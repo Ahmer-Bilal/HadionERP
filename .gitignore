@@ -1,0 +1,26 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.npm/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env/secrets
+.env
+.env.*
+*.pfx
+*.key

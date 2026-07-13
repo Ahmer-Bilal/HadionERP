@@ -1,0 +1,20 @@
+{
+  "moduleId": "Modules.Procurement",
+  "version": "0.1.0",
+  "databaseSchema": "procurement",
+  "exposedContracts": [
+    "Procurement.Contracts.IPurchaseOrderQueryService",
+    "Procurement.PurchaseOrderApproved.v1",
+    "Procurement.PurchaseOrderCancelled.v1"
+  ],
+  "consumedContracts": [
+    "MasterData.Contracts.IBusinessPartnerQueryService",
+    "MasterData.Contracts.IItemQueryService",
+    "Finance.Contracts.IBudgetCheckService"
+  ],
+  "extensionPoints": [
+    "PurchaseOrder.OnBeforeSubmit",
+    "PurchaseOrder.OnAfterApprove",
+    "PurchaseOrder.ObjectPage.ExtraTab"
+  ]
+}
