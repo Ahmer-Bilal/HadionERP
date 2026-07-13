@@ -9,6 +9,15 @@
   point is explicitly declared — doc §3); Application layer handlers depend on interfaces, never concrete
   Infrastructure classes; architecture unit tests (e.g. NetArchTest) fail the build if a Domain project
   references an Infrastructure or another module's internals (enforces doc 01 §3.2 automatically).
+- **No hardcoded translatable text — enforced, not just conventional.** `tests/ArchitectureTests/
+  Platform.ArchitectureTests` parses every `.cs` file under `src/` with Roslyn and fails `dotnet test` if a
+  string/char literal contains Arabic script outside an explicit, justified allow-list (currently just
+  `Platform.Localization/LocalizationDefaults.cs`, the shipped-default-content file, and
+  `ArabicIndicDigits.cs`, a Unicode structural constant). This exists because the rule was violated once
+  during development (see PROGRESS.md, 2026-07-13) — relying on a contributor (human or AI) remembering a
+  past conversation doesn't scale across sessions/tools; a failing test does. The same pattern should be
+  extended to other statically-checkable rules as they come up (e.g. "no direct SQL in Application layer")
+  rather than left as documentation alone.
 - **Testing pyramid**: unit tests over Domain/Application logic (majority of tests, fast, no DB), integration
   tests over Infrastructure (real Postgres via Testcontainers), a thin layer of end-to-end tests over
   critical business flows (PO approval, invoice posting, payroll run) through the actual API + UI. Coverage

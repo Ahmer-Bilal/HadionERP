@@ -54,6 +54,34 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 
 ## Entry Log (newest first)
 
+### 2026-07-13 — Added a permanent, automated guardrail against hardcoded Arabic text
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation (cross-cutting engineering-standards work, not tied to one module)
+- Status: Completed
+- What changed: The user was (rightly) worried that the hardcoded-Arabic mistake caught earlier today
+  (see the Platform.Localization entry below) could quietly happen again in a future session — by me, by
+  Codex, by anyone — since fixing one file doesn't stop it from being reintroduced elsewhere later. Rather
+  than just promising to be careful, built an automated check:
+  - A new test project (`tests/ArchitectureTests/Platform.ArchitectureTests`) parses every source file
+    with a real C# code parser (Roslyn) and fails the test run if any file contains actual Arabic text in
+    code — unless that file is on a short, explicitly justified allow-list (currently: the one file where
+    default translations are deliberately stored, and one file that's a technical character-mapping table,
+    not language content).
+  - **Proved it actually works**, not just trusted the logic: deliberately added a fake violation (a
+    hardcoded Arabic string in an unrelated file), ran the test, confirmed it failed with a clear message
+    pointing at the exact file and line, then removed the fake violation and confirmed the suite was green
+    again.
+  - Audited the entire codebase first (not just the one file already fixed) — confirmed no other
+    hardcoded Arabic existed anywhere else in the project.
+  - Documented this as an enforced rule in docs/architecture/05-engineering-standards.md, not just a
+    convention that depends on someone remembering it.
+  - 48 tests passing across the whole project now (2 new architecture tests + the 46 from before).
+- Files touched: `tests/ArchitectureTests/Platform.ArchitectureTests/*.cs` (RepoPaths, ArabicScript,
+  NoHardcodedTranslatableTextTests), its README.md, `docs/architecture/05-engineering-standards.md`
+- Next: this same "write an automated test, don't just rely on a promise" pattern should be applied to
+  other architecture rules as modules get built (e.g. checking that a module's Domain layer never
+  references another module's internals, per docs/architecture/01-architecture-foundation.md #3.2).
+
 ### 2026-07-13 — Phase 0: Platform.Localization implemented and tested (Arabic/English, Saudi calendar, e-invoicing)
 - Agent: Claude Sonnet 5
 - Phase: Phase 0 — Platform Foundation
