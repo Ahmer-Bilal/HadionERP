@@ -1,5 +1,7 @@
 using Gateway.Api.Events;
 using Gateway.Api.Localization;
+using Platform.Audit;
+using Platform.Core;
 using Platform.Events;
 using Platform.Events.Outbox;
 using Platform.Localization.Translation;
@@ -74,6 +76,14 @@ builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddSingleton<IIntegrationEventPublisher, IntegrationEventPublisher>();
 builder.Services.AddSingleton<OutboxRelay>();
 
+// Platform.Audit: the permanent, hash-chained, append-only change log
+// (docs/architecture/03-platform-services.md #5). The log is append-only by contract and (in a real
+// deployment) by DB-role hardening; InMemoryAuditLog proves the chain mechanics first. A real module's
+// Application layer calls IAuditRecorder at each lifecycle transition; nothing here needs to change when
+// that module is built.
+builder.Services.AddSingleton<IAuditLog, InMemoryAuditLog>();
+builder.Services.AddSingleton<IAuditRecorder, AuditRecorder>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -117,5 +127,22 @@ integrationEventPublisher.Enqueue(IntegrationEvent.Create(
 
 var outboxRelay = app.Services.GetRequiredService<OutboxRelay>();
 await outboxRelay.RelayPendingAsync();
+
+// Prove the audit pipeline works live at boot: record one real, permanent operational entry ("application
+// started"), then verify the chain is intact. This is the same "prove the mechanism at boot" pattern used
+// for the events pipeline above. A real business module records its own audit entries at each lifecycle
+// transition via IAuditRecorder; nothing here needs to change when that module is built.
+var auditRecorder = app.Services.GetRequiredService<IAuditRecorder>();
+var auditLog = app.Services.GetRequiredService<IAuditLog>();
+auditRecorder.RecordCreate(
+    businessObject: new BusinessObjectReference(Guid.NewGuid(), "Platform", "Startup"),
+    actorPrincipalKey: "system/startup",
+    summary: "Application started.",
+    source: Environment.MachineName);
+var chainBroken = auditLog.VerifyChain();
+if (chainBroken is not null)
+{
+    startupLogger.LogError("Audit chain verification failed at boot on entry {AuditEntryId}.", chainBroken.Id);
+}
 
 app.Run();

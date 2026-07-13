@@ -1,0 +1,173 @@
+/*
+ * Platform.UI component styles. Written with CSS logical properties (inline-start/inline-end,
+ * block-start/block-end, inline-size) throughout — this is what lets every component flip correctly for
+ * Arabic (RTL) with zero component-level changes, per docs/architecture/02-business-object-model.md #4.
+ * All sizing/color references the --pi-* design tokens; nothing is hardcoded.
+ */
+
+/* --- ShellBar --- */
+.pi-shell-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--pi-space-3) var(--pi-space-5);
+  border-block-end: 1px solid var(--pi-border);
+  background: var(--pi-surface);
+}
+
+.pi-shell-bar__title {
+  font-weight: var(--pi-font-weight-semibold);
+  font-size: var(--pi-font-size-lg);
+}
+
+.pi-shell-bar__language-switch button {
+  padding: var(--pi-space-1) var(--pi-space-3);
+  margin-inline-start: var(--pi-space-2);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  cursor: pointer;
+}
+
+.pi-shell-bar__language-switch button.is-active {
+  border-color: var(--pi-accent);
+  color: var(--pi-accent);
+  font-weight: var(--pi-font-weight-semibold);
+}
+
+/* --- NavigationPane --- */
+.pi-nav-pane {
+  inline-size: 240px;
+  flex-shrink: 0;
+  border-inline-end: 1px solid var(--pi-border);
+  padding: var(--pi-space-4);
+  background: var(--pi-surface);
+}
+
+.pi-nav-pane__module {
+  font-weight: var(--pi-font-weight-semibold);
+  margin-block-end: var(--pi-space-2);
+}
+
+.pi-nav-pane__area {
+  color: var(--pi-text-muted);
+  font-size: var(--pi-font-size-sm);
+  margin-block-end: var(--pi-space-1);
+}
+
+.pi-nav-pane__item {
+  display: block;
+  padding: var(--pi-space-1) var(--pi-space-2);
+  margin-inline-start: var(--pi-space-2);
+  border-radius: var(--pi-radius-sm);
+  color: var(--pi-text);
+  text-decoration: none;
+}
+
+.pi-nav-pane__item.is-active {
+  background: var(--pi-bg);
+  color: var(--pi-accent);
+  font-weight: var(--pi-font-weight-semibold);
+}
+
+/* --- ActionPane --- */
+.pi-action-pane {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pi-space-2);
+  padding: var(--pi-space-3) 0;
+  border-block-end: 1px solid var(--pi-border);
+  margin-block-end: var(--pi-space-4);
+}
+
+.pi-action-pane__button {
+  padding: var(--pi-space-1) var(--pi-space-3);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  cursor: pointer;
+}
+
+.pi-action-pane__button:hover:not(:disabled) {
+  border-color: var(--pi-accent);
+}
+
+.pi-action-pane__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pi-action-pane__button--primary {
+  background: var(--pi-accent);
+  border-color: var(--pi-accent);
+  color: var(--pi-accent-contrast);
+  font-weight: var(--pi-font-weight-semibold);
+}
+
+.pi-action-pane__button--danger {
+  color: var(--pi-danger);
+  border-color: var(--pi-danger);
+}
+
+/* --- FastTabs --- */
+.pi-fast-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-2);
+}
+
+.pi-fast-tab {
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-md);
+  background: var(--pi-bg);
+  overflow: hidden;
+}
+
+.pi-fast-tab__header {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-space-2);
+  inline-size: 100%;
+  padding: var(--pi-space-2) var(--pi-space-3);
+  border: none;
+  background: var(--pi-surface);
+  color: var(--pi-text);
+  font-weight: var(--pi-font-weight-semibold);
+  text-align: start;
+  cursor: pointer;
+}
+
+.pi-fast-tab__header:hover {
+  background: var(--pi-bg);
+}
+
+.pi-fast-tab__chevron {
+  /* The common accordion affordance: an arrow pointing toward the content's start side when collapsed
+     (right in LTR, left in RTL), rotating 90deg to point down when expanded. This is a DIRECTIONAL icon,
+     so it MUST mirror for RTL — a collapsed arrow in Arabic points left, the same way native disclosure
+     triangles do in Arabic OS UIs. Getting this wrong is the same category of bidi bug as the outbox
+     counter reordering caught earlier this session.
+
+     The mirroring is done by building the triangle with LOGICAL border properties (border-inline-start),
+     which auto-resolve to the correct physical side under dir="rtl" — no manual scale needed. The expanded
+     state rotates to point down; since "down" is direction-neutral, no further adjustment is required for
+     the open state in either language. */
+  inline-size: 0;
+  block-size: 0;
+  border-inline-start: 6px solid var(--pi-text-muted);
+  border-block-start: 5px solid transparent;
+  border-block-end: 5px solid transparent;
+  border-inline-end: 0;
+  transition: transform 0.15s ease;
+}
+
+.pi-fast-tab.is-open .pi-fast-tab__chevron {
+  transform: rotate(90deg);
+}
+
+.pi-fast-tab__content {
+  padding: var(--pi-space-3) var(--pi-space-4);
+  border-block-start: 1px solid var(--pi-border);
+}

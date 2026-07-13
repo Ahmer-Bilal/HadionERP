@@ -16,7 +16,17 @@ type TranslationKey =
   | "status.phaseLabel"
   | "status.kernelServicesLabel"
   | "status.greetingHeading"
-  | "status.eventsOutboxLabel";
+  | "status.eventsOutboxLabel"
+  | "status.auditLabel"
+  | "status.auditChainValid"
+  | "status.auditChainBroken"
+  | "status.tabGeneral"
+  | "status.tabEventsAudit"
+  | "status.tabLocalization"
+  | "status.actionRefresh"
+  | "aria.languageSwitchGroup"
+  | "aria.navigationLandmark"
+  | "aria.actionToolbar";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "ERP Platform", ar: "منصة تخطيط الموارد" },
@@ -31,6 +41,16 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "status.kernelServicesLabel": { en: "Kernel services wired", ar: "خدمات النواة المفعّلة" },
   "status.greetingHeading": { en: "Localization check", ar: "فحص التوطين" },
   "status.eventsOutboxLabel": { en: "Events published / pending", ar: "الأحداث المنشورة / المعلّقة" },
+  "status.auditLabel": { en: "Audit entries", ar: "سجلات التدقيق" },
+  "status.auditChainValid": { en: "chain intact", ar: "السلسلة سليمة" },
+  "status.auditChainBroken": { en: "CHAIN BROKEN", ar: "السلسلة مكسورة" },
+  "status.tabGeneral": { en: "General", ar: "عام" },
+  "status.tabEventsAudit": { en: "Events & audit", ar: "الأحداث والتدقيق" },
+  "status.tabLocalization": { en: "Localization", ar: "التوطين" },
+  "status.actionRefresh": { en: "Refresh", ar: "تحديث" },
+  "aria.languageSwitchGroup": { en: "Language", ar: "اللغة" },
+  "aria.navigationLandmark": { en: "Main", ar: "الرئيسية" },
+  "aria.actionToolbar": { en: "Actions", ar: "إجراءات" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

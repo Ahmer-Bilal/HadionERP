@@ -1,0 +1,60 @@
+/*
+ * Platform.UI design tokens — the single source of truth for color, spacing, typography, and radius.
+ * Consumed by Platform.UI's own components AND by Apps.Shell's app-level CSS. Every consumer references
+ * these --pi-* variables; none hardcodes a raw color/size. Theme-able (light/dark today, per-tenant
+ * branding later) by redefining the same variables, per docs/architecture/02-business-object-model.md #4.
+ *
+ * These were extracted from Apps.Shell's original index.css (7 color tokens only) and expanded with the
+ * spacing/typography/radius scales that were previously hardcoded per-rule.
+ */
+
+:root {
+  /* --- Color (light) --- */
+  --pi-text: #1f2328;
+  --pi-text-muted: #57606a;
+  --pi-bg: #ffffff;
+  --pi-surface: #f6f8fa;
+  --pi-border: #d0d7de;
+  --pi-accent: #0969da;
+  --pi-accent-contrast: #ffffff;
+  --pi-danger: #cf222e;
+  --pi-success: #1a7f37;
+
+  /* --- Spacing scale (rem, so it respects the user's font-size preference) --- */
+  --pi-space-1: 0.25rem;
+  --pi-space-2: 0.5rem;
+  --pi-space-3: 0.75rem;
+  --pi-space-4: 1rem;
+  --pi-space-5: 1.5rem;
+  --pi-space-6: 2rem;
+
+  /* --- Typography --- */
+  --pi-font-family: system-ui, "Segoe UI", Tahoma, Arial, sans-serif;
+  --pi-font-size-sm: 0.85rem;
+  --pi-font-size-base: 1rem;
+  --pi-font-size-lg: 1.1rem;
+  --pi-font-weight-normal: 400;
+  --pi-font-weight-semibold: 600;
+  --pi-line-height: 1.5;
+
+  /* --- Radius --- */
+  --pi-radius-sm: 6px;
+  --pi-radius-md: 8px;
+
+  color-scheme: light dark;
+  font: var(--pi-font-size-base)/var(--pi-line-height) var(--pi-font-family);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pi-text: #e6edf3;
+    --pi-text-muted: #9198a1;
+    --pi-bg: #0d1117;
+    --pi-surface: #161b22;
+    --pi-border: #30363d;
+    --pi-accent: #4493f8;
+    --pi-accent-contrast: #0d1117;
+    --pi-danger: #ff7b72;
+    --pi-success: #3fb950;
+  }
+}

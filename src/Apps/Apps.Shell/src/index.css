@@ -1,27 +1,6 @@
-:root {
-  --text: #1f2328;
-  --text-muted: #57606a;
-  --bg: #ffffff;
-  --surface: #f6f8fa;
-  --border: #d0d7de;
-  --accent: #0969da;
-  --danger: #cf222e;
-
-  color-scheme: light dark;
-  font: 16px/1.5 system-ui, "Segoe UI", Tahoma, Arial, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #e6edf3;
-    --text-muted: #9198a1;
-    --bg: #0d1117;
-    --surface: #161b22;
-    --border: #30363d;
-    --accent: #4493f8;
-    --danger: #ff7b72;
-  }
-}
+/* Global element resets. Design tokens (color/spacing/typography/radius as --pi-* variables) now live in
+   Platform.UI (src/Platform/Platform.UI/tokens/design-tokens.css) — the single source of truth. This file
+   only resets element defaults and points them at those tokens. */
 
 * {
   box-sizing: border-box;
@@ -29,12 +8,12 @@
 
 body {
   margin: 0;
-  color: var(--text);
-  background: var(--bg);
+  color: var(--pi-text);
+  background: var(--pi-bg);
 }
 
 h1, h2 {
-  font-weight: 600;
+  font-weight: var(--pi-font-weight-semibold);
   margin: 0 0 0.5em;
 }
 
@@ -43,14 +22,14 @@ dl {
 }
 
 dt {
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  color: var(--pi-text-muted);
+  font-size: var(--pi-font-size-sm);
   margin-top: 0.75em;
 }
 
 dd {
   margin-inline-start: 0;
-  font-size: 1.05rem;
+  font-size: var(--pi-font-size-lg);
 }
 
 button {

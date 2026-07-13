@@ -10,10 +10,11 @@ dist/
 build/
 .npm/
 
-# IDE
+# IDE / AI tool metadata
 .vs/
 .vscode/
 .idea/
+.zcode/
 
 # OS
 .DS_Store

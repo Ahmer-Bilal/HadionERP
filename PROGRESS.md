@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | In Progress — application runnable; Platform.Core/Security/Localization/Workflow/Events done; Audit/full UI design system/Configuration remain | 2026-07-13 |
+| Phase 0 — Platform Foundation | In Progress — application runnable; Platform.Core/Security/Localization/Workflow/Events/Audit/UI/Api done; Configuration remains | 2026-07-13 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,178 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-13 — Built Platform.Api (shared API conventions: base controller, paging, idempotency, error envelope)
+- Agent: ZCode (builtin:zai-coding-plan/GLM-5.2)
+- Phase: Phase 0 — Platform Foundation
+- Status: Completed
+- What changed:
+  - **Built Platform.Api** — the shared API conventions layer every module's controllers will follow
+    (docs/architecture/04-data-and-api.md #2). In plain terms: instead of each module inventing its own
+    error format, paging shape, and route pattern, there's one base controller and one set of result types
+    every endpoint inherits — so the frontend and external integrators always know what to expect,
+    regardless of which module's API they're calling. The pieces:
+    - `PlatformApiController`: the base controller every module inherits. Route convention
+      `api/v1/[controller]` (URL-segment major version, §2.1). Provides `Paged()`, `ValidationError()`,
+      `BadRequestError()`, `ConflictError()` helpers.
+    - `PagedResult<T>`: the standard envelope for list endpoints — `Items`, `TotalCount`, `Skip`, `Top`.
+      A consistent shape so the frontend always knows how to page through a list.
+    - `ODataQuery`: parses `$top`, `$skip`, `$orderby`, `$filter`, `$select`, `$count` from the query
+      string into a typed object, with validation (non-negative, max-page-size clamp). The standard input
+      every List Report endpoint receives — OData-inspired, matching what SAP/Dynamics integrators expect.
+    - `ApiErrorEnvelope`: the unified error response (RFC 7807 problem-details-inspired) — `Type`, `Title`,
+      `Status`, `Detail`, `Errors` (field-level validation). Every error uses this shape.
+    - `IdempotencyKeyAttribute`: an action filter requiring an `Idempotency-Key` header on POST/state-
+      transition endpoints (§2.2: "critical for financial documents where a retried network call must never
+      double-post"). Caches the response per key so a retried request returns the cached result instead of
+      re-executing.
+  - **Proved the idempotency guarantee, not just trusted the logic**: the headline test sends a request,
+    caches its response, then sends a retried request with the SAME key and asserts it returns the cached
+    response without re-executing. Separate tests cover: missing header → 400, different key → executes
+    fresh, and a failed (non-2xx) response is NOT cached so it can be retried.
+  - **Refactored SystemController onto the base** to prove the conventions work on real running code, not
+    just in tests — it now inherits `PlatformApiController` instead of `ControllerBase` directly. The
+    route `api/v1/system/status` still resolves correctly (via the base's `api/v1/[controller]` pattern),
+    and all endpoints (status, greeting, health) return the same payloads as before. No behavior change to
+    existing endpoints — the refactor only adds the shared base.
+  - 24 new tests, 123 total passing across the whole project. Frontend Arabic guardrail still green (no
+    frontend changes).
+- Files touched: `src/Platform/Platform.Api/*` (full new project: Platform.Api.csproj, PagedResult.cs,
+  ODataQuery.cs, ApiErrorEnvelope.cs, IdempotencyKeyAttribute.cs, PlatformApiController.cs, README.md),
+  `tests/UnitTests/Platform.Api.Tests/*` (Platform.Api.Tests.csproj, ODataQueryTests, PagedResultTests,
+  ApiErrorEnvelopeTests, IdempotencyKeyAttributeTests), `erp-platform.sln` (two projects added),
+  `src/Gateway/Gateway.Api/Gateway.Api.csproj` (project ref), `src/Gateway/Gateway.Api/Controllers/
+  SystemController.cs` (inherits PlatformApiController)
+- Known gap, disclosed not hidden: the `$filter` expression engine (parsing `Amount gt 1000` into a real
+  predicate) is deferred — it needs a proper grammar (OData ABNF / ANTLR) and a real list endpoint to drive
+  it; the query structure + validation is built now so the contract is stable. The idempotency cache is
+  in-memory (same swap-for-real-store pattern); a real deployment needs Redis/DB so it survives restarts
+  and works across multiple Gateway instances. OpenAPI 3.1 contract-first spec generation, `$batch`/bulk
+  operations, webhooks/event subscriptions, and header-based minor version negotiation are all deferred —
+  documented in Platform.Api/README.md.
+- Next: the last Phase 0 piece — `Platform.Configuration` (settings without needing new code: multi-level
+  override hierarchy, business rule engine, feature flags). After that, Phase 0 is complete and Phase 1
+  (Master Data + Finance Core) begins.
+
+### 2026-07-13 — Built Platform.UI design system (tokens + reusable components, Vite alias stage)
+- Agent: ZCode (builtin:zai-coding-plan/GLM-5.2)
+- Phase: Phase 0 — Platform Foundation
+- Status: Completed
+- What changed:
+  - **Built Platform.UI** — the in-house design system (docs/architecture/02-business-object-model.md
+    #2–4): design tokens + reusable Dynamics-365-referenced components, consumed by Apps.Shell via a
+    `@platform/ui` import path. In plain terms: the shell's ad-hoc styling and components (which worked but
+    lived inline in the app and couldn't be reused by a second app) are now a real, self-contained design
+    system that any future frontend app can consume. The pieces:
+    - **Design tokens** (`tokens/design-tokens.css`): the single source of truth for color, spacing,
+      typography, and radius — all `--pi-*` CSS variables. Extracted + expanded from Apps.Shell's original
+      7 color-only tokens; the spacing/typography/radius scales that were hardcoded per-rule are now named
+      tokens. Theme-able (light/dark today, per-tenant branding later) by redefining the same variables.
+    - **ShellBar** + **NavigationPane**: extracted from Apps.Shell's originals and generalized —
+      data-driven (the app passes translated strings, nav tree, and language options as props; the
+      components have zero dependency on any translation system).
+    - **ActionPane** (new): the Dynamics 365 command bar (§2.1). Stateless — the app passes only the actions
+      available right now (driven by the document's FSM state + the user's security role). This is what
+      makes a new BO transition surface its button everywhere automatically.
+    - **FastTabs** (new): vertically stacked, collapsible panels where several can be open at once (§2.1:
+      "FastTabs, not tabs"). Real `<button>` headers with `aria-expanded`/`aria-controls` for keyboard +
+      screen-reader access (WCAG 2.1 AA, per doc 02 #4).
+  - **Hard rule enforced: Platform.UI never imports from Apps.Shell.** It's self-contained — no dependency
+    on any app's i18n, routing, or state. This keeps promoting it to a real npm package later a config
+    change, not a rewrite (documented in its README).
+  - **Two corrections caught by the user before they shipped**, both real bugs:
+    1. The relative path from Apps.Shell to Platform.UI was `../../../` (overshooting to the repo root)
+       instead of `../../` — would have broken both the TS checker and the Vite bundler. Fixed in both
+       tsconfig and vite.config.
+    2. The FastTabs chevron was initially a "never flip" physical transform — wrong. A directional disclosure
+       arrow MUST mirror for RTL (point right collapsed in LTR, point left in Arabic). Fixed by building the
+       triangle with `border-inline-start` (a logical property that auto-mirrors with `dir`), so collapsed
+       it points toward the content's start side in both languages, and expanded it rotates to point down
+       (direction-neutral) in both. Same category of bidi bug as the outbox counter reordering caught in the
+       Platform.Events session.
+  - **No hardcoded strings anywhere in Platform.UI** — including aria-labels. Every screen-reader-facing
+    label (language switcher group, nav landmark, action toolbar) comes in as a prop, translated by the
+    consumer via its own `t()`. The FastTabs button needs no separate label — its accessible name is the
+    visible tab title text.
+  - **Apps.Shell refactored to consume Platform.UI**: ShellBar + NavigationPane now imported from
+    `@platform/ui` (old local copies deleted); System Status page restructured with an ActionPane (functional
+    Refresh button) + FastTabs organizing the facts into General / Events & audit / Localization tabs.
+  - **Extended the frontend Arabic guardrail to scan Platform.UI too** — `check-no-hardcoded-arabic.mjs`
+    now scans both Apps.Shell's `src/` and `src/Platform/Platform.UI/`, so a hardcoded string can't slip in
+    through the design system any more than through an app component.
+  - Verified live: backend returns `audit.chainValid: true`, frontend serves with `@platform/ui` resolving
+    through Vite, 99 .NET tests + full `npm run build` + Arabic guardrail all green.
+- Files touched: `src/Platform/Platform.UI/*` (tokens/design-tokens.css, types.ts, components/{ShellBar,
+  NavigationPane, ActionPane, FastTabs}.tsx, components/components.css, index.ts, README.md),
+  `src/Apps/Apps.Shell/vite.config.ts` (alias + react dedupe), `src/Apps/Apps.Shell/tsconfig.app.json`
+  (paths + include), `src/Apps/Apps.Shell/src/main.tsx` (Platform.UI CSS imports),
+  `src/Apps/Apps.Shell/src/App.tsx` (consume Platform.UI, data-driven props),
+  `src/Apps/Apps.Shell/src/index.css` (tokens removed, resets point at --pi-*),
+  `src/Apps/Apps.Shell/src/App.css` (token refs updated, component styles removed),
+  `src/Apps/Apps.Shell/src/pages/SystemStatusPage.tsx` (ActionPane + FastTabs restructure),
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (7 new keys: 3 tab titles, refresh action, 3 aria labels),
+  `src/Apps/Apps.Shell/scripts/check-no-hardcoded-arabic.mjs` (now scans Platform.UI),
+  deleted `src/Apps/Apps.Shell/src/components/ShellBar.tsx` + `NavigationPane.tsx` (moved to Platform.UI)
+- Known gap, disclosed not hidden: Platform.UI is at the Vite-alias stage — not a real npm package yet
+  (no package.json, no independent build). Promoting it to a workspace package later is a config change
+  (documented in its README), not a rewrite, because it's self-contained now. The List+Details form template
+  (§2.1) and Workspace component (§2.2) are deferred — they need a real business object to render, built
+  when Phase 1's first module lands. Accessibility CI checks (axe-core) not wired yet; components are
+  authored to WCAG 2.1 AA but not yet verified by an automated scanner.
+- Next: continue Phase 0 with `Platform.Api` (API conventions: how screens talk to the server), then
+  `Platform.Configuration` (settings without needing new code). These are the last two Phase 0 pieces.
+
+### 2026-07-13 — Built Platform.Audit (permanent, tamper-evident change history)
+- Agent: ZCode (builtin:zai-coding-plan/GLM-5.2)
+- Phase: Phase 0 — Platform Foundation
+- Status: Completed
+- What changed:
+  - **Built Platform.Audit** — the permanent, tamper-evident change history every module will feed, per
+    docs/architecture/03-platform-services.md #5. In plain terms: every create / update / status-transition /
+    delete-attempt on a record is captured (who, what field-level before/after, when, from where, why), and
+    the records are hash-chained so a retroactive edit is computationally detectable — the same spirit as
+    SAP's change-document framework, and a real requirement for financial/statutory defensibility in Saudi
+    Arabia (ZATCA, external auditors). The pieces:
+    - `AuditEntry` captures the full who/what/when/from-where/why set, carrying `FieldValueChange`s for the
+      before/after of each changed field.
+    - `AuditHasher` is the tamper-evidence core: SHA-256 over a deterministic canonical string of the
+      entry's content plus the PREVIOUS entry's hash. That link is what makes tampering detectable — change
+      any old field and its hash changes, which breaks every later entry's PreviousHash link.
+    - `IAuditLog`/`InMemoryAuditLog` is append-only (no Update/Delete by design — §5: append-only). `Append`
+      computes the hash from the current tail. `VerifyChain()` recomputes every hash from the genesis entry
+      forward and returns the first entry that disagrees.
+    - `IAuditRecorder`/`AuditRecorder` is the friendly facade modules call (RecordCreate,
+      RecordFieldUpdate, RecordStatusTransition, RecordDeleteAttempt) — same single-entry-point pattern as
+      IIntegrationEventPublisher for events; modules never call IAuditLog directly.
+  - **Proved the tamper-evidence guarantee, not just trusted the logic**: the headline test appends a few
+    entries, then mutates a stored record's content via reflection (standing in for a hostile in-place DB
+    UPDATE — exactly the threat the chain defends against), re-runs VerifyChain, and asserts it returns the
+    tampered entry. Separate tests cover tampering with the first record, the last record, and a swap of two
+    records (a reordering that breaks the PreviousHash links even though no record's own content changed).
+  - **Proved the whole pipeline works in the running application**, not just in tests: Gateway.Api records
+    one real, permanent operational audit entry at boot ("Application started"), and the System Status page
+    now shows `audit.entries` + `audit.chainValid` (re-verified on every status read — a broken chain would
+    be a serious integrity signal an operator would see, not a silent failure).
+  - 20 new backend tests, 99 total passing across the whole project. Frontend Arabic guardrail still green
+    (Platform.Audit has no display text in the kernel; the one new frontend label lives in content.ts as
+    required).
+- Files touched: `src/Platform/Platform.Audit/*` (full new project: AuditAction, FieldValueChange,
+  AuditEntry, Hashing/AuditHasher, IAuditLog, InMemoryAuditLog, IAuditRecorder, AuditRecorder, README.md),
+  `tests/UnitTests/Platform.Audit.Tests/*` (Platform.Audit.Tests.csproj, AuditHasherTests,
+  InMemoryAuditLogTests, TamperEvidenceTests, AuditRecorderTests), `erp-platform.sln` (two projects added),
+  `src/Gateway/Gateway.Api/Gateway.Api.csproj` (project ref), `src/Gateway/Gateway.Api/Program.cs` (DI +
+  boot-time audit entry), `src/Gateway/Gateway.Api/Controllers/SystemController.cs` (audit in status payload
+  + Platform.Audit in kernelServicesWired), `src/Apps/Apps.Shell/src/api/systemApi.ts` (AuditStatus type),
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (3 new keys: audit label + chain valid/broken), 
+  `src/Apps/Apps.Shell/src/pages/SystemStatusPage.tsx` (audit row with bidi-isolated count)
+- Known gap, disclosed not hidden: `InMemoryAuditLog` proves the chain mechanics; a real deployment needs an
+  actual append-only audit table with no UPDATE/DELETE grants at the DB-role level (§5), with the audit write
+  committed in the same transaction as the business change. Automatic audit at every lifecycle transition
+  isn't wired yet because no business module exists yet to drive it; Gateway.Api records the one boot entry
+  to prove the live pipeline. Retention/archiving and compliance exports (§5) need Modules.Reporting, not
+  built yet.
+- Next: continue Phase 0 with the fuller `Platform.UI` design system, then `Platform.Api` conventions and
+  `Platform.Configuration`. (Phase 0's remaining pieces after Audit are these three.)
 
 ### 2026-07-13 — Built Platform.Events (cross-module messaging), closed the frontend translation gap, fixed a display bug
 - Agent: Claude Sonnet 5

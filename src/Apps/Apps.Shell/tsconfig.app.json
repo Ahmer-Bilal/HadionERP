@@ -16,11 +16,24 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Platform.UI design system — resolved via a Vite alias (see vite.config.ts) for bundling and via
+       this paths mapping for type-checking. The import path "@platform/ui" stays the same if Platform.UI
+       is later promoted to a real npm package; only the resolution mechanism changes. */
+    "paths": {
+      "@platform/ui": ["../../Platform/Platform.UI/index.ts"],
+      "@platform/ui/*": ["../../Platform/Platform.UI/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"]
+    },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../../Platform/Platform.UI"
+  ]
 }

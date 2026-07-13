@@ -6,6 +6,11 @@ export interface EventsOutboxStatus {
   pending: number;
 }
 
+export interface AuditStatus {
+  entries: number;
+  chainValid: boolean;
+}
+
 export interface SystemStatus {
   application: string;
   phase: string;
@@ -13,6 +18,7 @@ export interface SystemStatus {
   kernelServicesWired: string[];
   supportedLanguages: string[];
   eventsOutbox: EventsOutboxStatus;
+  audit: AuditStatus;
 }
 
 export interface SystemGreeting {
