@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | Not Started | — |
+| Phase 0 — Platform Foundation | In Progress (Platform.Core done; Security/Localization/Workflow/Events/Audit/UI/Api/Configuration remain) | 2026-07-13 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,41 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-13 — Phase 0: Platform.Core implemented and tested (first working code)
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation
+- Status: In Progress (Platform.Core sub-piece Completed; Phase 0 overall is not — see Next)
+- What changed: This is the first actual code in the project (everything before this was architecture
+  docs and folder scaffolding). Installed .NET 8 SDK (was missing on this machine), initialized git
+  (repo had no version control before), and built `Platform.Core` — the foundation every other module
+  will build on:
+  - The shared Business Object base class (`BusinessObject`) that every future module's documents
+    (Purchase Orders, Journal Entries, Subcontracts, etc.) will inherit from, giving them a document
+    number, a status, an audit trail, and custom fields for free.
+  - The lifecycle rules engine (`LifecycleEngine`) enforcing the one allowed set of status changes
+    (Draft → Submitted → Approved → Posted, or Reversed/Cancelled) so no document can be pushed into an
+    illegal state, and so every status change automatically raises an event other services (audit,
+    workflow) can react to later.
+  - The document numbering service (`INumberRangeService` / `InMemoryNumberRangeService`) — assigns
+    sequential numbers like `PROC-PO-2026-000123` per company and fiscal year (in-memory version now;
+    swapped for a database-backed one later without touching any module code).
+  - Custom-field storage (`ExtensionFieldBag`) — lets a future site-specific requirement add a field to
+    any document without a database schema change.
+  - Proved all of it end-to-end with a throwaway "demo document" (no real business meaning) taken through
+    create → number → submit → approve → post → reverse, matching the Phase 0 exit criteria in
+    `docs/architecture/06-roadmap.md`. 9 automated tests, all passing (`dotnet test`).
+- Files touched: `erp-platform.sln`, `src/Platform/Platform.Core/*.cs` (BusinessObject, IBusinessObject,
+  BusinessObjectStatus, BusinessObjectTransition, BusinessObjectReference, ExtensionFieldBag,
+  Lifecycle/LifecycleEngine.cs, Events/IDomainEvent.cs, Events/BusinessObjectStatusChangedEvent.cs,
+  NumberRanges/INumberRangeService.cs, NumberRanges/NumberRangeDefinition.cs,
+  NumberRanges/InMemoryNumberRangeService.cs), `tests/UnitTests/Platform.Core.Tests/*.cs`, `.gitignore`
+- Next: Phase 0 is not finished — `Platform.Core` is one of nine pieces. Still to build:
+  `Platform.Security` (login/permissions), `Platform.Localization` (Arabic/English, Hijri calendar,
+  ZATCA), `Platform.Workflow` (approval routing), `Platform.Events` (cross-module messaging, database-
+  backed), `Platform.Audit` (permanent change history), `Platform.UI` (the actual screens), `Platform.Api`
+  (how the screens talk to the server), `Platform.Configuration` (settings without needing new code). No
+  business modules (Finance, Procurement, Construction, etc.) start until these are done.
 
 ### 2026-07-13 — Architecture corrected against SAP/Dynamics source material
 - Agent: Claude Sonnet 5
