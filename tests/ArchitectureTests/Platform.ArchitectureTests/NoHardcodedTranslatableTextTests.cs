@@ -34,6 +34,10 @@ public class NoHardcodedTranslatableTextTests
         ["Platform/Platform.Localization/Formatting/ArabicIndicDigits.cs"] =
             "A fixed Unicode digit-mapping table (٠-٩), a structural/technical constant like a Base64 " +
             "alphabet table — not translatable business content, so it isn't subject to the same rule.",
+
+        ["Gateway/Gateway.Api/Localization/GatewayApiLocalizationDefaults.cs"] =
+            "Gateway.Api's own shipped default translated content, same pattern/justification as " +
+            "Platform.Localization/LocalizationDefaults.cs above.",
     };
 
     [Fact]

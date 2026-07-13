@@ -1,0 +1,99 @@
+/* Written with logical properties (inline-start/inline-end, not left/right) throughout — this is what
+   lets the shell flip correctly for Arabic (RTL) with zero component-level changes, per
+   docs/architecture/02-business-object-model.md #4. */
+
+.app-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-block-end: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.shell-bar__title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.shell-bar__language-switch button {
+  padding: 0.35rem 0.75rem;
+  margin-inline-start: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.shell-bar__language-switch button.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.app-shell__body {
+  flex: 1;
+  display: flex;
+}
+
+.nav-pane {
+  inline-size: 240px;
+  flex-shrink: 0;
+  border-inline-end: 1px solid var(--border);
+  padding: 1rem;
+  background: var(--surface);
+}
+
+.nav-pane__module {
+  font-weight: 600;
+  margin-block-end: 0.5rem;
+}
+
+.nav-pane__area {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-block-end: 0.25rem;
+}
+
+.nav-pane__item {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  margin-inline-start: 0.5rem;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-pane__item.is-active {
+  background: var(--bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.app-shell__content {
+  flex: 1;
+  padding: 1.5rem 2rem;
+}
+
+.status-page__error {
+  color: var(--danger);
+}
+
+.status-page__facts {
+  max-inline-size: 32rem;
+}
+
+.status-page__greeting {
+  margin-block-start: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-inline-size: 32rem;
+}

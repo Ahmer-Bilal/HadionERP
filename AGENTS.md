@@ -16,6 +16,20 @@ files below load-bearing, not optional reading:
 2. **`ARCHITECTURE.md`** (and `docs/architecture/*.md`) — the technical architecture this project must
    follow. Read the relevant docs before implementing anything in that area.
 
+## Standing rule: the application must always run (added 2026-07-13)
+
+At the end of every phase/unit of work: the solution must compile, the backend
+(`src/Gateway/Gateway.Api`) must start without errors, the frontend (`src/Apps/Apps.Shell`) must start
+without errors, and the user must be able to open it in a browser and see the completed work. Never leave
+the project in a non-runnable state.
+
+Build the production application from Day 1. Every phase extends the existing running application —
+never build temporary UI, temporary architecture, or throwaway/demo code meant to be discarded later. An
+in-memory reference implementation behind a stable interface (e.g. `InMemoryNumberRangeService`) is fine —
+it gets swapped for a real one later without a rewrite — but a prototype meant to be thrown away is not.
+Before reporting a phase done, actually build, start both processes, and verify (e.g. via the `run` skill)
+rather than relying on the test suite alone.
+
 ## Working rules
 
 - Do not start implementation work without first reading `PROGRESS.md`'s Phase Status Summary and the most

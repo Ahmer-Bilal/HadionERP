@@ -12,7 +12,10 @@ work on it over time with no shared memory except what's written to disk. Before
 2. After finishing a unit of work, add an entry to `PROGRESS.md` following its template — this is not
    optional, it's how the next session (yours or another tool's) knows the real state of the project.
 
-See `AGENTS.md` for the same rules in tool-agnostic form (that's the file other AI tools will read).
+See `AGENTS.md` for the same rules in tool-agnostic form (that's the file other AI tools will read),
+including the standing "the application must always run" rule added 2026-07-13 — every phase must leave
+`src/Gateway/Gateway.Api` (backend) and `src/Apps/Apps.Shell` (frontend) compiling and startable, verified
+before reporting a phase done, not just covered by the test suite.
 
 **Before writing any code in this repo, read `ARCHITECTURE.md` and the linked docs in
 `docs/architecture/`.** They define the layered architecture, module boundaries, the Business Object model
@@ -33,3 +36,6 @@ conventions, naming conventions, and the extension model. Do not:
 
 Current phase status is tracked in `PROGRESS.md`, not here — check it rather than assuming from this file,
 since this file is not updated per-phase.
+
+To actually run the application (backend `src/Gateway/Gateway.Api` + frontend `src/Apps/Apps.Shell`), see
+`HOW-TO-RUN.md`.

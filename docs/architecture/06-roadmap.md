@@ -4,6 +4,12 @@ No business modules are built until Phase 0 (the platform kernel) is solid — e
 on it, and retrofitting security/localization/workflow/audit into modules built without them is exactly the
 kind of rework this architecture exists to avoid.
 
+**Standing rule for every phase below (added 2026-07-13)**: at the end of each phase, the solution must
+compile, `src/Gateway/Gateway.Api` (backend) and `src/Apps/Apps.Shell` (frontend) must both start without
+errors, and the work must be verifiable by opening the application in a browser — not just by a passing
+test suite. Everything built is production-shaped from the start; nothing here is a prototype meant to be
+replaced later. See AGENTS.md.
+
 ## Phase 0 — Platform Foundation (prerequisite for everything else)
 - `Platform.Core`: BO base classes, FSM lifecycle engine, number ranges, extension field storage
 - `Platform.Security`: authN (OIDC/SSO), RBAC+ABAC, row/field-level security, SoD engine
@@ -14,7 +20,9 @@ kind of rework this architecture exists to avoid.
 - `tools/bo-scaffold`, `tools/object-page-gen`: codegen so Phase 1+ modules are fast to stand up
 - **Exit criteria**: a trivial demo BO (no business meaning) can be scaffolded end-to-end — created,
   submitted, approved via a configured workflow, posted, audited, printed, bilingually — proving the whole
-  kernel works before any real business logic is written.
+  kernel works before any real business logic is written. In addition (per the standing rule above):
+  `Gateway.Api` runs and serves a real system-status/health surface built on the kernel services, and
+  `Apps.Shell` runs and displays it in a browser, in both English and Arabic.
 
 ## Phase 1 — Master Data + Finance Core
 - `Modules.MasterData`: Business Partners, Chart of Accounts, Items, Cost Centers, Tax codes, Number ranges

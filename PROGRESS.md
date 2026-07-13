@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | In Progress (Platform.Core, Platform.Security, Platform.Localization done; Workflow/Events/Audit/UI/Api/Configuration remain) | 2026-07-13 |
+| Phase 0 — Platform Foundation | In Progress — **application is runnable now** (backend + frontend both live, verified in browser); Platform.Core/Security/Localization done; Workflow/Events/Audit/full UI design system/Configuration remain | 2026-07-13 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,44 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-13 — First runnable application: real backend + real frontend, verified in a browser
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation
+- Status: In Progress (this checkpoint Completed; Phase 0 overall is not — see Next)
+- What changed: The user set a new standing rule for all future work: every phase must leave a real,
+  compiling, running application the user can open in a browser — never just a class library with test
+  results, and never throwaway/prototype code that gets rewritten later. This is now written into
+  `AGENTS.md`/`CLAUDE.md` and `docs/architecture/06-roadmap.md` as a permanent rule, not a one-time ask.
+  To meet it immediately (retroactively covering all Platform.Core/Security/Localization work so far):
+  - Built **Gateway.Api** — a real backend server (not a demo) at `src/Gateway/Gateway.Api`, wired to the
+    permissions and translation systems already built. It exposes: a health check, a system-status page
+    (shows what's running), and a greeting endpoint that proves the Arabic/English translation system
+    works through an actual running server, not just in tests.
+  - Built **Apps.Shell** — a real website (not a prototype) at `src/Apps/Apps.Shell`, showing a "System
+    Status" page that calls the backend above and displays it live, plus a working English/Arabic language
+    switcher that flips the entire page layout right-to-left for Arabic, not just the text.
+  - **Actually verified it, not just trusted it compiles**: started both, used an automated browser
+    (Playwright/headless Chromium — `chromium-cli` wasn't available on this Windows machine, so adapted)
+    to load the real page, click the Arabic button, and took screenshots of both states. Confirmed no
+    browser console errors and that the Arabic screenshot shows a properly mirrored layout (nav pane
+    moved to the other side, text right-aligned), not just translated words.
+  - Added `HOW-TO-RUN.md` with plain-language, copy-pasteable steps for starting both and opening it in a
+    browser — two terminal commands and one URL.
+  - Caught and fixed a small hardcoded-text slip while building this: the language switcher briefly had
+    "العربية" written directly in a component instead of going through the same centralized-content
+    pattern used everywhere else. Fixed before it shipped.
+- Files touched: `src/Gateway/Gateway.Api/*` (Program.cs, Controllers/SystemController.cs,
+  Localization/GatewayApiLocalizationDefaults.cs, launchSettings.json), `src/Apps/Apps.Shell/*` (full Vite
+  React TypeScript app — App.tsx, components/, pages/, api/, i18n/, styles), `HOW-TO-RUN.md`,
+  `tests/ArchitectureTests/.../NoHardcodedTranslatableTextTests.cs` (allow-list entry for Gateway.Api's
+  content file), `AGENTS.md`, `CLAUDE.md`, `docs/architecture/06-roadmap.md`
+- Known gap, disclosed not hidden: the "no hardcoded text" automated check only covers C# (backend) code;
+  the frontend follows the same discipline by convention (`src/Apps/Apps.Shell/src/i18n/`) but doesn't yet
+  have an automated test enforcing it the way the backend does. Also: the Arabic backend/frontend text
+  written so far is a draft translation, not reviewed by a professional Arabic linguist.
+- Next: continue Phase 0 with `Platform.Workflow`, extending Gateway.Api/Apps.Shell rather than building
+  them separately — every future piece plugs into this same running application from now on.
 
 ### 2026-07-13 — Added a permanent, automated guardrail against hardcoded Arabic text
 - Agent: Claude Sonnet 5
