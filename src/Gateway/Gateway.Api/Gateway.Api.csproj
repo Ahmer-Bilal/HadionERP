@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\Platform\Platform.Core\Platform.Core.csproj" />
     <ProjectReference Include="..\..\Platform\Platform.Security\Platform.Security.csproj" />
     <ProjectReference Include="..\..\Platform\Platform.Localization\Platform.Localization.csproj" />
+    <ProjectReference Include="..\..\Platform\Platform.Workflow\Platform.Workflow.csproj" />
   </ItemGroup>
 
 </Project>

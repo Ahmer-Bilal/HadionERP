@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Platform.Core\Platform.Core.csproj" />
+    <ProjectReference Include="..\Platform.Security\Platform.Security.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

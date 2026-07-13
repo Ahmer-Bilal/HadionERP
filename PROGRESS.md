@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | In Progress — **application is runnable now** (backend + frontend both live, verified in browser); Platform.Core/Security/Localization done; Workflow/Events/Audit/full UI design system/Configuration remain | 2026-07-13 |
+| Phase 0 — Platform Foundation | In Progress — application runnable; Platform.Core/Security/Localization/Workflow done; Events/Audit/full UI design system/Configuration remain | 2026-07-13 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,51 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-13 — Fixed a file-lock build error, then built Platform.Workflow (approval routing)
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation
+- Status: Completed
+- What changed:
+  - **Build error fix**: the user hit `MSB3027`/`MSB3021` "file is locked by Gateway.Api" errors twice —
+    once from a background process I'd left running after the previous session's verification, and once
+    from the user's own terminal where they were watching `dotnet run`. Root cause both times: Windows
+    locks a running program's files, so a second build can't overwrite them. Fixed by identifying the
+    exact locking process (`tasklist`/`netstat -ano`) and stopping it, then confirmed the build was clean
+    again. Also fixed a separate, real (if harmless) startup warning about HTTPS redirection — the backend
+    is meant to run over plain HTTP locally (matching the frontend), so the redirect now only activates
+    outside local development.
+  - **Built Platform.Workflow** — the approval-routing system. In plain terms: this is what lets you say
+    "a Purchase Order under 50,000 SAR needs one manager's approval, but above that it also needs Finance's
+    approval," and have the system actually enforce that, including:
+    - Skipping approval steps that don't apply (e.g. a small purchase needs no approval at all).
+    - Requiring either "any one approver" or "everyone on a specific list must approve" (e.g. a capital
+      spending committee).
+    - Stopping immediately if anyone rejects, rather than continuing to ask other approvers.
+    - Letting someone cover for an approver who's out of office for a date range, without giving them that
+      person's permissions permanently.
+    - Detecting when an approval has sat too long (a configurable time limit) so it can be escalated — the
+      actual "check this every few minutes automatically" scheduling is not built yet (documented below),
+      but the detection logic itself is built and tested.
+  - **Documented deliberate deviation from the original plan**: the architecture document had said we'd
+    use a third-party workflow engine (Elsa Workflows). Building the actual approval-routing logic
+    ourselves — the same way every other kernel piece so far was built — turned out to be the right call
+    for what's actually needed right now, without pulling in a large framework dependency. This is written
+    down as a reasoned, dated change to that decision (`ARCHITECTURE.md` ADR-6), not a silent contradiction
+    of it — the third-party engine remains an option later if genuinely complex scenarios need it.
+  - Wired it into the real running backend and **re-verified the whole application still works in a
+    browser** after the change (same screenshot-based check as before), not just that it compiles.
+  - 18 new tests, 66 total passing across the whole project.
+- Files touched: `src/Platform/Platform.Core/AttributeConstraints.cs` (shared threshold-checking logic,
+  extracted so Security and Workflow don't each duplicate it), `src/Platform/Platform.Security/AuthorizationService.cs`
+  (refactored to use it), `src/Platform/Platform.Workflow/*` (full new project), `tests/UnitTests/Platform.Workflow.Tests/*`,
+  `src/Gateway/Gateway.Api/Program.cs` and `Controllers/SystemController.cs` (wired in), `ARCHITECTURE.md`
+  (ADR-6 updated), `src/Gateway/Gateway.Api/Program.cs` (HTTPS warning fix)
+- Known gap, disclosed not hidden: no actual background job runs the escalation check automatically yet —
+  that needs a scheduled task in Gateway.Api, planned but not built. No real approval matrix is registered
+  yet either, since no business module (e.g. Procurement) exists yet to own one.
+- Next: continue Phase 0 with `Platform.Events` (cross-module messaging), then `Platform.Audit`, the fuller
+  `Platform.UI` design system, `Platform.Api` conventions, and `Platform.Configuration`.
 
 ### 2026-07-13 — First runnable application: real backend + real frontend, verified in a browser
 - Agent: Claude Sonnet 5

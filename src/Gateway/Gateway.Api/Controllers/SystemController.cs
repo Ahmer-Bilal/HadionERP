@@ -30,7 +30,7 @@ public class SystemController : ControllerBase
             application = "ERP Platform",
             phase = "Phase 0 - Platform Foundation",
             utcNow = DateTimeOffset.UtcNow,
-            kernelServicesWired = new[] { "Platform.Core", "Platform.Security", "Platform.Localization" },
+            kernelServicesWired = new[] { "Platform.Core", "Platform.Security", "Platform.Localization", "Platform.Workflow" },
             supportedLanguages = new[] { "en", "ar" }
         });
     }

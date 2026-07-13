@@ -1,6 +1,8 @@
 using Gateway.Api.Localization;
 using Platform.Localization.Translation;
 using Platform.Security;
+using Platform.Workflow;
+using Platform.Workflow.Delegation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +46,16 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
     return new InMemorySecurityCatalog(new[] { administratorRole }, new[] { manageSecurityDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
+
+// Platform.Workflow: no approval workflows are registered yet because no business module exists yet to
+// own one (e.g. a real "PurchaseOrder.Submit" workflow belongs to Modules.Procurement, not built yet).
+// The engine itself is fully wired so a module's own startup registration just adds definitions to this
+// same catalog when that module is built — nothing here needs to change.
+builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
+    new InMemoryWorkflowDefinitionCatalog(Array.Empty<WorkflowDefinition>()));
+builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
+builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
+builder.Services.AddSingleton<IWorkflowEngine, WorkflowEngine>();
 
 var app = builder.Build();
 
