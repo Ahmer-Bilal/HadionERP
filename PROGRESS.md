@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | In Progress (Platform.Core, Platform.Security done; Localization/Workflow/Events/Audit/UI/Api/Configuration remain) | 2026-07-13 |
+| Phase 0 — Platform Foundation | In Progress (Platform.Core, Platform.Security, Platform.Localization done; Workflow/Events/Audit/UI/Api/Configuration remain) | 2026-07-13 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,43 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-13 — Phase 0: Platform.Localization implemented and tested (Arabic/English, Saudi calendar, e-invoicing)
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation
+- Status: In Progress (Platform.Localization sub-piece Completed; Phase 0 overall is not — see Next)
+- What changed: Built the piece that makes the system genuinely bilingual and Saudi-compliant, not just
+  "English with an Arabic option bolted on." In plain terms:
+  - **Text/translation lookup**: every screen label is resolved by a key (e.g. "Purchase Order Header"),
+    not hardcoded — so a customer can override wording without a developer changing code and redeploying.
+    Falls back sensibly (customer's own wording → standard Arabic/English → a visibly-flagged "missing
+    translation" marker, never a silent blank).
+  - **Arabic/English direction handling**: a single place decides that Arabic reads right-to-left and
+    English left-to-right, so screens flip correctly instead of each screen having its own logic.
+  - **Saudi (Hijri) calendar**: dates convert correctly between the Gregorian calendar (what's always
+    stored internally) and the Hijri calendar (what a user may prefer to see), using the same official
+    Saudi-government calendar table Microsoft ships in .NET — not a hand-built approximation.
+  - **Saudi Riyal number formatting**, correctly ordered for each language (e.g. "SAR 12,500.50" in
+    English vs "12,500.50 ر.س" in Arabic).
+  - **ZATCA-compliant QR codes** for tax invoices (the government e-invoicing requirement) — verified the
+    exact required format against ZATCA's own published specification before writing code, since getting
+    a government compliance format wrong is a real business risk, not just a bug. Handles Arabic company
+    names correctly in the encoding.
+  - **Caught and fixed a mistake mid-build**: initially wrote the Arabic/English currency labels directly
+    into the formatting code, which contradicts the "text isn't hardcoded" rule above — the user asked
+    "do you hardcode Arabic, does SAP do that?" which caught it. Fixed by moving the actual words into a
+    dedicated "defaults" file (mirroring how SAP/Dynamics ship default translations in a text repository,
+    not inside program logic) and having the formatter accept an already-looked-up label instead.
+  - 23 new automated tests, all passing — 46 total across the whole project now.
+  - **Deliberately not built yet**: WPS payroll files and GOSI integration (belong to Payroll, not
+    general localization), ZATCA's more advanced "Phase 2" government-integrated invoicing (needs a live
+    government API connection and real invoices to send), and the actual admin screen a non-developer
+    would use to edit translations (needs the on-screen UI framework, not built yet).
+- Files touched: `src/Platform/Platform.Localization/*.cs` (SupportedLanguage, TextDirection,
+  LocalizationResourceKeys, LocalizationDefaults, Translation/*, Calendar/*, Formatting/*, Zatca/*),
+  `src/Platform/Platform.Localization/README.md`, `tests/UnitTests/Platform.Localization.Tests/*.cs`
+- Next: continue Phase 0 with `Platform.Workflow` (approval routing), then `Platform.Events`,
+  `Platform.Audit`, `Platform.UI`, `Platform.Api`, `Platform.Configuration`.
 
 ### 2026-07-13 — Phase 0: Platform.Security implemented and tested (who's allowed to do what)
 - Agent: Claude Sonnet 5

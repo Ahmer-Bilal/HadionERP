@@ -19,6 +19,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Platform.Security", "src\Pl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Platform.Security.Tests", "tests\UnitTests\Platform.Security.Tests\Platform.Security.Tests.csproj", "{236BC724-FE32-48B9-80D5-09C0986BFFE5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Platform.Localization", "src\Platform\Platform.Localization\Platform.Localization.csproj", "{E288D941-AEDF-4339-A37E-D16CCEE5387C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Platform.Localization.Tests", "tests\UnitTests\Platform.Localization.Tests\Platform.Localization.Tests.csproj", "{3D6092B7-E0FD-45CB-86F2-E037FFEA8C67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +48,14 @@ Global
 		{236BC724-FE32-48B9-80D5-09C0986BFFE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{236BC724-FE32-48B9-80D5-09C0986BFFE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{236BC724-FE32-48B9-80D5-09C0986BFFE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E288D941-AEDF-4339-A37E-D16CCEE5387C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E288D941-AEDF-4339-A37E-D16CCEE5387C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E288D941-AEDF-4339-A37E-D16CCEE5387C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E288D941-AEDF-4339-A37E-D16CCEE5387C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D6092B7-E0FD-45CB-86F2-E037FFEA8C67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D6092B7-E0FD-45CB-86F2-E037FFEA8C67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D6092B7-E0FD-45CB-86F2-E037FFEA8C67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D6092B7-E0FD-45CB-86F2-E037FFEA8C67}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{233429C3-B14A-4C2A-B3EF-E65C8EEB8D95} = {0AF46503-DB3B-4090-9D0D-4CA13E9ECD37}
@@ -52,5 +64,7 @@ Global
 		{D2B1463E-8F26-4933-A68C-ACFFC51C00BB} = {E42834AC-3E49-4525-9850-8995C362CF17}
 		{A5C25CE1-C7A5-40F5-897B-80BADE736D06} = {233429C3-B14A-4C2A-B3EF-E65C8EEB8D95}
 		{236BC724-FE32-48B9-80D5-09C0986BFFE5} = {E42834AC-3E49-4525-9850-8995C362CF17}
+		{E288D941-AEDF-4339-A37E-D16CCEE5387C} = {233429C3-B14A-4C2A-B3EF-E65C8EEB8D95}
+		{3D6092B7-E0FD-45CB-86F2-E037FFEA8C67} = {E42834AC-3E49-4525-9850-8995C362CF17}
 	EndGlobalSection
 EndGlobal
