@@ -52,9 +52,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    // Local development intentionally runs HTTP-only (matches the Vite dev server, also plain HTTP) —
+    // forcing an HTTPS redirect here has no HTTPS endpoint to redirect to and only produces a confusing
+    // startup warning. Real deployments terminate TLS (a load balancer/ingress, or a configured
+    // certificate) and this redirect becomes meaningful again outside Development.
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(appsShellDevCorsPolicy);
-app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
