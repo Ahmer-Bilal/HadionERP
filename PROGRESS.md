@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | In Progress (Platform.Core done; Security/Localization/Workflow/Events/Audit/UI/Api/Configuration remain) | 2026-07-13 |
+| Phase 0 — Platform Foundation | In Progress (Platform.Core, Platform.Security done; Localization/Workflow/Events/Audit/UI/Api/Configuration remain) | 2026-07-13 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,40 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-13 — Phase 0: Platform.Security implemented and tested (who's allowed to do what)
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation
+- Status: In Progress (Platform.Security sub-piece Completed; Phase 0 overall is not — see Next)
+- What changed: Built the permissions engine every module will check before letting a user do anything.
+  In plain terms:
+  - **Roles, Duties, Privileges**: a user is assigned Roles (e.g. "Junior Finance Approver"); a Role is a
+    bundle of Duties (job functions, e.g. "Approve Small Purchase Orders"); a Duty grants specific
+    Privileges (the smallest permission, e.g. "approve a purchase order"). This 3-level structure is what
+    lets amount-based limits work — e.g. one Duty grants "approve up to 50,000 SAR" and another grants
+    "approve any amount," and a user holding either (or both) gets the correct combined limit.
+  - **Segregation of Duties (SoD)**: the system can detect when a user has been given two job functions
+    that shouldn't be combined (e.g. "create a vendor" and "approve payment to a vendor") — a classic
+    fraud-prevention control auditors look for. If a business genuinely needs an exception (common in a
+    small office with too few staff to separate every duty), it can be explicitly granted and is
+    permanently logged with who approved it and why — never silently allowed.
+  - **Row-level security**: restricts which company/branch/project a user can see records for (e.g. a
+    branch accountant only sees their own branch's invoices).
+  - **Field-level masking**: sensitive fields (salary, bank account/IBAN) are automatically hidden from
+    anyone who doesn't specifically hold the permission to view them, showing asterisks instead.
+  - Proved all four pieces with 14 automated tests (all passing) on top of the 9 from Platform.Core — 23
+    total, `dotnet test` green across the whole solution.
+  - **Deliberately not built yet**: the actual login screen/single sign-on and multi-factor authentication.
+    Those require a real identity provider to be stood up (a hosting decision, not a code decision) — this
+    piece decides "what can a user do" once they're already logged in; a later piece will handle "how do
+    they log in."
+- Files touched: `src/Platform/Platform.Security/*.cs` (Privilege, PrivilegeGrant, Duty, Role,
+  SecurityPrincipal, ISecurityCatalog/InMemorySecurityCatalog, IAuthorizationService/AuthorizationService,
+  AuthorizationResult, Sod/*, RowLevel/*, FieldLevel/*), `src/Platform/Platform.Security/README.md`,
+  `tests/UnitTests/Platform.Security.Tests/*.cs`
+- Next: continue Phase 0 with `Platform.Localization` (Arabic/English, Hijri calendar, ZATCA), then
+  `Platform.Workflow`, `Platform.Events`, `Platform.Audit`, `Platform.UI`, `Platform.Api`,
+  `Platform.Configuration` — same "build the reusable piece, prove it with tests" approach as these two.
 
 ### 2026-07-13 — Phase 0: Platform.Core implemented and tested (first working code)
 - Agent: Claude Sonnet 5
