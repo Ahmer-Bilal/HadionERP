@@ -1,6 +1,8 @@
 using Gateway.Api.Events;
 using Gateway.Api.Localization;
 using Platform.Audit;
+using Platform.Configuration;
+using Platform.Configuration.FeatureFlags;
 using Platform.Core;
 using Platform.Events;
 using Platform.Events.Outbox;
@@ -83,6 +85,23 @@ builder.Services.AddSingleton<OutboxRelay>();
 // that module is built.
 builder.Services.AddSingleton<IAuditLog, InMemoryAuditLog>();
 builder.Services.AddSingleton<IAuditRecorder, AuditRecorder>();
+
+// Platform.Configuration: the multi-level override hierarchy (docs/architecture/04-data-and-api.md #3).
+// Two real, permanent settings registered here — a module registers its own the same way when built.
+builder.Services.AddSingleton<IConfigurationCatalog>(_ =>
+{
+    var catalog = new InMemoryConfigurationCatalog();
+    catalog.Register(new ConfigurationKeyDefinition(
+        "Platform.DefaultLanguage", "The language a new session starts in before the user picks one.",
+        new[] { ConfigurationLevel.System, ConfigurationLevel.Tenant }, DefaultValue: "en"));
+    catalog.Register(new ConfigurationKeyDefinition(
+        "Features.VerboseSystemStatus", "Whether /api/v1/system/status includes the detailed events/audit breakdown.",
+        new[] { ConfigurationLevel.System }, DefaultValue: "true"));
+    return catalog;
+});
+builder.Services.AddSingleton<IConfigurationStore, InMemoryConfigurationStore>();
+builder.Services.AddSingleton<IConfigurationResolver, ConfigurationResolver>();
+builder.Services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
 
 var app = builder.Build();
 

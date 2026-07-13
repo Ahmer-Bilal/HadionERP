@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\Platform\Platform.Events\Platform.Events.csproj" />
     <ProjectReference Include="..\..\Platform\Platform.Audit\Platform.Audit.csproj" />
     <ProjectReference Include="..\..\Platform\Platform.Api\Platform.Api.csproj" />
+    <ProjectReference Include="..\..\Platform\Platform.Configuration\Platform.Configuration.csproj" />
   </ItemGroup>
 
 </Project>

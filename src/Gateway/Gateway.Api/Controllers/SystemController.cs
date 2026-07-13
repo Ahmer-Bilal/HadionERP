@@ -2,6 +2,8 @@ using Gateway.Api.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Audit;
 using Platform.Api;
+using Platform.Configuration;
+using Platform.Configuration.FeatureFlags;
 using Platform.Events.Outbox;
 using Platform.Localization;
 using Platform.Localization.Translation;
@@ -20,42 +22,66 @@ public class SystemController : PlatformApiController
     private readonly ITranslationService _translationService;
     private readonly IOutboxStore _outboxStore;
     private readonly IAuditLog _auditLog;
+    private readonly IConfigurationResolver _configurationResolver;
+    private readonly IFeatureFlagService _featureFlagService;
 
-    public SystemController(ITranslationService translationService, IOutboxStore outboxStore, IAuditLog auditLog)
+    public SystemController(
+        ITranslationService translationService,
+        IOutboxStore outboxStore,
+        IAuditLog auditLog,
+        IConfigurationResolver configurationResolver,
+        IFeatureFlagService featureFlagService)
     {
         _translationService = translationService;
         _outboxStore = outboxStore;
         _auditLog = auditLog;
+        _configurationResolver = configurationResolver;
+        _featureFlagService = featureFlagService;
     }
 
     [HttpGet("status")]
     public IActionResult GetStatus()
     {
-        var allMessages = _outboxStore.GetAll();
-        var auditEntries = _auditLog.GetAll();
-        // Re-verify the chain on every status read: if the log were ever tampered with out-of-band, this
-        // is where an operator would see it (chainValid: false). Cheap on an in-memory log; a real
-        // deployment would run this as a periodic background job rather than per-request.
-        var chainValid = _auditLog.VerifyChain() is null;
+        var context = ConfigurationContext.SystemOnly;
+        var defaultLanguage = _configurationResolver.Resolve("Platform.DefaultLanguage", context);
+        var verbose = _featureFlagService.IsEnabled("Features.VerboseSystemStatus", context);
 
-        return Ok(new
+        var payload = new Dictionary<string, object?>
         {
-            application = "ERP Platform",
-            phase = "Phase 0 - Platform Foundation",
-            utcNow = DateTimeOffset.UtcNow,
-            kernelServicesWired = new[] { "Platform.Core", "Platform.Security", "Platform.Localization", "Platform.Workflow", "Platform.Events", "Platform.Audit" },
-            supportedLanguages = new[] { "en", "ar" },
-            eventsOutbox = new
+            ["application"] = "ERP Platform",
+            ["phase"] = "Phase 0 - Platform Foundation",
+            ["utcNow"] = DateTimeOffset.UtcNow,
+            ["kernelServicesWired"] = new[]
+            {
+                "Platform.Core", "Platform.Security", "Platform.Localization", "Platform.Workflow",
+                "Platform.Events", "Platform.Audit", "Platform.UI", "Platform.Api", "Platform.Configuration"
+            },
+            ["supportedLanguages"] = new[] { "en", "ar" },
+            ["configuration"] = new
+            {
+                defaultLanguage,
+                verboseSystemStatusEnabled = verbose
+            }
+        };
+
+        if (verbose)
+        {
+            var allMessages = _outboxStore.GetAll();
+            var auditEntries = _auditLog.GetAll();
+            // Re-verify the chain on every status read: if the log were ever tampered with out-of-band,
+            // this is where an operator would see it (chainValid: false). Cheap on an in-memory log; a
+            // real deployment would run this as a periodic background job rather than per-request.
+            var chainValid = _auditLog.VerifyChain() is null;
+
+            payload["eventsOutbox"] = new
             {
                 published = allMessages.Count(m => m.IsPublished),
                 pending = allMessages.Count(m => !m.IsPublished)
-            },
-            audit = new
-            {
-                entries = auditEntries.Count,
-                chainValid
-            }
-        });
+            };
+            payload["audit"] = new { entries = auditEntries.Count, chainValid };
+        }
+
+        return Ok(payload);
     }
 
     [HttpGet("greeting")]

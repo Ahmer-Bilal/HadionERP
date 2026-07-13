@@ -68,39 +68,50 @@ export function SystemStatusPage({ language }: SystemStatusPageProps) {
                   <dt>{t("status.kernelServicesLabel", language)}</dt>
                   <dd>{status.kernelServicesWired.join(", ")}</dd>
 
+                  <dt>{t("status.defaultLanguageLabel", language)}</dt>
+                  <dd><bdi dir="ltr">{status.configuration.defaultLanguage ?? "—"}</bdi></dd>
+
+                  <dt>{t("status.verboseStatusLabel", language)}</dt>
+                  <dd>{status.configuration.verboseSystemStatusEnabled ? "✓" : "✗"}</dd>
+
                   <dt>/health</dt>
                   <dd>{health}</dd>
                 </dl>
               ),
             },
-            {
-              key: "events-audit",
-              title: t("status.tabEventsAudit", language),
-              defaultExpanded: true,
-              content: (
-                <dl className="status-page__facts">
-                  <dt>{t("status.eventsOutboxLabel", language)}</dt>
-                  {/* A bare "N / M" digit sequence is bidi-neutral — inside an Arabic (RTL) paragraph the
-                      browser visually reorders it. <bdi dir="ltr"> isolates it so it always reads in the
-                      intended published/pending order regardless of the surrounding text direction. */}
-                  <dd>
-                    <bdi dir="ltr">
-                      {status.eventsOutbox.published} / {status.eventsOutbox.pending}
-                    </bdi>
-                  </dd>
+            // Only rendered when the backend's Features.VerboseSystemStatus flag (Platform.Configuration)
+            // is enabled — it genuinely omits eventsOutbox/audit from the response when disabled, this
+            // isn't just a frontend display toggle.
+            ...(status.eventsOutbox && status.audit
+              ? [
+                  {
+                    key: "events-audit",
+                    title: t("status.tabEventsAudit", language),
+                    defaultExpanded: true,
+                    content: (
+                      <dl className="status-page__facts">
+                        <dt>{t("status.eventsOutboxLabel", language)}</dt>
+                        {/* A bare "N / M" digit sequence is bidi-neutral — inside an Arabic (RTL) paragraph
+                            the browser visually reorders it. <bdi dir="ltr"> isolates it so it always reads
+                            in the intended published/pending order regardless of text direction. */}
+                        <dd>
+                          <bdi dir="ltr">
+                            {status.eventsOutbox.published} / {status.eventsOutbox.pending}
+                          </bdi>
+                        </dd>
 
-                  <dt>{t("status.auditLabel", language)}</dt>
-                  <dd>
-                    <bdi dir="ltr">{status.audit.entries}</bdi>{" "}
-                    {/* chainValid is a backend re-verification of the hash chain on every status read; a
-                        broken chain would be a serious integrity signal, so it's surfaced plainly. */}
-                    {status.audit.chainValid
-                      ? `(${t("status.auditChainValid", language)})`
-                      : `(${t("status.auditChainBroken", language)})`}
-                  </dd>
-                </dl>
-              ),
-            },
+                        <dt>{t("status.auditLabel", language)}</dt>
+                        <dd>
+                          <bdi dir="ltr">{status.audit.entries}</bdi>{" "}
+                          {status.audit.chainValid
+                            ? `(${t("status.auditChainValid", language)})`
+                            : `(${t("status.auditChainBroken", language)})`}
+                        </dd>
+                      </dl>
+                    ),
+                  },
+                ]
+              : []),
             {
               key: "localization",
               title: t("status.tabLocalization", language),

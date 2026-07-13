@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | In Progress — application runnable; Platform.Core/Security/Localization/Workflow/Events/Audit/UI/Api done; Configuration remains | 2026-07-13 |
+| Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,63 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Built Platform.Configuration — Phase 0 is now COMPLETE
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation
+- Status: Completed — **this was the last piece of Phase 0; Phase 1 (Master Data + Finance Core, real
+  business modules) starts next.**
+- What changed:
+  - **Independently verified GLM's prior work before building on top of it**: rebuilt and re-ran the whole
+    solution (123 tests passing, matching what was logged), rebuilt the frontend, ran the Arabic guardrail,
+    started both processes and confirmed live in a browser (both languages) — including a specific look at
+    the FastTabs chevron fix and the new ActionPane/FastTabs UI GLM built, not just the text summary.
+    **Found the new Platform.Audit/Platform.UI/Platform.Api work had never actually been committed to
+    git** — all of it was sitting only in the working directory. Committed it (with correct attribution)
+    after verifying it, and added GLM's own tool-metadata folder (`.zcode/`) to `.gitignore`.
+  - **Built Platform.Configuration** — settings that can be changed without a developer touching code, at
+    the right level: some things make sense per-user (e.g. table density), some per-company (e.g. document
+    numbering format), and some for everyone (e.g. the app's default language). One system now handles all
+    of that consistently, with the more specific setting always winning over the general one. The pieces:
+    - The **override hierarchy** (System → Tenant → Company → Branch → User) — resolving a setting walks
+      from most-specific to least-specific, and a setting can only be changed at levels it's explicitly
+      declared to support (you can't accidentally let someone override a company-wide policy per-user if
+      that was never meant to be allowed).
+    - **Feature flags** — not a separate system, just a yes/no setting using the same mechanism above. Used
+      live: `/api/v1/system/status` now genuinely omits its detailed events/audit section when a flag is
+      turned off, proving this isn't just a UI toggle.
+    - A **business rule engine** (decision-table style, e.g. "Saudi purchases get 15% VAT, everything else
+      doesn't") — reuses the same threshold/matching logic already proven in Security's permission grants
+      and Workflow's approval routing, rather than rebuilding it a third time.
+    - **Configuration packages** — export the current settings, compare them against a different
+      environment to see exactly what would change before applying it (so nothing gets silently
+      overwritten when promoting Dev → Test → UAT → Prod), then import. Importing checks the incoming
+      settings actually make sense in the target environment first and refuses otherwise, rather than
+      quietly applying something stale or invalid.
+  - Wired into the real running app: `Platform.DefaultLanguage` and `Features.VerboseSystemStatus` are
+    genuine, permanent settings now, not demo data — confirmed resolving correctly live in both English and
+    Arabic.
+  - 17 new tests, 140 total passing across the whole project.
+- Files touched: `src/Platform/Platform.Configuration/*` (full new project: ConfigurationLevel,
+  ConfigurationContext, ConfigurationKeyDefinition, IConfigurationCatalog/InMemoryConfigurationCatalog,
+  IConfigurationStore/InMemoryConfigurationStore, IConfigurationResolver/ConfigurationResolver,
+  FeatureFlags/*, Rules/*, Packages/*, README.md), `tests/UnitTests/Platform.Configuration.Tests/*`,
+  `src/Gateway/Gateway.Api/Program.cs` (DI + two real settings registered),
+  `src/Gateway/Gateway.Api/Controllers/SystemController.cs` (configuration section, verbose-flag-gated
+  events/audit), `src/Apps/Apps.Shell/src/api/systemApi.ts` (ConfigurationStatus type, optional
+  eventsOutbox/audit), `src/Apps/Apps.Shell/src/pages/SystemStatusPage.tsx` (new fields, conditional tab
+  content), `src/Apps/Apps.Shell/src/i18n/content.ts` (2 new keys), `.gitignore` (`.zcode/`)
+- Known gap, disclosed not hidden: everything here is in-memory (same pattern as every other kernel piece
+  so far) — a real deployment needs a database-backed store/catalog. No admin UI exists yet to actually
+  maintain settings/rules/packages by hand; that needs Phase 0's UI tooling extended further plus a real
+  deployment. No business module has registered its own settings or rules yet, since none exist yet.
+- Next: **Phase 0 is complete.** Phase 1 — Master Data + Finance Core — begins: `Modules.MasterData`
+  (Business Partners, Chart of Accounts, Items, Cost Centers, Tax codes, Number ranges) and
+  `Modules.Finance` (the Universal-Journal-style ledger, Document Splitting, Parallel Ledgers, Controlling
+  objects — see docs/architecture/07-project-accounting-and-financial-architecture.md), plus ZATCA Phase 1
+  e-invoicing live for AR. This is the first phase that builds real, visible business screens rather than
+  platform kernel pieces — per the standing runnable-app rule, expect an actual Business Partner or Chart
+  of Accounts screen in the browser as this phase's checkpoint, not just another system-status field.
 
 ### 2026-07-13 — Built Platform.Api (shared API conventions: base controller, paging, idempotency, error envelope)
 - Agent: ZCode (builtin:zai-coding-plan/GLM-5.2)

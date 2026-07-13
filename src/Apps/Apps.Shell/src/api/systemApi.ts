@@ -11,14 +11,22 @@ export interface AuditStatus {
   chainValid: boolean;
 }
 
+export interface ConfigurationStatus {
+  defaultLanguage: string | null;
+  verboseSystemStatusEnabled: boolean;
+}
+
 export interface SystemStatus {
   application: string;
   phase: string;
   utcNow: string;
   kernelServicesWired: string[];
   supportedLanguages: string[];
-  eventsOutbox: EventsOutboxStatus;
-  audit: AuditStatus;
+  configuration: ConfigurationStatus;
+  // Only present when configuration.verboseSystemStatusEnabled is true — Platform.Configuration's
+  // feature-flag mechanism genuinely gates whether the backend includes these, not just a UI toggle.
+  eventsOutbox?: EventsOutboxStatus;
+  audit?: AuditStatus;
 }
 
 export interface SystemGreeting {

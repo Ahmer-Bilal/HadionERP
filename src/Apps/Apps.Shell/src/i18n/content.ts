@@ -24,6 +24,8 @@ type TranslationKey =
   | "status.tabEventsAudit"
   | "status.tabLocalization"
   | "status.actionRefresh"
+  | "status.defaultLanguageLabel"
+  | "status.verboseStatusLabel"
   | "aria.languageSwitchGroup"
   | "aria.navigationLandmark"
   | "aria.actionToolbar";
@@ -48,6 +50,8 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "status.tabEventsAudit": { en: "Events & audit", ar: "الأحداث والتدقيق" },
   "status.tabLocalization": { en: "Localization", ar: "التوطين" },
   "status.actionRefresh": { en: "Refresh", ar: "تحديث" },
+  "status.defaultLanguageLabel": { en: "Default language", ar: "اللغة الافتراضية" },
+  "status.verboseStatusLabel": { en: "Verbose status", ar: "الحالة التفصيلية" },
   "aria.languageSwitchGroup": { en: "Language", ar: "اللغة" },
   "aria.navigationLandmark": { en: "Main", ar: "الرئيسية" },
   "aria.actionToolbar": { en: "Actions", ar: "إجراءات" },
