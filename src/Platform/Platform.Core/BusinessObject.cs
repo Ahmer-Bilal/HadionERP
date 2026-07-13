@@ -50,6 +50,20 @@ public abstract class BusinessObject : IBusinessObject
     }
 
     /// <summary>
+    /// Reserved for ORM materialization (e.g. Entity Framework Core rehydrating an existing row).
+    /// Application code must never call this — use the (createdBy) constructor to create a new Business
+    /// Object. An ORM constructs an empty instance this way and then sets every property (including
+    /// get-only ones, via their backing field) by reflection, bypassing the (createdBy) constructor's
+    /// "assign a fresh Id, start in Draft" logic entirely, which would otherwise corrupt a record loaded
+    /// back from storage.
+    /// </summary>
+    protected BusinessObject()
+    {
+        CreatedBy = null!;
+        ExtensionFields = null!;
+    }
+
+    /// <summary>
     /// Assigns the document number once (from Platform.Core.NumberRanges.INumberRangeService). Whether
     /// this happens at creation or at Submit is a configuration decision (doc 04 §3), not a kernel one —
     /// this method just enforces "assigned exactly once."

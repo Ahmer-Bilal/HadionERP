@@ -35,3 +35,52 @@
   border-radius: var(--pi-radius-md);
   max-inline-size: 32rem;
 }
+
+/* Business Partners page (Modules.MasterData) — the first real business screen. */
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block-start: var(--pi-space-4);
+}
+
+.bp-table th,
+.bp-table td {
+  text-align: start;
+  padding: var(--pi-space-2) var(--pi-space-3);
+  border-block-end: 1px solid var(--pi-border);
+}
+
+.bp-table__row {
+  cursor: pointer;
+}
+
+.bp-table__row:hover,
+.bp-table__row:focus-visible {
+  background: var(--pi-surface);
+  outline: none;
+}
+
+.bp-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-3);
+  max-inline-size: 28rem;
+}
+
+.bp-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-1);
+  font-size: var(--pi-font-size-sm);
+  color: var(--pi-text-muted);
+}
+
+.bp-form input,
+.bp-form select {
+  font: inherit;
+  padding: var(--pi-space-2);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+}

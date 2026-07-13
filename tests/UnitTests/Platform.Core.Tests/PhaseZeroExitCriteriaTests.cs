@@ -109,6 +109,20 @@ public class PhaseZeroExitCriteriaTests
     }
 
     [Fact]
+    public void Submitted_can_be_rejected_directly_without_a_workflows_InApproval_step()
+    {
+        // Symmetric with the Submitted -> Approve shortcut just below: a BO with no configured workflow
+        // must be reject-able the same direct way it's approve-able. Found missing while building
+        // Modules.MasterData's BusinessPartner (Reject only worked via InApproval).
+        var bo = new DemoBusinessObject("ahmer.bilal", 100m);
+        bo.Transition(BusinessObjectTransition.Submit, "ahmer.bilal");
+
+        bo.Transition(BusinessObjectTransition.Reject, "compliance.officer");
+
+        Assert.Equal(BusinessObjectStatus.Rejected, bo.Status);
+    }
+
+    [Fact]
     public void Business_rule_guard_can_reject_a_structurally_legal_transition()
     {
         var bo = new DemoBusinessObject("ahmer.bilal", 250_000m);

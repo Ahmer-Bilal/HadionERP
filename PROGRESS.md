@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | Not Started | — |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done (real, PostgreSQL-persisted); Chart of Accounts/Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,72 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Phase 1 begins: real PostgreSQL database + first business module (Business Partner)
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: In Progress (Business Partner slice Completed; rest of Phase 1 remains — see Next)
+- What changed:
+  - **Connected the app to a real database for the first time.** Everything built in Phase 0 used
+    temporary in-memory storage on purpose (fine for platform plumbing, since none of that data matters
+    if the app restarts). Real business data — starting with customers and vendors — can't work that way,
+    so this is where PostgreSQL actually gets used. The database password is stored using .NET's own
+    "local secrets" feature, kept completely outside the project folder, so it can never accidentally end
+    up committed to git in a file.
+  - **Built the first real business screen**: Business Partners (customers/vendors) — create one, submit
+    it for approval, approve it, see it in a list, all through the actual browser UI, backed by a real
+    database record that survives closing and reopening the app (proved this specifically: created a
+    record, restarted the backend entirely, confirmed it was still there).
+  - **Independently verified this claim rather than assuming it**: stopped the backend process fully,
+    started it fresh, and re-fetched the record over the real API before considering persistence "proved."
+  - **Found and fixed four real bugs** while building this — the kind that only show up once you're
+    dealing with an actual database instead of temporary memory:
+    1. The foundational "template" every business record is built on (`BusinessObject`) had no way for
+       the database layer to load an *existing* record back correctly — it would have quietly corrupted
+       every record reloaded from storage. Fixed by adding a dedicated loading path, separate from the
+       "create a brand new one" path.
+    2. A gap in the standard approval workflow: a submitted record could be auto-approved without going
+       through a formal review step, but couldn't be auto-*rejected* the same way — an inconsistency.
+       Fixed so both directions work the same way.
+    3. The automatic-numbering system's database table was set up with mismatched column names, which
+       would have silently broken the very first time it ran for real data. A plain in-memory test never
+       would have caught this — only running against the actual database did.
+    4. The most important one: two people editing the same record's contact details at the same time
+       would NOT have been correctly stopped from overwriting each other's changes — the safety check
+       that's supposed to prevent that wasn't actually wired up for anything except status changes. Fixed
+       by using PostgreSQL's own built-in row-versioning instead of a home-grown counter.
+    All four were caught specifically because real database tests were run, not just quick in-memory ones
+    — the same "prove it, don't just claim it" discipline as everywhere else in this project, now paying
+    off against a category of bug that in-memory testing structurally cannot catch.
+  - **Caught my own mistake again while building this**: displaying a business partner's status/type in
+    Arabic initially still showed the raw English backend values ("Approved", "Vendor") since only the
+    field *labels* were translated, not the values themselves. Not hardcoded text, but incomplete
+    localization — fixed before finishing, verified with a fresh screenshot showing "معتمد" / "مورّد" etc.
+  - 17 new backend tests (12 unit + 5 real-database integration), 158 total passing. Frontend Arabic
+    guardrail still green, now also covering the new business screen.
+- Files touched: `src/Modules/Modules.MasterData/{Domain,Application,Infrastructure,Api}/*` (full new
+  module: BusinessPartner, PartnerType, BusinessPartnerService, IBusinessPartnerRepository,
+  MasterDataDbContext, EfBusinessPartnerRepository, EfCoreNumberRangeService,
+  NumberRangeCounterEntity, DesignTimeDbContextFactory, BusinessPartnersController, migrations),
+  `tests/UnitTests/Modules.MasterData.Tests/*`, `tests/IntegrationTests/Modules.MasterData.IntegrationTests/*`,
+  `src/Platform/Platform.Core/BusinessObject.cs` (parameterless ctor for ORM), `src/Platform/Platform.Core/Lifecycle/LifecycleEngine.cs`
+  (Submitted→Reject transition), `tests/UnitTests/Platform.Core.Tests/PhaseZeroExitCriteriaTests.cs` (new
+  test for it), `src/Gateway/Gateway.Api/Program.cs` (DB + DI wiring), `src/Apps/Apps.Shell/src/pages/BusinessPartnersPage.tsx`
+  (new page), `src/Apps/Apps.Shell/src/api/businessPartnerApi.ts` (new), `src/Apps/Apps.Shell/src/App.tsx`
+  (nav entry + simple hash-based page switching), `src/Apps/Apps.Shell/src/App.css`, `src/Apps/Apps.Shell/src/i18n/content.ts`
+  (new keys including status/type value translations), `HOW-TO-RUN.md` (database setup steps),
+  `src/Modules/Modules.MasterData/README.md`
+- Known gap, disclosed not hidden: no real login exists yet, so who created/approved a record is
+  hardcoded (`"system/ui"`) and there's only one hardcoded company (`"C001"`) — real multi-user,
+  multi-company support needs Platform.Security's SSO piece (still deferred, see its README) and a real
+  Company master data entity (not built yet). Docker isn't available on this machine, so the "real
+  database" integration tests run against a second, separate real database instead of an isolated
+  container — documented in Modules.MasterData/README.md. No client-side router exists yet (a simple
+  #anchor + state switch handles the two screens that exist today); revisit once a third navigable screen
+  makes that awkward.
+- Next: continue Phase 1 with Chart of Accounts (next Master Data entity — needed before any GL work can
+  start), then Items, Cost Centers, and Tax codes, before moving on to Modules.Finance itself (the
+  Universal-Journal-style ledger — see docs/architecture/07-project-accounting-and-financial-architecture.md).
 
 ### 2026-07-14 — Built Platform.Configuration — Phase 0 is now COMPLETE
 - Agent: Claude Sonnet 5

@@ -3,18 +3,35 @@ import "./App.css";
 import { ShellBar, NavigationPane } from "@platform/ui";
 import type { LanguageCode, NavModule } from "@platform/ui";
 import { SystemStatusPage } from "./pages/SystemStatusPage";
+import { BusinessPartnersPage } from "./pages/BusinessPartnersPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
 
+// Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
+// navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
+// "extract once a second/third real consumer proves the shape" philosophy applied to components).
+type PageKey = "system-status" | "business-partners";
+
+function currentPageFromHash(): PageKey {
+  return window.location.hash === "#business-partners" ? "business-partners" : "system-status";
+}
+
 function App() {
   const [language, setLanguage] = useState<SupportedLanguageCode>("en");
+  const [page, setPage] = useState<PageKey>(currentPageFromHash);
   const direction = directionFor(language);
 
   useEffect(() => {
     document.documentElement.dir = direction;
     document.documentElement.lang = language;
   }, [direction, language]);
+
+  useEffect(() => {
+    const onHashChange = () => setPage(currentPageFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   // The navigation tree, data-driven per docs/architecture/02-business-object-model.md #3. A new business
   // module adds its own entry here as data — Platform.UI's NavigationPane renders whatever structure it's
@@ -28,7 +45,30 @@ function App() {
           key: "system",
           label: t("nav.system", language),
           items: [
-            { key: "system-status", label: t("nav.systemStatus", language), href: "#system-status", isActive: true },
+            {
+              key: "system-status",
+              label: t("nav.systemStatus", language),
+              href: "#system-status",
+              isActive: page === "system-status",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      key: "master-data",
+      label: t("nav.masterData", language),
+      areas: [
+        {
+          key: "business-partners",
+          label: t("nav.businessPartnersArea", language),
+          items: [
+            {
+              key: "all-business-partners",
+              label: t("nav.allBusinessPartners", language),
+              href: "#business-partners",
+              isActive: page === "business-partners",
+            },
           ],
         },
       ],
@@ -55,7 +95,11 @@ function App() {
           ariaLabel={t("aria.navigationLandmark", language)}
         />
         <main className="app-shell__content">
-          <SystemStatusPage language={language} />
+          {page === "business-partners" ? (
+            <BusinessPartnersPage language={language} />
+          ) : (
+            <SystemStatusPage language={language} />
+          )}
         </main>
       </div>
     </div>

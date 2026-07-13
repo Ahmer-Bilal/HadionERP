@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>cf153051-7eb1-43b0-a5dc-259aa7c4fdd9</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +20,8 @@
     <ProjectReference Include="..\..\Platform\Platform.Audit\Platform.Audit.csproj" />
     <ProjectReference Include="..\..\Platform\Platform.Api\Platform.Api.csproj" />
     <ProjectReference Include="..\..\Platform\Platform.Configuration\Platform.Configuration.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.MasterData\Api\Modules.MasterData.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.MasterData\Infrastructure\Modules.MasterData.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

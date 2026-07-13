@@ -1,9 +1,13 @@
 using Gateway.Api.Events;
 using Gateway.Api.Localization;
+using Microsoft.EntityFrameworkCore;
+using Modules.MasterData.Application;
+using Modules.MasterData.Infrastructure;
 using Platform.Audit;
 using Platform.Configuration;
 using Platform.Configuration.FeatureFlags;
 using Platform.Core;
+using Platform.Core.NumberRanges;
 using Platform.Events;
 using Platform.Events.Outbox;
 using Platform.Localization.Translation;
@@ -102,6 +106,23 @@ builder.Services.AddSingleton<IConfigurationCatalog>(_ =>
 builder.Services.AddSingleton<IConfigurationStore, InMemoryConfigurationStore>();
 builder.Services.AddSingleton<IConfigurationResolver, ConfigurationResolver>();
 builder.Services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
+
+// Modules.MasterData: the first real, persisted business module — Postgres-backed, not in-memory, since
+// real master data can't disappear on a restart the way platform-kernel demo data can.
+// ConnectionStrings:Default comes from .NET User Secrets in Development (never a committed file — see
+// HOW-TO-RUN.md) and would come from a real secret store in production.
+var masterDataConnectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException(
+        "Missing ConnectionStrings:Default. Run `dotnet user-secrets set \"ConnectionStrings:Default\" " +
+        "\"Host=localhost;Port=5432;Database=erp_platform_dev;Username=postgres;Password=...\"` " +
+        "in src/Gateway/Gateway.Api — see HOW-TO-RUN.md.");
+
+builder.Services.AddDbContext<MasterDataDbContext>(options => options.UseNpgsql(masterDataConnectionString));
+builder.Services.AddScoped<IBusinessPartnerRepository, EfBusinessPartnerRepository>();
+builder.Services.AddScoped<BusinessPartnerService>();
+builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
+    sp.GetRequiredService<MasterDataDbContext>(),
+    new[] { new NumberRangeDefinition(BusinessPartnerService.NumberRangeKey, "MD", "BP") }));
 
 var app = builder.Build();
 

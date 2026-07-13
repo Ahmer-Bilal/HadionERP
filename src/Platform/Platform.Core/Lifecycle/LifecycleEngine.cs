@@ -24,9 +24,15 @@ public static class LifecycleEngine
         [(BusinessObjectStatus.Draft, BusinessObjectTransition.Submit)] = BusinessObjectStatus.Submitted,
 
         [(BusinessObjectStatus.Submitted, BusinessObjectTransition.StartApproval)] = BusinessObjectStatus.InApproval,
-        // Not every BO type has a configured workflow — a submitted BO with no workflow attached
-        // goes straight to Approved via the same command a workflow engine would issue.
+        // Not every BO type has a configured workflow — a submitted BO with no workflow attached goes
+        // straight to Approved (or Rejected) via the same commands a workflow engine would issue. These
+        // two shortcuts are deliberately symmetric: a BO that can be auto-approved without a workflow
+        // must equally be rejectable without one (e.g. a synchronous validation rule catching a problem
+        // before any human approver is ever involved) — found missing during Modules.MasterData's
+        // BusinessPartner build, where Reject only worked via InApproval and had no direct-from-Submitted
+        // path, unlike Approve.
         [(BusinessObjectStatus.Submitted, BusinessObjectTransition.Approve)] = BusinessObjectStatus.Approved,
+        [(BusinessObjectStatus.Submitted, BusinessObjectTransition.Reject)] = BusinessObjectStatus.Rejected,
 
         [(BusinessObjectStatus.InApproval, BusinessObjectTransition.Approve)] = BusinessObjectStatus.Approved,
         [(BusinessObjectStatus.InApproval, BusinessObjectTransition.Reject)] = BusinessObjectStatus.Rejected,
