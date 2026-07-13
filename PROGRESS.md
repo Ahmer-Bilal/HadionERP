@@ -40,7 +40,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase | Status | Last Updated |
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
-| Phase 0 — Platform Foundation | In Progress — application runnable; Platform.Core/Security/Localization/Workflow done; Events/Audit/full UI design system/Configuration remain | 2026-07-13 |
+| Phase 0 — Platform Foundation | In Progress — application runnable; Platform.Core/Security/Localization/Workflow/Events done; Audit/full UI design system/Configuration remain | 2026-07-13 |
 | Phase 1 — Master Data + Finance Core | Not Started | — |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
@@ -53,6 +53,50 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-13 — Built Platform.Events (cross-module messaging), closed the frontend translation gap, fixed a display bug
+- Agent: Claude Sonnet 5
+- Phase: Phase 0 — Platform Foundation
+- Status: Completed
+- What changed:
+  - **Built Platform.Events** — how different parts of the system will tell each other "something just
+    happened" without being directly wired together. In plain terms: when Procurement approves a Purchase
+    Order, Finance needs to know about it (to set aside budget) without Procurement's code needing to know
+    Finance exists. This piece is that messaging system:
+    - Events are staged first ("outbox pattern") before being sent out, so nothing is lost even if the
+      messaging system is briefly unavailable — an event sits safely waiting rather than vanishing.
+    - Only registered, named, versioned events can be sent — an ad-hoc, undocumented event can't slip
+      through, which keeps the system's cross-module "contracts" deliberate and traceable.
+    - Proved the entire pipeline (publish → hold safely → deliver → received) works, including inside the
+      actual running application: it now publishes one real "application started" event at boot and logs
+      that it received its own message, visible in the System Status page as a live published/pending count.
+  - **Closed a real gap the user flagged**: after the backend's hardcoded-Arabic safety check was built
+    two sessions ago, the frontend (website) side never got the same protection. The user asked again
+    whether text was still being hardcoded — right to ask, since it hadn't been fixed yet. Built the
+    frontend equivalent (an automated script scanning every frontend file), proved it actually catches a
+    planted violation (twice — once for a normal case, once for text embedded directly in on-screen
+    markup), then removed the test violations. Both the backend and frontend now have their own automated
+    checks; before this, only the backend did.
+  - **Found and fixed a real display bug while re-verifying**, not just re-confirming the change worked:
+    the new published/pending counter displayed backwards in the Arabic view (showing "0 / 1" instead of
+    "1 / 0") — a known quirk where plain numbers inside Arabic (right-to-left) text can get visually
+    reordered by the browser. Fixed by isolating that number sequence so it always displays correctly
+    regardless of language, and confirmed the fix with a new screenshot before moving on.
+  - 13 new backend tests, 79 total passing across the whole project, plus a new, separately-run frontend
+    check (not a counted "test" in the .NET sense, but enforced the same way — see its own README).
+- Files touched: `src/Platform/Platform.Events/*` (full new project: IntegrationEvent, IEventCatalog,
+  IEventBus, Outbox/*, IIntegrationEventPublisher), `tests/UnitTests/Platform.Events.Tests/*`,
+  `src/Gateway/Gateway.Api/Program.cs` and `Controllers/SystemController.cs` and new `Events/GatewayApiEvents.cs`,
+  `src/Apps/Apps.Shell/scripts/check-no-hardcoded-arabic.mjs` (new frontend guardrail),
+  `src/Apps/Apps.Shell/package.json` (new npm script), `src/Apps/Apps.Shell/src/i18n/content.ts` (new
+  label), `src/Apps/Apps.Shell/src/pages/SystemStatusPage.tsx` (new field + bidi display fix),
+  `src/Platform/Platform.Events/README.md`, `src/Apps/Apps.Shell/README.md`
+- Known gap, disclosed not hidden: the outbox relay runs once at startup only — no recurring background
+  job yet (same deferred-scheduler pattern as Platform.Workflow's escalation check). RabbitMQ (the real
+  messaging system per the architecture doc) is still an in-memory stand-in. No business-module events
+  exist yet since no business module exists yet to own one.
+- Next: continue Phase 0 with `Platform.Audit` (permanent, tamper-evident change history), then the fuller
+  `Platform.UI` design system, `Platform.Api` conventions, and `Platform.Configuration`.
 
 ### 2026-07-13 — Fixed a file-lock build error, then built Platform.Workflow (approval routing)
 - Agent: Claude Sonnet 5

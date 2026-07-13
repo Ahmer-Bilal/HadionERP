@@ -15,7 +15,8 @@ type TranslationKey =
   | "status.applicationLabel"
   | "status.phaseLabel"
   | "status.kernelServicesLabel"
-  | "status.greetingHeading";
+  | "status.greetingHeading"
+  | "status.eventsOutboxLabel";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "ERP Platform", ar: "منصة تخطيط الموارد" },
@@ -29,6 +30,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "status.phaseLabel": { en: "Current phase", ar: "المرحلة الحالية" },
   "status.kernelServicesLabel": { en: "Kernel services wired", ar: "خدمات النواة المفعّلة" },
   "status.greetingHeading": { en: "Localization check", ar: "فحص التوطين" },
+  "status.eventsOutboxLabel": { en: "Events published / pending", ar: "الأحداث المنشورة / المعلّقة" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

@@ -55,6 +55,13 @@ export function SystemStatusPage({ language }: SystemStatusPageProps) {
           <dt>{t("status.kernelServicesLabel", language)}</dt>
           <dd>{status.kernelServicesWired.join(", ")}</dd>
 
+          <dt>{t("status.eventsOutboxLabel", language)}</dt>
+          {/* A bare "N / M" digit sequence is bidi-neutral — inside an Arabic (RTL) paragraph the
+              browser visually reorders it, showing "0 / 1" for published=1, pending=0. <bdi dir="ltr">
+              isolates it so it always reads in the intended published/pending order regardless of the
+              surrounding text direction. */}
+          <dd><bdi dir="ltr">{status.eventsOutbox.published} / {status.eventsOutbox.pending}</bdi></dd>
+
           <dt>/health</dt>
           <dd>{health}</dd>
         </dl>

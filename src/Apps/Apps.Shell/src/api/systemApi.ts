@@ -1,12 +1,18 @@
 import { API_BASE_URL } from "../config";
 import type { SupportedLanguageCode } from "../i18n/language";
 
+export interface EventsOutboxStatus {
+  published: number;
+  pending: number;
+}
+
 export interface SystemStatus {
   application: string;
   phase: string;
   utcNow: string;
   kernelServicesWired: string[];
   supportedLanguages: string[];
+  eventsOutbox: EventsOutboxStatus;
 }
 
 export interface SystemGreeting {

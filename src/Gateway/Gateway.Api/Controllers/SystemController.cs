@@ -1,5 +1,6 @@
 using Gateway.Api.Localization;
 using Microsoft.AspNetCore.Mvc;
+using Platform.Events.Outbox;
 using Platform.Localization;
 using Platform.Localization.Translation;
 
@@ -16,22 +17,31 @@ namespace Gateway.Api.Controllers;
 public class SystemController : ControllerBase
 {
     private readonly ITranslationService _translationService;
+    private readonly IOutboxStore _outboxStore;
 
-    public SystemController(ITranslationService translationService)
+    public SystemController(ITranslationService translationService, IOutboxStore outboxStore)
     {
         _translationService = translationService;
+        _outboxStore = outboxStore;
     }
 
     [HttpGet("status")]
     public IActionResult GetStatus()
     {
+        var allMessages = _outboxStore.GetAll();
+
         return Ok(new
         {
             application = "ERP Platform",
             phase = "Phase 0 - Platform Foundation",
             utcNow = DateTimeOffset.UtcNow,
-            kernelServicesWired = new[] { "Platform.Core", "Platform.Security", "Platform.Localization", "Platform.Workflow" },
-            supportedLanguages = new[] { "en", "ar" }
+            kernelServicesWired = new[] { "Platform.Core", "Platform.Security", "Platform.Localization", "Platform.Workflow", "Platform.Events" },
+            supportedLanguages = new[] { "en", "ar" },
+            eventsOutbox = new
+            {
+                published = allMessages.Count(m => m.IsPublished),
+                pending = allMessages.Count(m => !m.IsPublished)
+            }
         });
     }
 

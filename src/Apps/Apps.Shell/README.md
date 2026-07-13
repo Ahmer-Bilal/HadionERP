@@ -23,6 +23,9 @@ Opens on http://localhost:5173 by default. Requires `Gateway.Api` running on htt
 
 Same rule as the backend (see `src/Platform/Platform.Localization/README.md`): no component embeds a
 literal display string. All display text lives in `src/i18n/content.ts` (translatable content) or
-`src/i18n/languageNames.ts` (fixed language autonyms), looked up via `t(key, language)`. Not yet covered
-by an automated test the way the backend is (`tests/ArchitectureTests`) — that guardrail is C#/Roslyn-
-specific; extending an equivalent check to the frontend is a known follow-up, not yet done.
+`src/i18n/languageNames.ts` (fixed language autonyms), looked up via `t(key, language)`.
+
+Enforced automatically: `npm run check:no-hardcoded-arabic` parses every `.ts`/`.tsx` file with the
+TypeScript compiler API and fails if any Arabic-script string/template/JSX-text literal exists outside
+`scripts/check-no-hardcoded-arabic.mjs`'s `ALLOWED_FILES` list. Added 2026-07-13 as the frontend
+equivalent of `tests/ArchitectureTests` (that one is C#/Roslyn-specific and doesn't cover this app).

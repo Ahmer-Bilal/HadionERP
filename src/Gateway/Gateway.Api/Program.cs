@@ -1,4 +1,7 @@
+using Gateway.Api.Events;
 using Gateway.Api.Localization;
+using Platform.Events;
+using Platform.Events.Outbox;
 using Platform.Localization.Translation;
 using Platform.Security;
 using Platform.Workflow;
@@ -57,6 +60,20 @@ builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>()
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
 builder.Services.AddSingleton<IWorkflowEngine, WorkflowEngine>();
 
+// Platform.Events: the outbox + bus pipeline. One real, permanent operational event is registered here
+// (application startup) — this proves the pipeline end-to-end without inventing a fake business-module
+// event; a real module registers its own events into this same catalog when it's built.
+builder.Services.AddSingleton<IEventCatalog>(_ =>
+{
+    var catalog = new InMemoryEventCatalog();
+    catalog.Register(GatewayApiEventTypes.ApplicationStarted, "Raised once when the application finishes starting.");
+    return catalog;
+});
+builder.Services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
+builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+builder.Services.AddSingleton<IIntegrationEventPublisher, IntegrationEventPublisher>();
+builder.Services.AddSingleton<OutboxRelay>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -77,5 +94,28 @@ app.UseCors(appsShellDevCorsPolicy);
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+// Prove the events pipeline works end-to-end at boot: subscribe a logger, publish the one real event
+// this application raises so far, then relay the outbox once. The actual "run the relay every few
+// seconds" scheduler is a hosted background service, not built yet (see Platform.Events/README.md) —
+// this one-time relay at startup is enough to prove enqueue -> outbox -> bus -> subscriber works.
+var eventBus = app.Services.GetRequiredService<IEventBus>();
+var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+eventBus.Subscribe(GatewayApiEventTypes.ApplicationStarted, (integrationEvent, _) =>
+{
+    var payload = integrationEvent.DeserializePayload<ApplicationStartedPayload>();
+    startupLogger.LogInformation(
+        "Received {EventType}: {Application} started at {StartedAtUtc}",
+        integrationEvent.EventType, payload?.Application, payload?.StartedAtUtc);
+    return Task.CompletedTask;
+});
+
+var integrationEventPublisher = app.Services.GetRequiredService<IIntegrationEventPublisher>();
+integrationEventPublisher.Enqueue(IntegrationEvent.Create(
+    GatewayApiEventTypes.ApplicationStarted,
+    new ApplicationStartedPayload("ERP Platform", DateTimeOffset.UtcNow)));
+
+var outboxRelay = app.Services.GetRequiredService<OutboxRelay>();
+await outboxRelay.RelayPendingAsync();
 
 app.Run();
