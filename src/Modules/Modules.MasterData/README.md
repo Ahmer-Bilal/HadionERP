@@ -153,6 +153,30 @@ for real business records that must survive a restart.
   `tsc --noEmit` (both branches type-check fine on their own) or the guardrail script — a reminder that
   "the build passes" and "the feature works" are genuinely different claims.
 
+## What's built (Phase 1, slice 4: Cost Centers)
+
+- **Domain**: `CostCenter` — the "who owns this cost/revenue organizationally" Controlling object every
+  journal line can carry alongside the G/L Account
+  (docs/architecture/07-project-accounting-and-financial-architecture.md #1, #4), and the fourth Phase 1
+  Master Data piece. Mirrors `GLAccount`'s shape, not `Item`'s: unique `CostCenterCode`, bilingual
+  `CostCenterName`/`CostCenterNameArabic`, a self-referencing `ParentCostCenterId` hierarchy (e.g. "Head
+  Office" → "Finance Department"), and `IsPostable` (header vs. leaf) — cost center reporting genuinely
+  needs roll-ups, the same reason the chart of accounts needs one, unlike Item's flat catalog. Same
+  BusinessObject lifecycle, Security/SoD split, and Workflow wiring as the other three master-data slices.
+- **Api**: `CostCentersController` at `api/v1/masterdata/cost-centers` — CRUD + submit/approve/reject, same
+  pattern as `GLAccountsController`.
+- **Frontend**: `CostCentersPage.tsx` — list/create/details, parent-cost-center display, bilingual name
+  field. Got its own nav Area from the start this time (see the earlier nav-restructure entry in
+  PROGRESS.md for why that matters).
+- A `HomePage.tsx` workspace (tiles per Master Data area, live totals + pending-approval counts, click
+  through to the list — the SAP Fiori Launchpad / Dynamics 365 Workspace pattern) now replaces the plain
+  System Status page as the application's default landing screen; System Status stays reachable under
+  Platform Administration for diagnostics. Purely additive frontend work, reusing the existing list
+  endpoints — no new backend endpoint, no Domain/Application/Infrastructure changes.
+- Nothing new broke building this either — followed the exact `GLAccount`/`Item` pattern, and this time the
+  `{page === "cost-centers" ? <CostCentersPage /> : ...}` render branch was added correctly the first time
+  (the Items slice's bug was fresh enough to check for deliberately).
+
 ## Real bugs found and fixed while building this (disclosed, not hidden)
 
 1. **`Platform.Core.BusinessObject` had no parameterless constructor.** Its only constructor always
@@ -210,12 +234,13 @@ proven correct, and both were verified against real PostgreSQL from the start.
 
 ## Deferred (disclosed, not hidden)
 
-- Cost Centers, Tax codes — the rest of Master Data (next slices of Phase 1). Chart of Accounts and Items
-  are now both built (see above).
-- G/L Account has no parent-hierarchy validation against cycles (`AssignParent` accepts any GUID); Item has
-  no UoM master — `UnitOfMeasure` is free text with no conversion factors, and no Item Group/category
-  hierarchy — both revisit once a real second-unit or roll-up-reporting need shows up, same "wait for a
-  real need" reasoning as everywhere else in this module.
+- Tax codes — the last slice of Phase 1 Master Data. Chart of Accounts, Items, and Cost Centers are now
+  all built (see above).
+- G/L Account and Cost Center both have no parent-hierarchy validation against cycles (`AssignParent`
+  accepts any GUID for either); Item has no UoM master — `UnitOfMeasure` is free text with no conversion
+  factors, and no Item Group/category hierarchy — all revisit once a real second-unit, roll-up-reporting,
+  or cycle-prone-editing need shows up, same "wait for a real need" reasoning as everywhere else in this
+  module.
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.

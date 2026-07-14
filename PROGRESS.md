@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner + Chart of Accounts (G/L Account) + Items done; Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner + Chart of Accounts (G/L Account) + Items + Cost Centers done; Tax codes and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,48 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Cost Centers — Phase 1 Master Data
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Built the Cost Centers master-data entity — the "who owns this cost/revenue
+  organizationally" Controlling object every journal line can carry alongside the G/L Account
+  (docs/architecture/07-project-accounting-and-financial-architecture.md #1, #4), and the fourth of the
+  five Phase 1 Master Data pieces (only Tax codes remain). Mirrors `GLAccount`'s shape rather than `Item`'s:
+  unique `CostCenterCode`, bilingual `CostCenterName`/`CostCenterNameArabic`, a self-referencing
+  `ParentCostCenterId` hierarchy (e.g. "Head Office" → "Finance Department"), and `IsPostable`
+  (header/grouping vs. leaf) — cost center reporting genuinely needs roll-ups, the same reason the chart of
+  accounts needs one, unlike Item's deliberately flat catalog. Same BusinessObject lifecycle, Security
+  (Maintainer vs. Approver duties + SoD conflict rule), and Workflow (one-step Any-quorum approval) wiring
+  as every other master-data slice. Wired end-to-end: Domain entity, Application (DTOs, service, repository
+  port, security, workflow config), Infrastructure (EF repo, DbContext mapping with self-ref FK + unique
+  index, migration applied to dev + test), Api controller (CRUD + submit/approve/reject at
+  `api/v1/masterdata/cost-centers`), frontend (API client, page with list/create/details + parent display,
+  its own nav Area from the start this time, i18n keys EN+AR). Verified: 277 tests pass (100 unit incl. 18
+  new Cost Center tests + 20 integration incl. 3 new Cost Center persistence/hierarchy/uniqueness tests
+  against real Postgres), full solution builds clean, frontend typecheck + Arabic guardrail both pass, API
+  exercised live via curl (header/non-postable Head Office + child Finance Department, duplicate-code
+  rejection, list — all correct), and a live Playwright browser pass in both English and Arabic (parent
+  cost center displays correctly, full RTL layout mirroring, own nav Area shows correctly).
+- Nothing new broke — followed the exact `GLAccount` pattern, and the `{page === "cost-centers" ? ... }`
+  render branch (the thing the Items slice forgot) was added correctly the first time.
+- Files touched: `src/Modules/Modules.MasterData/Domain/CostCenter.cs`, `Application/CostCenterDto.cs`,
+  `Application/CostCenterService.cs`, `Application/ICostCenterRepository.cs`,
+  `Application/CostCenterSecurity.cs`, `Application/CostCenterWorkflow.cs`,
+  `Infrastructure/EfCostCenterRepository.cs`, `Infrastructure/MasterDataDbContext.cs` (CostCenter mapping),
+  `Infrastructure/Migrations/20260714152130_AddCostCenter*.cs`, `Api/CostCentersController.cs`,
+  `src/Gateway/Gateway.Api/Program.cs` (DI + security + SoD + workflow + number range),
+  `src/Apps/Apps.Shell/src/api/costCenterApi.ts`, `src/Apps/Apps.Shell/src/pages/CostCentersPage.tsx`,
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (cc.* keys), `src/Apps/Apps.Shell/src/App.tsx` (nav Area +
+  routing), `tests/UnitTests/Modules.MasterData.Tests/CostCenterTests.cs`, `CostCenterServiceTests.cs`,
+  `FakeCostCenterRepository.cs`, `tests/IntegrationTests/Modules.MasterData.IntegrationTests/
+  CostCenterPersistenceTests.cs`, `TestDatabase.cs` (truncate cost_centers),
+  `src/Modules/Modules.MasterData/README.md` (added Cost Centers + Home workspace "What's built" sections,
+  fixed the stale Deferred line).
+- Next: Phase 1's last Master Data slice is Tax codes, then Finance (GL/AP/AR/Cash-Bank). Needs a fresh
+  go-ahead before starting — this closes out the "go ahead, in one go, proceed to another roadmap step too"
+  authorization for this session.
 
 ### 2026-07-14 — Home workspace page replaces plain System Status as the default landing page
 - Agent: Claude Sonnet 5

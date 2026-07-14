@@ -151,7 +151,27 @@ type TranslationKey =
   | "item.fieldUnitOfMeasure"
   | "item.itemTypeStock"
   | "item.itemTypeNonStock"
-  | "item.itemTypeService";
+  | "item.itemTypeService"
+  | "nav.costCentersArea"
+  | "nav.allCostCenters"
+  | "cc.heading"
+  | "cc.newHeading"
+  | "cc.emptyState"
+  | "cc.actionNew"
+  | "cc.actionCreate"
+  | "cc.actionBack"
+  | "cc.actionSubmit"
+  | "cc.actionApprove"
+  | "cc.actionReject"
+  | "cc.columnCode"
+  | "cc.columnName"
+  | "cc.columnStatus"
+  | "cc.fieldCostCenterCode"
+  | "cc.fieldCostCenterName"
+  | "cc.fieldCostCenterNameArabic"
+  | "cc.fieldParentCostCenter"
+  | "cc.fieldIsPostable"
+  | "cc.noParent";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -304,6 +324,26 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "item.itemTypeStock": { en: "Stock", ar: "مخزون" },
   "item.itemTypeNonStock": { en: "Non-Stock", ar: "غير مخزون" },
   "item.itemTypeService": { en: "Service", ar: "خدمة" },
+  "nav.costCentersArea": { en: "Cost Centers", ar: "مراكز التكلفة" },
+  "nav.allCostCenters": { en: "All Cost Centers", ar: "جميع مراكز التكلفة" },
+  "cc.heading": { en: "Cost Centers", ar: "مراكز التكلفة" },
+  "cc.newHeading": { en: "New Cost Center", ar: "مركز تكلفة جديد" },
+  "cc.emptyState": { en: "No cost centers yet.", ar: "لا توجد مراكز تكلفة حتى الآن." },
+  "cc.actionNew": { en: "New", ar: "جديد" },
+  "cc.actionCreate": { en: "Create", ar: "إنشاء" },
+  "cc.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "cc.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "cc.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "cc.actionReject": { en: "Reject", ar: "رفض" },
+  "cc.columnCode": { en: "Code", ar: "الرمز" },
+  "cc.columnName": { en: "Cost Center Name", ar: "اسم مركز التكلفة" },
+  "cc.columnStatus": { en: "Status", ar: "الحالة" },
+  "cc.fieldCostCenterCode": { en: "Cost Center Code", ar: "رمز مركز التكلفة" },
+  "cc.fieldCostCenterName": { en: "Cost Center Name", ar: "اسم مركز التكلفة" },
+  "cc.fieldCostCenterNameArabic": { en: "Cost Center Name (Arabic)", ar: "اسم مركز التكلفة بالعربية" },
+  "cc.fieldParentCostCenter": { en: "Parent Cost Center", ar: "مركز التكلفة الأصلي" },
+  "cc.fieldIsPostable": { en: "Postable", ar: "قابل للترحيل" },
+  "cc.noParent": { en: "— None (top level) —", ar: "— لا يوجد (مستوى أعلى) —" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {
