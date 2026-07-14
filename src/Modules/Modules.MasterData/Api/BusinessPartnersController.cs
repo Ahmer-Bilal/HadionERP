@@ -138,4 +138,23 @@ public sealed class BusinessPartnersController : PlatformApiController
             return ConflictError(ex.Message);
         }
     }
+
+    [HttpPost("{id:guid}/reject")]
+    public async Task<IActionResult> Reject(Guid id, CancellationToken cancellationToken)
+    {
+        const string actor = "system/ui";
+
+        try
+        {
+            return Ok(await _service.RejectAsync(id, actor, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ConflictError(ex.Message);
+        }
+    }
 }

@@ -67,6 +67,20 @@ public sealed class WorkflowInstance
         }
     }
 
+    /// <summary>Reserved for ORM materialization (see the persistence port's implementation) — never call
+    /// from application code; use <see cref="WorkflowEngine.Start"/> to create a new instance. Every
+    /// property/field below is set directly by the ORM via reflection after this runs (the same pattern
+    /// <c>Platform.Core.BusinessObject</c>'s own parameterless constructor uses), including the
+    /// otherwise-`readonly` dictionary fields — EF Core explicitly supports materializing into readonly
+    /// backing fields (see EF Core's "read-only fields" backing-field docs).</summary>
+    private WorkflowInstance()
+    {
+        DefinitionKey = null!;
+        BusinessObjectType = null!;
+        ApplicableSteps = null!;
+        _requiredApproversByStep = null!;
+    }
+
     /// <summary>Required approvers snapshotted for the current step (All-quorum only — empty for Any).</summary>
     public IReadOnlyCollection<string> RequiredApproversForCurrentStep =>
         CurrentStep is { } step && _requiredApproversByStep.TryGetValue(step.StepId, out var required)

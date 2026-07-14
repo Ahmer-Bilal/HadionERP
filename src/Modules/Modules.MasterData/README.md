@@ -27,10 +27,22 @@ for real business records that must survive a restart.
   object), `IBusinessPartnerRepository` (the persistence port). Calls `Platform.Audit`'s `IAuditRecorder`
   at every audit-relevant point — `RecordCreate` on create, `RecordFieldUpdate` on each address/contact
   added (`FieldName` "Addresses"/"Contacts", `NewValueJson` the serialized child, `OldValueJson` null since
-  there's nothing to diff against for an append), `RecordStatusTransition` on Submit/Approve. This is
+  there's nothing to diff against for an append), `RecordStatusTransition` on Submit/Approve/Reject. This is
   consuming the platform service, not reimplementing it (CLAUDE.md's "audit ... as platform services
   consumed from `src/Platform/*`") — the actual capture/hash-chaining logic lives entirely in
   `Platform.Audit`; this layer only decides *when* to call it.
+  - **`Platform.Workflow` is wired the same way.** `BusinessPartnerWorkflow.SubmitApprovalDefinition`
+    (one Any-quorum step, role `MasterData.ApproveBusinessPartner`) is this module's own registered
+    approval matrix. `SubmitAsync` starts a workflow instance instead of approving directly;
+    `ApproveAsync`/`RejectAsync` now *decide* the pending instance (`IWorkflowEngine.Decide`) and only
+    apply `BusinessPartner`'s own Approved/Rejected transition once the workflow itself reaches that final
+    state — a submitted partner genuinely waits on a real approval gate now, not an unconditional call.
+    Added a `RejectAsync`/`POST .../{id}/reject` that didn't exist before this (Reject was reachable on the
+    Domain object since Phase 1 but had no service method or endpoint — an existing gap this work also
+    closed, not a new feature invented for its own sake, since a workflow's Reject decision needs
+    somewhere to land). **Disclosed shim**: `ActingPrincipal(actor)` grants the acting user the approver
+    role unconditionally, because there is no real user/role-assignment store yet — see `Platform.Security`
+    in Deferred below, the very next slice, which replaces this.
 - **Infrastructure**: `MasterDataDbContext` (EF Core, Postgres, its own `masterdata` schema — physically
   enforcing the module-boundary rule at the database level), `EfBusinessPartnerRepository`,
   `EfCoreNumberRangeService` (a real, atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`
@@ -38,9 +50,16 @@ for real business records that must survive a restart.
   document numbers). Addresses/Contacts are mapped as owned child tables
   (`business_partner_addresses`/`business_partner_contacts`) via their private backing fields, cascade
   deleted with the parent.
+  - **`EfWorkflowInstanceRepository`** implements `Platform.Workflow.IWorkflowInstanceRepository` — the
+    first real persistence for `WorkflowInstance` anywhere in the codebase (previously only proven
+    in-memory by `Platform.Workflow.Tests`; a running approval needs to survive between separate HTTP
+    requests). Mapped into its own `workflow_instances` table with `ApplicableSteps`/history/approver-set
+    fields stored as `jsonb` (same choice as `ExtensionFields`), each with an explicit `ValueComparer` —
+    see bug 7 below for why that matters here specifically.
 - **Api**: `BusinessPartnersController` (inherits `Platform.Api.PlatformApiController`) at
   `api/v1/masterdata/business-partners`, with `POST .../{id}/addresses` and `POST .../{id}/contacts` to
-  append a child (there is no update/remove endpoint yet — see Deferred).
+  append a child (there is no update/remove endpoint yet — see Deferred), and `POST .../{id}/reject`
+  alongside the existing `.../submit`/`.../approve`.
 - **Frontend**: `src/Apps/Apps.Shell/src/pages/BusinessPartnersPage.tsx` — the first real business screen
   (List + create/details), using `Platform.UI`'s `ActionPane`/`FastTabs`. The details view has separate
   Addresses/Contacts FastTabs, each showing the existing rows plus an inline add form. Not using a shared
@@ -84,6 +103,16 @@ the intended lesson for this module going forward.
    `[assembly: CollectionBehavior(DisableTestParallelization = true)]` in `TestDatabase.cs` — the tests
    weren't flaky, the isolation assumption was wrong for a suite sharing one physical database instead of
    one container per test.
+7. **A mutated `WorkflowInstance` almost wouldn't have persisted its own decision.** `Decide()` mutates its
+   history/approved-by-step collections *in place* (the same list/dictionary instance, not a replacement)
+   — EF Core's default reference-equality comparer for value-converted reference types can't detect that
+   as a change, so a load → `Decide()` → `SaveChanges()` unit of work could silently write nothing back.
+   Fixed by giving each jsonb-converted property an explicit `ValueComparer` that compares by serialized
+   value, not reference — and specifically proved this with an integration test that decides an instance
+   in one `DbContext`, then reloads through a completely fresh one to confirm the decision actually landed
+   (the general "prove persistence across a fresh DbContext" pattern this module already uses, applied to
+   the one scenario — mutation, not just insert — that could have hidden this bug from a less deliberate
+   test).
 
 ## Deferred (disclosed, not hidden)
 
@@ -91,10 +120,10 @@ the intended lesson for this module going forward.
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.
-- `Platform.Workflow` and `Platform.Security` are still NOT wired into this module — Submit/Approve call
-  the Domain object's lifecycle transitions directly rather than going through the configurable workflow
-  engine, and `BusinessPartnersController` has no permission checks gating any endpoint. `Platform.Audit`
-  is wired (this entry); those two are the next slice.
+- `Platform.Security` is still NOT wired into this module — `BusinessPartnersController` has no permission
+  checks gating any endpoint, and `BusinessPartnerService`'s `ActingPrincipal` shim grants the workflow
+  approver role to whichever actor string is passed rather than checking a real role assignment.
+  `Platform.Audit` and `Platform.Workflow` are both wired (see above); Security is the next slice.
 - Real authentication/company-context: `BusinessPartnersController` currently hardcodes
   `actor = "system/ui"` and `companyId = "C001"` since no real SSO or company-selection UI exists yet —
   see `Program.cs`. This also means every audit entry for Business Partner is currently attributed to

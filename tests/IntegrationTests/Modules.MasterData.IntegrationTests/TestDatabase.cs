@@ -43,5 +43,6 @@ internal static class TestDatabase
         await using var context = CreateContext();
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.business_partners CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.number_range_counters");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.workflow_instances");
     }
 }

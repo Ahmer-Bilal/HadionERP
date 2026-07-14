@@ -2,6 +2,8 @@ using Modules.MasterData.Application;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
+using Platform.Workflow;
+using Platform.Workflow.Delegation;
 
 namespace Modules.MasterData.Tests;
 
@@ -10,9 +12,18 @@ public class BusinessPartnerServiceTests
     private static readonly int CurrentYear = DateTimeOffset.UtcNow.Year;
 
     private static BusinessPartnerService BuildService(out FakeBusinessPartnerRepository repository) =>
-        BuildService(out repository, out _);
+        BuildService(out repository, out _, out _);
 
-    private static BusinessPartnerService BuildService(out FakeBusinessPartnerRepository repository, out IAuditLog auditLog)
+    private static BusinessPartnerService BuildService(out FakeBusinessPartnerRepository repository, out IAuditLog auditLog) =>
+        BuildService(out repository, out auditLog, out _);
+
+    /// <summary>Wires the REAL Platform.Workflow engine (only its own in-memory reference
+    /// implementations, already proven by Platform.Workflow.Tests) with
+    /// <see cref="Modules.MasterData.Application.BusinessPartnerWorkflow.SubmitApprovalDefinition"/>
+    /// registered — the same definition Gateway.Api registers at startup — so these tests exercise the
+    /// real routing/eligibility logic, not a stub that always says "approved."</summary>
+    private static BusinessPartnerService BuildService(
+        out FakeBusinessPartnerRepository repository, out IAuditLog auditLog, out FakeWorkflowInstanceRepository workflowInstances)
     {
         repository = new FakeBusinessPartnerRepository();
         var numberRanges = new InMemoryNumberRangeService(new[]
@@ -20,7 +31,13 @@ public class BusinessPartnerServiceTests
             new NumberRangeDefinition(BusinessPartnerService.NumberRangeKey, "MD", "BP")
         });
         auditLog = new InMemoryAuditLog();
-        return new BusinessPartnerService(repository, numberRanges, new AuditRecorder(auditLog));
+        workflowInstances = new FakeWorkflowInstanceRepository();
+
+        var workflowCatalog = new InMemoryWorkflowDefinitionCatalog(new[] { BusinessPartnerWorkflow.SubmitApprovalDefinition });
+        var eligibilityService = new RoleBasedWorkflowEligibilityService(new InMemoryDelegationRegistry());
+        var workflowEngine = new WorkflowEngine(workflowCatalog, eligibilityService);
+
+        return new BusinessPartnerService(repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances);
     }
 
     private static CreateBusinessPartnerRequest ValidRequest(string partnerType = "Vendor") =>
@@ -193,6 +210,67 @@ public class BusinessPartnerServiceTests
         Assert.Equal("\"Submitted\"", transitions[0].FieldValueChanges.Single().NewValueJson);
         Assert.Equal("finance.manager", transitions[1].ActorPrincipalKey);
         Assert.Equal("\"Approved\"", transitions[1].FieldValueChanges.Single().NewValueJson);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_starts_a_running_workflow_instance_and_leaves_the_partner_Submitted()
+    {
+        var service = BuildService(out _, out _, out var workflowInstances);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        var submitted = await service.SubmitAsync(created.Id, "ahmer.bilal");
+
+        Assert.Equal("Submitted", submitted.Status);
+        var instance = await workflowInstances.GetActiveAsync("BusinessPartner", created.Id);
+        Assert.NotNull(instance);
+        Assert.Equal(WorkflowInstanceStatus.Running, instance!.Status);
+        Assert.Equal(BusinessPartnerWorkflow.SubmitApprovalDefinition.DefinitionKey, instance.DefinitionKey);
+    }
+
+    [Fact]
+    public async Task ApproveAsync_decides_the_pending_workflow_instance_and_completes_it()
+    {
+        var service = BuildService(out _, out _, out var workflowInstances);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+
+        var approved = await service.ApproveAsync(created.Id, "finance.manager");
+
+        Assert.Equal("Approved", approved.Status);
+        Assert.Null(await workflowInstances.GetActiveAsync("BusinessPartner", created.Id));
+    }
+
+    [Fact]
+    public async Task RejectAsync_decides_the_pending_workflow_instance_and_rejects_the_partner()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+
+        var rejected = await service.RejectAsync(created.Id, "compliance.officer");
+
+        Assert.Equal("Rejected", rejected.Status);
+    }
+
+    [Fact]
+    public async Task ApproveAsync_throws_when_there_is_no_pending_approval_to_decide()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        // Never submitted — nothing started a workflow instance for this partner.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApproveAsync(created.Id, "finance.manager"));
+    }
+
+    [Fact]
+    public async Task ApproveAsync_throws_when_the_pending_approval_was_already_decided()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+        await service.ApproveAsync(created.Id, "finance.manager");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApproveAsync(created.Id, "finance.manager"));
     }
 
     [Fact]

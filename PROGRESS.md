@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts and real Platform.Audit wiring; Platform.Workflow/Security wiring, Attachments/Notes, bilingual names, and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts, real Platform.Audit + Platform.Workflow wiring; Platform.Security wiring, Attachments/Notes, bilingual names, and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,73 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Business Partner: Platform.Workflow wired in (second of Audit/Workflow/Security gap-fix pass)
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed (this slice; Security wiring for this same module is the last one remaining — see Next)
+- What changed:
+  - **Wired `Platform.Workflow` into `BusinessPartnerService`** — Submit/Approve used to call the Domain
+    object's lifecycle transitions directly, completely bypassing the configurable approval-routing engine
+    the kernel already had built and tested since Phase 0. Now: `SubmitAsync` starts a real workflow
+    instance (`BusinessPartnerWorkflow.SubmitApprovalDefinition` — one Any-quorum step requiring role
+    `MasterData.ApproveBusinessPartner`, this module's own registered approval matrix, the same
+    "attached via configuration, not code" pattern the architecture calls for); `ApproveAsync`/`RejectAsync`
+    now *decide* that pending instance and only apply the partner's own Approved/Rejected transition once
+    the workflow itself reaches that final state. A submitted Business Partner genuinely waits on a real
+    approval gate now — trying to approve twice, or approving one that was never submitted, is correctly
+    rejected (409/500 depending on the case), which is new, correct behavior a direct unconditional
+    transition could never have provided.
+  - Added a `RejectAsync` service method and `POST .../{id}/reject` endpoint that plainly didn't exist
+    before — `BusinessPartner.Reject()` has existed on the Domain object since the original Phase 1 slice,
+    but nothing ever called it through the API. This was an existing, disclosed gap surfaced while wiring
+    Workflow (a workflow's Reject decision needs somewhere real to land), not scope creep.
+  - **Built real, durable persistence for `WorkflowInstance`** — it didn't exist anywhere before this
+    (only proven in-memory by `Platform.Workflow.Tests`), and a real approval can span separate HTTP
+    requests (submit today, decide days later), so it has to survive between them. Added
+    `Platform.Workflow.IWorkflowInstanceRepository` (a storage-agnostic kernel port, same pattern as
+    `Platform.Core.NumberRanges.INumberRangeService`) and its first implementation,
+    `Modules.MasterData.Infrastructure.EfWorkflowInstanceRepository`, backed by a new `workflow_instances`
+    Postgres table (new migration, applied to both dev and test databases). Gave `WorkflowInstance` a
+    private parameterless constructor for ORM materialization, mirroring `Platform.Core.BusinessObject`'s
+    own pattern from the very first Phase 1 slice.
+  - **Found and fixed one real, subtle bug** while proving this persistence layer (disclosed in full in
+    `Modules.MasterData/README.md`): `WorkflowInstance.Decide()` mutates its history/approved-by-step
+    collections *in place*, and EF Core's default reference-equality comparer for value-converted
+    reference-type properties can't detect an in-place mutation as a change — a load → decide → save unit
+    of work could have silently written nothing back to the database. Fixed with an explicit `ValueComparer`
+    per jsonb-converted property, and specifically wrote an integration test that decides an instance in
+    one `DbContext` and reloads through a completely fresh one to prove the decision actually persisted —
+    the one scenario (mutation, not just insert) that could have hidden this bug.
+  - **Disclosed, temporary shim**: real user authentication/role-assignment doesn't exist yet (same
+    "`actor = system/ui`" placeholder used everywhere in this module), so there is no real principal to
+    check workflow eligibility against. `BusinessPartnerService.ActingPrincipal(actor)` grants the acting
+    user the approver role unconditionally rather than looking it up from a real store — exactly what the
+    next slice (wiring `Platform.Security` into this same module) replaces.
+  - **Verified live**: full solution builds with 0 errors, every test project passes (28 unit +
+    8 integration against real PostgreSQL, including 3 new tests specifically proving `WorkflowInstance`
+    round-trips and survives a real mutate-then-reload), then started the real backend and exercised the
+    actual HTTP API end-to-end — submit (partner correctly stays Submitted, not auto-approved), approve
+    (workflow instance resolves, partner becomes Approved), approve again on an already-decided partner
+    (correctly rejected, 409), and a separate partner through submit → reject (partner becomes Rejected).
+    Confirmed the real `workflow_instances` table in Postgres holds exactly the expected Approved/Rejected
+    rows. Also exercised the Submit → Approve flow live in a real browser through the existing frontend
+    (no frontend changes were needed — the API shape didn't change) and confirmed no console errors.
+- Files touched: `src/Platform/Platform.Workflow/{WorkflowInstance,IWorkflowInstanceRepository,README}`,
+  `src/Modules/Modules.MasterData/Application/{BusinessPartnerService,BusinessPartnerWorkflow,
+  Modules.MasterData.Application.csproj}`, `src/Modules/Modules.MasterData/Infrastructure/
+  {MasterDataDbContext,EfWorkflowInstanceRepository,Modules.MasterData.Infrastructure.csproj}`,
+  `src/Modules/Modules.MasterData/Infrastructure/Migrations/*AddWorkflowInstances*` (new),
+  `src/Modules/Modules.MasterData/Api/BusinessPartnersController.cs`,
+  `src/Gateway/Gateway.Api/Program.cs`, `tests/UnitTests/Modules.MasterData.Tests/
+  {BusinessPartnerServiceTests,FakeWorkflowInstanceRepository,Modules.MasterData.Tests.csproj}`,
+  `tests/IntegrationTests/Modules.MasterData.IntegrationTests/{WorkflowInstancePersistenceTests,
+  TestDatabase}.cs`, `src/Modules/Modules.MasterData/README.md`
+- Next: Wire `Platform.Security` permission checks into `BusinessPartnersController` (currently has no
+  authorization gating any endpoint) and replace `BusinessPartnerService.ActingPrincipal`'s temporary
+  unconditional-role shim with a real principal/role lookup. After that: Attachments and Notes into
+  `Platform.Core` (never built at all), then bilingual (Arabic + English) name fields on `BusinessPartner`.
+  Only after those does Phase 1 continue to Chart of Accounts/Items/Cost Centers/Tax codes and Finance.
 
 ### 2026-07-14 — Business Partner: Platform.Audit wired in (first of Audit/Workflow/Security gap-fix pass)
 - Agent: Claude Sonnet 5

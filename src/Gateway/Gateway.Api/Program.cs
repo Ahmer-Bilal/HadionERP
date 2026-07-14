@@ -58,12 +58,11 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
-// Platform.Workflow: no approval workflows are registered yet because no business module exists yet to
-// own one (e.g. a real "PurchaseOrder.Submit" workflow belongs to Modules.Procurement, not built yet).
-// The engine itself is fully wired so a module's own startup registration just adds definitions to this
-// same catalog when that module is built — nothing here needs to change.
+// Platform.Workflow: one real approval workflow is registered — Modules.MasterData's Business Partner
+// onboarding approval (BusinessPartnerWorkflow.SubmitApprovalDefinition). A future module registers its
+// own definitions into this same catalog when it's built — nothing here needs to change.
 builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
-    new InMemoryWorkflowDefinitionCatalog(Array.Empty<WorkflowDefinition>()));
+    new InMemoryWorkflowDefinitionCatalog(new[] { BusinessPartnerWorkflow.SubmitApprovalDefinition }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
 builder.Services.AddSingleton<IWorkflowEngine, WorkflowEngine>();
@@ -119,6 +118,7 @@ var masterDataConnectionString = builder.Configuration.GetConnectionString("Defa
 
 builder.Services.AddDbContext<MasterDataDbContext>(options => options.UseNpgsql(masterDataConnectionString));
 builder.Services.AddScoped<IBusinessPartnerRepository, EfBusinessPartnerRepository>();
+builder.Services.AddScoped<IWorkflowInstanceRepository, EfWorkflowInstanceRepository>();
 builder.Services.AddScoped<BusinessPartnerService>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),

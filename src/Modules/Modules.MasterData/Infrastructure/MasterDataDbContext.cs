@@ -1,6 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Modules.MasterData.Domain;
 using Platform.Core;
+using Platform.Workflow;
 
 namespace Modules.MasterData.Infrastructure;
 
@@ -13,6 +16,11 @@ public sealed class MasterDataDbContext : DbContext
 {
     public DbSet<BusinessPartner> BusinessPartners => Set<BusinessPartner>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
+    // WorkflowInstance is a Platform.Workflow kernel type, not this module's own — persisted here because
+    // Platform.Workflow itself stays storage-agnostic (see IWorkflowInstanceRepository's doc comment) and
+    // this is the only module with a real database so far. A running approval can span separate HTTP
+    // requests (submit today, decision days later), so it must survive here, not stay in memory.
+    public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
 
     public MasterDataDbContext(DbContextOptions<MasterDataDbContext> options) : base(options)
     {
@@ -107,6 +115,61 @@ public sealed class MasterDataDbContext : DbContext
             entity.Property<Guid>("BusinessPartnerId").HasColumnName("business_partner_id");
         });
 
+        modelBuilder.Entity<WorkflowInstance>(entity =>
+        {
+            entity.ToTable("workflow_instances");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.DefinitionKey).HasColumnName("definition_key").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.BusinessObjectId).HasColumnName("business_object_id");
+            entity.Property(e => e.BusinessObjectType).HasColumnName("business_object_type").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.CurrentStepIndex).HasColumnName("current_step_index");
+            entity.Property(e => e.CurrentStepStartedAt).HasColumnName("current_step_started_at");
+
+            // ApplicableSteps/History/the two approver dictionaries have no natural relational shape worth
+            // a real child table for (they're read as a whole, on the one instance that's currently
+            // active, never queried across instances) — stored as jsonb, the same choice already made for
+            // BusinessPartner.ExtensionFields. Each gets an explicit ValueComparer (unlike ExtensionFields)
+            // because WorkflowInstance mutates these IN PLACE across a load -> Decide() -> SaveChanges
+            // unit of work — without one, EF's default reference-equality comparer for converted
+            // reference types can't tell a mutated collection changed, and would silently skip writing a
+            // real approval decision back to the database.
+            entity.Property(e => e.ApplicableSteps)
+                .HasColumnName("applicable_steps")
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    steps => ToJson(steps),
+                    json => (IReadOnlyList<WorkflowStepDefinition>)FromJson<List<WorkflowStepDefinition>>(json))
+                .Metadata.SetValueComparer(ApplicableStepsComparer);
+
+            entity.Property<List<WorkflowStepDecisionRecord>>("_history")
+                .HasColumnName("history")
+                .HasColumnType("jsonb")
+                .HasConversion(history => ToJson(history), json => FromJson<List<WorkflowStepDecisionRecord>>(json))
+                .Metadata.SetValueComparer(HistoryComparer);
+
+            entity.Property<Dictionary<string, HashSet<string>>>("_approvedByStep")
+                .HasColumnName("approved_by_step")
+                .HasColumnType("jsonb")
+                .HasConversion(dict => ToJson(dict), json => FromJson<Dictionary<string, HashSet<string>>>(json))
+                .Metadata.SetValueComparer(StringSetDictionaryComparer);
+
+            entity.Property<Dictionary<string, HashSet<string>>>("_requiredApproversByStep")
+                .HasColumnName("required_approvers_by_step")
+                .HasColumnType("jsonb")
+                .HasConversion(dict => ToJson(dict), json => FromJson<Dictionary<string, HashSet<string>>>(json))
+                .Metadata.SetValueComparer(StringSetDictionaryComparer);
+
+            // Transient/computed — never persisted: DomainEvents (drained after save, same as
+            // BusinessObject's), and CurrentStep/RequiredApproversForCurrentStep/History, which are all
+            // derived from the fields/properties already mapped above.
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.CurrentStep);
+            entity.Ignore(e => e.RequiredApproversForCurrentStep);
+            entity.Ignore(e => e.History);
+        });
+
         modelBuilder.Entity<NumberRangeCounterEntity>(entity =>
         {
             entity.ToTable("number_range_counters");
@@ -122,4 +185,25 @@ public sealed class MasterDataDbContext : DbContext
             entity.Property(e => e.LastSequence).HasColumnName("last_sequence");
         });
     }
+
+    // WorkflowInstance's jsonb conversions (see OnModelCreating above) — a bare JsonSerializer call,
+    // reused four times, not a speculative abstraction over something that might vary later.
+    private static string ToJson<T>(T value) => JsonSerializer.Serialize(value);
+
+    private static T FromJson<T>(string json) where T : new() => JsonSerializer.Deserialize<T>(json) ?? new T();
+
+    private static readonly ValueComparer<IReadOnlyList<WorkflowStepDefinition>> ApplicableStepsComparer = new(
+        (a, b) => ToJson(a) == ToJson(b),
+        v => ToJson(v).GetHashCode(),
+        v => FromJson<List<WorkflowStepDefinition>>(ToJson(v)));
+
+    private static readonly ValueComparer<List<WorkflowStepDecisionRecord>> HistoryComparer = new(
+        (a, b) => ToJson(a) == ToJson(b),
+        v => ToJson(v).GetHashCode(),
+        v => FromJson<List<WorkflowStepDecisionRecord>>(ToJson(v)));
+
+    private static readonly ValueComparer<Dictionary<string, HashSet<string>>> StringSetDictionaryComparer = new(
+        (a, b) => ToJson(a) == ToJson(b),
+        v => ToJson(v).GetHashCode(),
+        v => FromJson<Dictionary<string, HashSet<string>>>(ToJson(v)));
 }

@@ -3,6 +3,8 @@ using Modules.MasterData.Domain;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
+using Platform.Security;
+using Platform.Workflow;
 
 namespace Modules.MasterData.Application;
 
@@ -10,10 +12,11 @@ namespace Modules.MasterData.Application;
 /// Orchestrates Business Partner use cases — validates input, drives the Domain object, and persists
 /// through the repository port. No business rules live here (those belong on
 /// <see cref="BusinessPartner"/> itself, per docs/architecture/01-architecture-foundation.md #1); this
-/// layer only coordinates. Audit is likewise a platform service, not module logic (CLAUDE.md /
-/// docs/architecture/03-platform-services.md #5) — this layer only calls <see cref="IAuditRecorder"/> at
-/// the points a real auditor would care about (created, address/contact added, status transitions), the
-/// actual capture/hash-chaining lives entirely in Platform.Audit.
+/// layer only coordinates. Audit and Workflow are likewise platform services, not module logic (CLAUDE.md /
+/// docs/architecture/03-platform-services.md #4-5) — this layer only calls
+/// <see cref="Platform.Audit.IAuditRecorder"/> and <see cref="Platform.Workflow.IWorkflowEngine"/> at the
+/// points a real business process cares about; the actual capture/hash-chaining/approval-routing logic
+/// lives entirely in those platform projects.
 /// </summary>
 public sealed class BusinessPartnerService
 {
@@ -27,15 +30,21 @@ public sealed class BusinessPartnerService
     private readonly IBusinessPartnerRepository _repository;
     private readonly INumberRangeService _numberRangeService;
     private readonly IAuditRecorder _auditRecorder;
+    private readonly IWorkflowEngine _workflowEngine;
+    private readonly IWorkflowInstanceRepository _workflowInstanceRepository;
 
     public BusinessPartnerService(
         IBusinessPartnerRepository repository,
         INumberRangeService numberRangeService,
-        IAuditRecorder auditRecorder)
+        IAuditRecorder auditRecorder,
+        IWorkflowEngine workflowEngine,
+        IWorkflowInstanceRepository workflowInstanceRepository)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
         _auditRecorder = auditRecorder;
+        _workflowEngine = workflowEngine;
+        _workflowInstanceRepository = workflowInstanceRepository;
     }
 
     public async Task<BusinessPartnerDto> CreateAsync(
@@ -132,6 +141,17 @@ public sealed class BusinessPartnerService
         return ToDto(partner);
     }
 
+    /// <summary>
+    /// Moves the partner to Submitted, then starts (or resolves) its onboarding approval workflow —
+    /// replacing what used to be a direct, unconditional path to Approved. Three outcomes, matching
+    /// <see cref="IWorkflowEngine.Start"/>'s documented contract:
+    /// (1) no workflow configured at all (<c>Start</c> returns null) — proceed as already approved;
+    /// (2) a workflow is configured but no step applies to this resource context (zero
+    ///     <see cref="WorkflowInstance.ApplicableSteps"/>) — the instance auto-completes as Approved, so
+    ///     approve the partner immediately, same net effect as (1);
+    /// (3) a real step applies — persist the Running instance and leave the partner Submitted until a
+    ///     real decision resolves it via <see cref="ApproveAsync"/>/<see cref="RejectAsync"/>.
+    /// </summary>
     public async Task<BusinessPartnerDto> SubmitAsync(Guid id, string actor, CancellationToken cancellationToken = default)
     {
         var partner = await RequirePartnerAsync(id, cancellationToken);
@@ -147,12 +167,67 @@ public sealed class BusinessPartnerService
             JsonSerializer.Serialize(partner.Status.ToString()),
             AuditSource);
 
+        var instance = _workflowEngine.Start(BusinessPartnerWorkflow.BusinessObjectType, BusinessPartnerWorkflow.SubmitTransition, partner.Id);
+        if (instance is null)
+        {
+            // No workflow configured at all for this BO type + transition — IWorkflowEngine's contract
+            // says the caller proceeds as if already approved.
+            await ApproveInternalAsync(partner, actor, cancellationToken);
+            return ToDto(partner);
+        }
+
+        _workflowInstanceRepository.Add(instance);
+        await _workflowInstanceRepository.SaveChangesAsync(cancellationToken);
+
+        if (instance.Status == WorkflowInstanceStatus.Approved)
+        {
+            // Zero applicable steps for this resource context (e.g. a future condition-gated step that
+            // didn't match) — the instance completed immediately with nothing to decide.
+            await ApproveInternalAsync(partner, actor, cancellationToken);
+        }
+
         return ToDto(partner);
     }
 
-    public async Task<BusinessPartnerDto> ApproveAsync(Guid id, string actor, CancellationToken cancellationToken = default)
+    public Task<BusinessPartnerDto> ApproveAsync(Guid id, string actor, CancellationToken cancellationToken = default) =>
+        DecideApprovalAsync(id, actor, WorkflowDecision.Approve, cancellationToken);
+
+    public Task<BusinessPartnerDto> RejectAsync(Guid id, string actor, CancellationToken cancellationToken = default) =>
+        DecideApprovalAsync(id, actor, WorkflowDecision.Reject, cancellationToken);
+
+    /// <summary>
+    /// Records one approver's decision against the partner's pending workflow instance, then applies the
+    /// resulting Business Object transition only if the workflow itself reached a final state — a
+    /// multi-step matrix (not configured today, but supported by the engine) would leave the partner
+    /// Submitted after this call, still waiting on the next step's approver.
+    /// </summary>
+    private async Task<BusinessPartnerDto> DecideApprovalAsync(
+        Guid id, string actor, WorkflowDecision decision, CancellationToken cancellationToken)
     {
         var partner = await RequirePartnerAsync(id, cancellationToken);
+        var instance = await _workflowInstanceRepository.GetActiveAsync(BusinessPartnerWorkflow.BusinessObjectType, partner.Id, cancellationToken)
+            ?? throw new InvalidOperationException($"Business partner {id} has no pending approval to decide.");
+
+        _workflowEngine.Decide(instance, ActingPrincipal(actor), decision);
+        await _workflowInstanceRepository.SaveChangesAsync(cancellationToken);
+
+        switch (instance.Status)
+        {
+            case WorkflowInstanceStatus.Approved:
+                await ApproveInternalAsync(partner, actor, cancellationToken);
+                break;
+            case WorkflowInstanceStatus.Rejected:
+                await RejectInternalAsync(partner, actor, cancellationToken);
+                break;
+            // Running (a later step still pending) and Cancelled are left as-is — the partner stays
+            // Submitted; there is no Cancel path wired for Business Partner yet.
+        }
+
+        return ToDto(partner);
+    }
+
+    private async Task ApproveInternalAsync(BusinessPartner partner, string actor, CancellationToken cancellationToken)
+    {
         var fromStatus = partner.Status;
         partner.Approve(actor);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -164,9 +239,33 @@ public sealed class BusinessPartnerService
             JsonSerializer.Serialize(fromStatus.ToString()),
             JsonSerializer.Serialize(partner.Status.ToString()),
             AuditSource);
-
-        return ToDto(partner);
     }
+
+    private async Task RejectInternalAsync(BusinessPartner partner, string actor, CancellationToken cancellationToken)
+    {
+        var fromStatus = partner.Status;
+        partner.Reject(actor);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordStatusTransition(
+            AuditReference(partner.Id),
+            actor,
+            $"Business partner '{partner.Name}' rejected.",
+            JsonSerializer.Serialize(fromStatus.ToString()),
+            JsonSerializer.Serialize(partner.Status.ToString()),
+            AuditSource);
+    }
+
+    /// <summary>
+    /// Builds the principal <see cref="IWorkflowEngine.Decide"/> checks eligibility against. A temporary
+    /// shim, disclosed: real SSO/role-assignment doesn't exist yet (see
+    /// `Modules.MasterData/README.md`'s deferred list), so every actor is granted
+    /// <see cref="BusinessPartnerWorkflow.ApproverRoleKey"/> unconditionally rather than looked up from a
+    /// real user-role store. This is exactly what the next slice — wiring `Platform.Security` into this
+    /// module — replaces with the real authenticated principal.
+    /// </summary>
+    private static SecurityPrincipal ActingPrincipal(string actor) =>
+        new(actor, new[] { BusinessPartnerWorkflow.ApproverRoleKey }, new Dictionary<string, IReadOnlySet<string>>());
 
     private static BusinessObjectReference AuditReference(Guid partnerId) => new(partnerId, AuditTargetType, "Self");
 
