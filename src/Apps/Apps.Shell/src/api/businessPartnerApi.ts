@@ -21,6 +21,7 @@ export interface BusinessPartner {
   documentNumber: string | null;
   status: string;
   name: string;
+  nameArabic: string | null;
   partnerType: string;
   taxRegistrationNumber: string | null;
   addresses: BusinessPartnerAddress[];
@@ -40,6 +41,7 @@ export interface CreateBusinessPartnerInput {
   name: string;
   partnerType: string;
   taxRegistrationNumber?: string;
+  nameArabic?: string;
 }
 
 export interface AddBusinessPartnerAddressInput {

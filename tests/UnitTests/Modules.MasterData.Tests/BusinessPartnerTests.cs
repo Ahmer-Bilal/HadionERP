@@ -110,4 +110,15 @@ public class BusinessPartnerTests
 
         Assert.Equal("300000000000003", partner.TaxRegistrationNumber);
     }
+
+    [Fact]
+    public void Arabic_name_is_null_until_set_and_can_be_set_independently()
+    {
+        var partner = new BusinessPartner("ahmer.bilal", "Gulf Falcon Trading Co", PartnerType.Vendor);
+        Assert.Null(partner.NameArabic);
+
+        partner.UpdateNameArabic("شركة صقر الخليج التجارية");
+
+        Assert.Equal("شركة صقر الخليج التجارية", partner.NameArabic);
+    }
 }

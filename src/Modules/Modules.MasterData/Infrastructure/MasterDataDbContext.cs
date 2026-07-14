@@ -60,6 +60,7 @@ public sealed class MasterDataDbContext : DbContext
             entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
 
             entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.NameArabic).HasColumnName("name_arabic").HasMaxLength(200);
             entity.Property(e => e.PartnerType).HasColumnName("partner_type").HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.TaxRegistrationNumber).HasColumnName("tax_registration_number").HasMaxLength(50);
 

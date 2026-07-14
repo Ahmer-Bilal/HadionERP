@@ -81,6 +81,18 @@ public class BusinessPartnerServiceTests
         Assert.Equal($"MD-BP-{CurrentYear}-000001", created.DocumentNumber);
         Assert.Equal("Draft", created.Status);
         Assert.Equal("Gulf Falcon Trading Co", created.Name);
+        Assert.Null(created.NameArabic);
+    }
+
+    [Fact]
+    public async Task CreateAsync_persists_the_Arabic_name_when_provided()
+    {
+        var service = BuildService(out _);
+        var request = new CreateBusinessPartnerRequest("Gulf Falcon Trading Co", "Vendor", "300000000000003", "شركة صقر الخليج التجارية");
+
+        var created = await service.CreateAsync(request, "ahmer.bilal", "C001");
+
+        Assert.Equal("شركة صقر الخليج التجارية", created.NameArabic);
     }
 
     [Fact]

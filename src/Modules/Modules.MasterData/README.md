@@ -9,7 +9,10 @@ for real business records that must survive a restart.
 ## What's built (Phase 1, slice 1: Business Partner)
 
 - **Domain**: `BusinessPartner` (extends `Platform.Core.BusinessObject`) — Name, PartnerType
-  (Customer/Vendor/Both), tax registration number, and two child collections, `Addresses` and `Contacts`.
+  (Customer/Vendor/Both), tax registration number, an optional `NameArabic` (`UpdateNameArabic`), and two
+  child collections, `Addresses` and `Contacts`. `NameArabic` exists because ZATCA e-invoicing requires the
+  seller's Arabic legal name on a tax invoice — it's optional at the Domain level today (not every partner
+  will be invoiced yet) but see Deferred for what isn't enforced.
   Uses the standard BO lifecycle (Draft → Submit → Approve) since new-partner onboarding is a real
   fraud/compliance control point (docs/architecture/03-platform-services.md #2.2's Segregation of Duties
   example); adding/removing an address or contact is NOT gated by lifecycle status (a deliberate
@@ -167,6 +170,11 @@ proven correct, and both were verified against real PostgreSQL from the start.
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.
+- `NameArabic` can only be set at creation (`CreateBusinessPartnerRequest.NameArabic`) — same precedent as
+  `TaxRegistrationNumber`, there's no dedicated update endpoint yet. Nothing requires it to be non-null
+  before a partner reaches Approved status, even though ZATCA effectively requires it before that partner
+  can ever be invoiced — revisit once Finance/invoicing exists to make that requirement real instead of
+  guessed at.
 - `Platform.Audit`, `Platform.Workflow`, `Platform.Security`, `Platform.Attachments`, and `Platform.Notes`
   are now ALL wired into this module (see above) — the gap the user originally caught (kernel/platform
   services built and tested in isolation, never actually consumed by the first real business module, and

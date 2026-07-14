@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts and every BusinessObject guarantee (Audit/Workflow/Security/Attachments/Notes) actually wired in; bilingual names and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts, every BusinessObject guarantee (Audit/Workflow/Security/Attachments/Notes) actually wired in, and a bilingual (Arabic) name field; Chart of Accounts/Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,40 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Business Partner: bilingual (Arabic) name field added
+- Agent: Claude Sonnet 5
+- Phase: Phase 1
+- Status: Completed
+- What changed: Added an optional `NameArabic` field to `BusinessPartner` (`UpdateNameArabic`), set at
+  creation only (`CreateBusinessPartnerRequest.NameArabic`) — same precedent as `TaxRegistrationNumber`, no
+  update endpoint yet. Motivated by ZATCA e-invoicing, which requires the seller's Arabic legal name on a
+  tax invoice; not yet enforced as a requirement before Approved status (disclosed in the module README's
+  Deferred section — revisit once Finance/invoicing exists). Wired end-to-end: Domain property, EF mapping
+  + migration (`name_arabic`, nullable `varchar(200)`), `BusinessPartnerDto`/`CreateBusinessPartnerRequest`,
+  frontend API client, i18n key (`bp.fieldNameArabic`), and a new `dir="rtl"` input on the create form plus
+  a matching row in the details view's General FastTab. Verified with a domain unit test, a service unit
+  test, an extended integration test (round-trips literal Arabic text through a fresh DbContext against
+  real PostgreSQL), a direct API `curl` exercise, and a live Playwright browser pass — screenshots confirmed
+  the RTL input renders correctly on the create form, the value displays correctly in the English-language
+  details view, and the whole page (including this field) correctly mirrors to a right-to-left layout when
+  switched to Arabic (`<html dir="rtl">`). All 213 existing tests still pass; 2 new tests added. Nothing
+  broke — this was the last item in the Audit → Workflow → Security → Attachments/Notes → bilingual-names
+  sequence the user asked to complete this session.
+- Files touched: `src/Modules/Modules.MasterData/Domain/BusinessPartner.cs`,
+  `src/Modules/Modules.MasterData/Infrastructure/MasterDataDbContext.cs`,
+  `src/Modules/Modules.MasterData/Infrastructure/Migrations/20260714093432_AddBusinessPartnerNameArabic*.cs`,
+  `src/Modules/Modules.MasterData/Application/BusinessPartnerDto.cs`,
+  `src/Modules/Modules.MasterData/Application/BusinessPartnerService.cs`,
+  `src/Apps/Apps.Shell/src/api/businessPartnerApi.ts`, `src/Apps/Apps.Shell/src/i18n/content.ts`,
+  `src/Apps/Apps.Shell/src/pages/BusinessPartnersPage.tsx`,
+  `tests/UnitTests/Modules.MasterData.Tests/BusinessPartnerTests.cs`,
+  `tests/UnitTests/Modules.MasterData.Tests/BusinessPartnerServiceTests.cs`,
+  `tests/IntegrationTests/Modules.MasterData.IntegrationTests/BusinessPartnerPersistenceTests.cs`,
+  `src/Modules/Modules.MasterData/README.md`
+- Next: Phase 1 continues with Chart of Accounts, Items, Cost Centers, and Tax codes, then Finance —
+  not yet started, needs a fresh go-ahead before beginning (this entry closes out the sequence the user
+  explicitly authorized: Audit → Workflow → Security → Attachments/Notes → bilingual names).
 
 ### 2026-07-14 — New Platform.Notes capability, wired into Business Partner (last BusinessObject guarantee closed)
 - Agent: Claude Sonnet 5

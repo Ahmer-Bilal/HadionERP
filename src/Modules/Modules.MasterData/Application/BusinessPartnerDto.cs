@@ -9,6 +9,7 @@ public sealed record BusinessPartnerDto(
     string? DocumentNumber,
     string Status,
     string Name,
+    string? NameArabic,
     string PartnerType,
     string? TaxRegistrationNumber,
     IReadOnlyList<BusinessPartnerAddressDto> Addresses,
@@ -16,7 +17,7 @@ public sealed record BusinessPartnerDto(
     DateTimeOffset CreatedAt,
     string CreatedBy);
 
-public sealed record CreateBusinessPartnerRequest(string Name, string PartnerType, string? TaxRegistrationNumber);
+public sealed record CreateBusinessPartnerRequest(string Name, string PartnerType, string? TaxRegistrationNumber, string? NameArabic = null);
 
 public sealed record AddBusinessPartnerAddressRequest(string AddressType, string? Country, string? City, string? AddressLine);
 

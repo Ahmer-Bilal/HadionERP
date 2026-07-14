@@ -65,6 +65,7 @@ type TranslationKey =
   | "bp.columnNoteCreatedAt"
   | "bp.emptyNotes"
   | "bp.fieldName"
+  | "bp.fieldNameArabic"
   | "bp.fieldPartnerType"
   | "bp.fieldTaxRegistrationNumber"
   | "bp.fieldEmail"
@@ -158,6 +159,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.columnNoteCreatedAt": { en: "Date", ar: "التاريخ" },
   "bp.emptyNotes": { en: "No notes yet.", ar: "لا توجد ملاحظات حتى الآن." },
   "bp.fieldName": { en: "Name", ar: "الاسم" },
+  "bp.fieldNameArabic": { en: "Name (Arabic)", ar: "الاسم بالعربية" },
   "bp.fieldPartnerType": { en: "Partner Type", ar: "نوع الشريك" },
   "bp.fieldTaxRegistrationNumber": { en: "Tax Registration Number", ar: "الرقم الضريبي" },
   "bp.fieldEmail": { en: "Email", ar: "البريد الإلكتروني" },

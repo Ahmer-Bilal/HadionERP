@@ -23,6 +23,16 @@ public sealed class BusinessPartner : BusinessObject
     private readonly List<BusinessPartnerContact> _contacts = new();
 
     public string Name { get; private set; }
+    /// <summary>The partner's legal name in Arabic — required on a ZATCA-compliant tax invoice (the
+    /// seller's Arabic name is a mandatory field, per ZATCA's e-invoicing implementation standards) and
+    /// for a correctly localized Arabic UI, since <see cref="Name"/> alone is whatever script the partner
+    /// was entered in (usually English/Latin) and Business Partner names are never auto-translated
+    /// (docs/architecture — this platform's own hardcoded-Arabic guardrails exist precisely because UI
+    /// *copy* must never be hardcoded; a real person's or company's actual legal name is data, not copy,
+    /// and must be entered, not machine-translated). Optional at the domain level (a Draft partner may not
+    /// have it yet) but should be required by the time a partner reaches Approved for any partner that
+    /// will actually be invoiced — that validation isn't wired in yet, see Deferred in the module README.</summary>
+    public string? NameArabic { get; private set; }
     public PartnerType PartnerType { get; private set; }
     public string? TaxRegistrationNumber { get; private set; }
 
@@ -44,6 +54,8 @@ public sealed class BusinessPartner : BusinessObject
     }
 
     public void UpdateTaxRegistrationNumber(string? taxRegistrationNumber) => TaxRegistrationNumber = taxRegistrationNumber;
+
+    public void UpdateNameArabic(string? nameArabic) => NameArabic = nameArabic;
 
     /// <summary>
     /// Adds an address. Not gated by lifecycle status the way a financial document's fields would be (an

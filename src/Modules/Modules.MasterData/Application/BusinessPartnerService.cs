@@ -74,6 +74,7 @@ public sealed class BusinessPartnerService
 
         var partner = new BusinessPartner(actor, request.Name, partnerType);
         partner.UpdateTaxRegistrationNumber(request.TaxRegistrationNumber);
+        partner.UpdateNameArabic(request.NameArabic);
 
         var documentNumber = _numberRangeService.GetNext(NumberRangeKey, companyId, DateTimeOffset.UtcNow.Year);
         partner.AssignNumber(documentNumber);
@@ -431,6 +432,7 @@ public sealed class BusinessPartnerService
         partner.DocumentNumber,
         partner.Status.ToString(),
         partner.Name,
+        partner.NameArabic,
         partner.PartnerType.ToString(),
         partner.TaxRegistrationNumber,
         partner.Addresses.Select(a => new BusinessPartnerAddressDto(a.Id, a.AddressType.ToString(), a.Country, a.City, a.AddressLine)).ToList(),

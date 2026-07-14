@@ -44,6 +44,7 @@ const emptyForm: CreateBusinessPartnerInput = {
   name: "",
   partnerType: "Vendor",
   taxRegistrationNumber: "",
+  nameArabic: "",
 };
 
 const emptyAddressForm: AddBusinessPartnerAddressInput = {
@@ -398,6 +399,14 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
                     <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                   </label>
                   <label>
+                    {t("bp.fieldNameArabic", language)}
+                    <input
+                      dir="rtl"
+                      value={form.nameArabic}
+                      onChange={(e) => setForm({ ...form, nameArabic: e.target.value })}
+                    />
+                  </label>
+                  <label>
                     {t("bp.fieldPartnerType", language)}
                     <select
                       value={form.partnerType}
@@ -473,6 +482,9 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
 
                 <dt>{t("bp.fieldPartnerType", language)}</dt>
                 <dd>{translatePartnerType(partner.partnerType, language)}</dd>
+
+                <dt>{t("bp.fieldNameArabic", language)}</dt>
+                <dd>{partner.nameArabic ?? "—"}</dd>
 
                 <dt>{t("bp.fieldTaxRegistrationNumber", language)}</dt>
                 <dd><bdi dir="ltr">{partner.taxRegistrationNumber ?? "—"}</bdi></dd>
