@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done, now with real Addresses/Contacts child collections (real, PostgreSQL-persisted); Chart of Accounts/Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts and real Platform.Audit wiring; Platform.Workflow/Security wiring, Attachments/Notes, bilingual names, and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,52 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Business Partner: Platform.Audit wired in (first of Audit/Workflow/Security gap-fix pass)
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed (this slice; Workflow and Security wiring for this same module remain — see Next)
+- What changed:
+  - **Wired `Platform.Audit` into `BusinessPartnerService`** — the real gap the user caught earlier: the
+    kernel's Audit/Workflow/Security services existed and were tested in isolation, but the first real
+    business module (Business Partner) never actually called any of them. This entry closes that gap for
+    Audit specifically (Workflow and Security for this module are the next two slices, in that order, per
+    the user's explicit sequencing).
+  - Every audit-relevant Business Partner action now records a permanent, hash-chained entry: creating a
+    partner (`RecordCreate`), adding an address or contact (`RecordFieldUpdate`, one entry per add — no
+    update/remove exists yet so there's nothing else to diff), and Submit/Approve (`RecordStatusTransition`,
+    capturing the real from/to status). `BusinessPartnerService` only decides *when* to call
+    `IAuditRecorder` — the capture/hash-chaining logic itself stays entirely inside `Platform.Audit`,
+    consumed as a platform service rather than reimplemented in the module (the standing architecture
+    rule this whole pass exists to satisfy).
+  - Added `IAuditRecorder` as a constructor dependency (already registered in `Gateway.Api`'s DI container
+    from Phase 0 — no DI wiring needed, only the module actually calling it). Added `actor` as an explicit
+    parameter to `AddAddressAsync`/`AddContactAsync` (previously missing — there was no way to know who
+    made the change for the audit entry to record).
+  - Added unit tests proving the audit entries actually appear (not just that the code compiles) —
+    asserting on `IAuditLog.GetFor(...)` after each service call, including the two-entry Submit-then-
+    Approve sequence with the correct from/to status JSON on each.
+  - **Found and fixed one real, pre-existing bug** while running the full suite before considering this
+    done (disclosed, not hidden — full detail in `Modules.MasterData/README.md`): the integration test
+    suite was flaky under xUnit's default parallel-test-class execution, since two test classes share one
+    real Postgres database and both call a `TRUNCATE`-based reset — one class's reset could wipe rows
+    another class's test had just inserted. Fixed with `[assembly: CollectionBehavior
+    (DisableTestParallelization = true)]`; this was a test-isolation bug, not application-code flakiness.
+  - **Verified live**: full solution builds with 0 errors, every test project passes (unit + integration
+    against real PostgreSQL + architecture guardrails), then started the real backend and exercised the
+    actual HTTP API end-to-end (create → add address → add contact → submit → approve) and confirmed via
+    `/api/v1/system/status`'s audit counter that exactly 5 new hash-chained entries were appended and the
+    chain remained valid — not just that the unit tests pass in isolation.
+- Files touched: `src/Modules/Modules.MasterData/Application/{BusinessPartnerService,Modules.MasterData.
+  Application.csproj}`, `src/Modules/Modules.MasterData/Api/BusinessPartnersController.cs`, `tests/
+  UnitTests/Modules.MasterData.Tests/BusinessPartnerServiceTests.cs`, `tests/IntegrationTests/
+  Modules.MasterData.IntegrationTests/TestDatabase.cs`, `src/Modules/Modules.MasterData/README.md`
+- Next: Wire `Platform.Workflow` into `BusinessPartner.Submit`/`Approve` (currently these call the Domain
+  object's lifecycle transitions directly, bypassing the configurable approval-routing engine entirely),
+  then `Platform.Security` permission checks into `BusinessPartnersController` (currently has no
+  authorization gating any endpoint). After that: Attachments and Notes into `Platform.Core` (never built
+  at all), then bilingual (Arabic + English) name fields on `BusinessPartner`. Only after those does
+  Phase 1 continue to Chart of Accounts/Items/Cost Centers/Tax codes and Finance.
 
 ### 2026-07-14 — Business Partner: Addresses/Contacts child collections replace flat fields; self-hosted Inter/Noto Sans Arabic fonts
 - Agent: Claude Sonnet 5

@@ -66,9 +66,11 @@ public sealed class BusinessPartnersController : PlatformApiController
     [HttpPost("{id:guid}/addresses")]
     public async Task<IActionResult> AddAddress(Guid id, [FromBody] AddBusinessPartnerAddressRequest request, CancellationToken cancellationToken)
     {
+        const string actor = "system/ui";
+
         try
         {
-            return Ok(await _service.AddAddressAsync(id, request, cancellationToken));
+            return Ok(await _service.AddAddressAsync(id, request, actor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -83,9 +85,11 @@ public sealed class BusinessPartnersController : PlatformApiController
     [HttpPost("{id:guid}/contacts")]
     public async Task<IActionResult> AddContact(Guid id, [FromBody] AddBusinessPartnerContactRequest request, CancellationToken cancellationToken)
     {
+        const string actor = "system/ui";
+
         try
         {
-            return Ok(await _service.AddContactAsync(id, request, cancellationToken));
+            return Ok(await _service.AddContactAsync(id, request, actor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {

@@ -24,7 +24,13 @@ for real business records that must survive a restart.
     company has several contact people (Procurement Manager, Accountant, CEO, Site Engineer), each with
     their own phone/email, not one shared pair for the whole company.
 - **Application**: `BusinessPartnerService` (orchestration only — business rules live on the Domain
-  object), `IBusinessPartnerRepository` (the persistence port).
+  object), `IBusinessPartnerRepository` (the persistence port). Calls `Platform.Audit`'s `IAuditRecorder`
+  at every audit-relevant point — `RecordCreate` on create, `RecordFieldUpdate` on each address/contact
+  added (`FieldName` "Addresses"/"Contacts", `NewValueJson` the serialized child, `OldValueJson` null since
+  there's nothing to diff against for an append), `RecordStatusTransition` on Submit/Approve. This is
+  consuming the platform service, not reimplementing it (CLAUDE.md's "audit ... as platform services
+  consumed from `src/Platform/*`") — the actual capture/hash-chaining logic lives entirely in
+  `Platform.Audit`; this layer only decides *when* to call it.
 - **Infrastructure**: `MasterDataDbContext` (EF Core, Postgres, its own `masterdata` schema — physically
   enforcing the module-boundary rule at the database level), `EfBusinessPartnerRepository`,
   `EfCoreNumberRangeService` (a real, atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`
@@ -69,6 +75,15 @@ the intended lesson for this module going forward.
    `business_partner_addresses`/`business_partner_contacts` held a foreign key into it (`cannot truncate a
    table referenced in a foreign key constraint`) — fixed by adding `CASCADE`, which also clears the child
    tables in the same statement.
+6. **The integration test suite was flaky under parallel execution** — `BusinessPartnerPersistenceTests`
+   and `EfCoreNumberRangeServiceTests` both call `TestDatabase.ResetAsync()` (a real `TRUNCATE`) against
+   the one shared `erp_platform_test` database, and xUnit runs different test *classes* in the same
+   assembly in parallel by default. One class's reset could wipe rows another class's test had just
+   inserted mid-run, surfacing as `System.InvalidOperationException: Sequence contains no elements` from a
+   `FirstAsync`/`SingleAsync` that should have found its row. Fixed with
+   `[assembly: CollectionBehavior(DisableTestParallelization = true)]` in `TestDatabase.cs` — the tests
+   weren't flaky, the isolation assumption was wrong for a suite sharing one physical database instead of
+   one container per test.
 
 ## Deferred (disclosed, not hidden)
 
@@ -76,9 +91,14 @@ the intended lesson for this module going forward.
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.
+- `Platform.Workflow` and `Platform.Security` are still NOT wired into this module — Submit/Approve call
+  the Domain object's lifecycle transitions directly rather than going through the configurable workflow
+  engine, and `BusinessPartnersController` has no permission checks gating any endpoint. `Platform.Audit`
+  is wired (this entry); those two are the next slice.
 - Real authentication/company-context: `BusinessPartnersController` currently hardcodes
   `actor = "system/ui"` and `companyId = "C001"` since no real SSO or company-selection UI exists yet —
-  see `Program.cs`.
+  see `Program.cs`. This also means every audit entry for Business Partner is currently attributed to
+  `"system/ui"`, not a real user — revisit once real auth exists.
 - Docker/Testcontainers for integration tests — not available on this development machine, so
   `tests/IntegrationTests/Modules.MasterData.IntegrationTests` runs against a real, separate
   `erp_platform_test` database instead (connection string via `ERP_MASTERDATA_TEST_CONNECTION` env var,

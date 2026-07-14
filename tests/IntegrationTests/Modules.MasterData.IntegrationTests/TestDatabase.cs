@@ -1,6 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Modules.MasterData.Infrastructure;
 
+// xUnit runs different test CLASSES in this assembly in parallel by default (only [Fact]s within the same
+// class are guaranteed sequential). Every class here calls TestDatabase.ResetAsync(), a real TRUNCATE
+// against the one shared erp_platform_test database — with parallelization on, one class's reset can wipe
+// rows another class's test just inserted mid-run ("Sequence contains no elements" from a FirstAsync/
+// SingleAsync that should have found its row). Disabling collection parallelization for this assembly is
+// the fix, not per-test retries or a bigger delay — the tests aren't flaky, the isolation assumption was
+// wrong for a suite sharing one physical database instead of one container per test.
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
+
 namespace Modules.MasterData.IntegrationTests;
 
 /// <summary>

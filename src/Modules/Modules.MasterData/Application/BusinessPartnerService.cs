@@ -1,4 +1,7 @@
+using System.Text.Json;
 using Modules.MasterData.Domain;
+using Platform.Audit;
+using Platform.Core;
 using Platform.Core.NumberRanges;
 
 namespace Modules.MasterData.Application;
@@ -7,7 +10,10 @@ namespace Modules.MasterData.Application;
 /// Orchestrates Business Partner use cases — validates input, drives the Domain object, and persists
 /// through the repository port. No business rules live here (those belong on
 /// <see cref="BusinessPartner"/> itself, per docs/architecture/01-architecture-foundation.md #1); this
-/// layer only coordinates.
+/// layer only coordinates. Audit is likewise a platform service, not module logic (CLAUDE.md /
+/// docs/architecture/03-platform-services.md #5) — this layer only calls <see cref="IAuditRecorder"/> at
+/// the points a real auditor would care about (created, address/contact added, status transitions), the
+/// actual capture/hash-chaining lives entirely in Platform.Audit.
 /// </summary>
 public sealed class BusinessPartnerService
 {
@@ -15,13 +21,21 @@ public sealed class BusinessPartnerService
     /// convention "{ModuleAbbrev}-{DocAbbrev}" in docs/architecture/05-engineering-standards.md #2.</summary>
     public const string NumberRangeKey = "MD-BP";
 
+    private const string AuditTargetType = "BusinessPartner";
+    private const string AuditSource = "Modules.MasterData";
+
     private readonly IBusinessPartnerRepository _repository;
     private readonly INumberRangeService _numberRangeService;
+    private readonly IAuditRecorder _auditRecorder;
 
-    public BusinessPartnerService(IBusinessPartnerRepository repository, INumberRangeService numberRangeService)
+    public BusinessPartnerService(
+        IBusinessPartnerRepository repository,
+        INumberRangeService numberRangeService,
+        IAuditRecorder auditRecorder)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
+        _auditRecorder = auditRecorder;
     }
 
     public async Task<BusinessPartnerDto> CreateAsync(
@@ -41,6 +55,12 @@ public sealed class BusinessPartnerService
         _repository.Add(partner);
         await _repository.SaveChangesAsync(cancellationToken);
 
+        _auditRecorder.RecordCreate(
+            AuditReference(partner.Id),
+            actor,
+            $"Business partner '{partner.Name}' ({partner.DocumentNumber}) created.",
+            AuditSource);
+
         return ToDto(partner);
     }
 
@@ -59,7 +79,7 @@ public sealed class BusinessPartnerService
     }
 
     public async Task<BusinessPartnerDto> AddAddressAsync(
-        Guid id, AddBusinessPartnerAddressRequest request, CancellationToken cancellationToken = default)
+        Guid id, AddBusinessPartnerAddressRequest request, string actor, CancellationToken cancellationToken = default)
     {
         if (!Enum.TryParse<AddressType>(request.AddressType, ignoreCase: true, out var addressType))
         {
@@ -68,35 +88,87 @@ public sealed class BusinessPartnerService
         }
 
         var partner = await RequirePartnerAsync(id, cancellationToken);
-        partner.AddAddress(addressType, request.Country, request.City, request.AddressLine);
+        var address = partner.AddAddress(addressType, request.Country, request.City, request.AddressLine);
         await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id),
+            actor,
+            $"Address added to '{partner.Name}'.",
+            new[]
+            {
+                new FieldValueChange(
+                    "Addresses",
+                    OldValueJson: null,
+                    NewValueJson: JsonSerializer.Serialize(new BusinessPartnerAddressDto(
+                        address.Id, address.AddressType.ToString(), address.Country, address.City, address.AddressLine)))
+            },
+            AuditSource);
+
         return ToDto(partner);
     }
 
     public async Task<BusinessPartnerDto> AddContactAsync(
-        Guid id, AddBusinessPartnerContactRequest request, CancellationToken cancellationToken = default)
+        Guid id, AddBusinessPartnerContactRequest request, string actor, CancellationToken cancellationToken = default)
     {
         var partner = await RequirePartnerAsync(id, cancellationToken);
-        partner.AddContact(request.Name, request.JobTitle, request.Email, request.Phone);
+        var contact = partner.AddContact(request.Name, request.JobTitle, request.Email, request.Phone);
         await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id),
+            actor,
+            $"Contact added to '{partner.Name}'.",
+            new[]
+            {
+                new FieldValueChange(
+                    "Contacts",
+                    OldValueJson: null,
+                    NewValueJson: JsonSerializer.Serialize(new BusinessPartnerContactDto(
+                        contact.Id, contact.Name, contact.JobTitle, contact.Email, contact.Phone)))
+            },
+            AuditSource);
+
         return ToDto(partner);
     }
 
     public async Task<BusinessPartnerDto> SubmitAsync(Guid id, string actor, CancellationToken cancellationToken = default)
     {
         var partner = await RequirePartnerAsync(id, cancellationToken);
+        var fromStatus = partner.Status;
         partner.Submit(actor);
         await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordStatusTransition(
+            AuditReference(partner.Id),
+            actor,
+            $"Business partner '{partner.Name}' submitted for approval.",
+            JsonSerializer.Serialize(fromStatus.ToString()),
+            JsonSerializer.Serialize(partner.Status.ToString()),
+            AuditSource);
+
         return ToDto(partner);
     }
 
     public async Task<BusinessPartnerDto> ApproveAsync(Guid id, string actor, CancellationToken cancellationToken = default)
     {
         var partner = await RequirePartnerAsync(id, cancellationToken);
+        var fromStatus = partner.Status;
         partner.Approve(actor);
         await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordStatusTransition(
+            AuditReference(partner.Id),
+            actor,
+            $"Business partner '{partner.Name}' approved.",
+            JsonSerializer.Serialize(fromStatus.ToString()),
+            JsonSerializer.Serialize(partner.Status.ToString()),
+            AuditSource);
+
         return ToDto(partner);
     }
+
+    private static BusinessObjectReference AuditReference(Guid partnerId) => new(partnerId, AuditTargetType, "Self");
 
     private async Task<BusinessPartner> RequirePartnerAsync(Guid id, CancellationToken cancellationToken) =>
         await _repository.GetAsync(id, cancellationToken)
