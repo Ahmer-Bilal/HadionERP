@@ -177,6 +177,29 @@ for real business records that must survive a restart.
   `{page === "cost-centers" ? <CostCentersPage /> : ...}` render branch was added correctly the first time
   (the Items slice's bug was fresh enough to check for deliberately).
 
+## What's built (Phase 1, slice 5: Tax Codes — Phase 1 Master Data complete)
+
+- **Domain**: `TaxCode` — the ZATCA VAT reference every future AP/AR document will carry (e.g. "VAT15" at
+  15%, "ZERO" at 0%, "EXEMPT"), and the fifth and last Phase 1 Master Data piece. Unique `TaxCodeCode`,
+  bilingual `TaxCodeName`/`TaxCodeNameArabic`, `Rate` (decimal, 0–100, validated in the constructor and on
+  update — this is the one place a VAT percentage is allowed to live; nowhere in code is 15% ever written
+  literally, per CLAUDE.md's "don't hard-code business rules... that should be configuration"), `TaxType`
+  enum (Standard/ZeroRated/Exempt — the ZATCA taxonomy; ZeroRated and Exempt both charge 0% but are
+  reported differently on a VAT return), `IsActive`. Deliberately flat like `Item`, not `GLAccount` — a tax
+  code list doesn't need roll-ups. Same BusinessObject lifecycle, Security/SoD split, and Workflow wiring
+  as every other master-data slice — a wrong VAT rate/type affects every document that references it
+  afterward.
+- **Api**: `TaxCodesController` at `api/v1/masterdata/tax-codes` — CRUD + submit/approve/reject, same
+  pattern as the other four master-data controllers.
+- **Frontend**: `TaxCodesPage.tsx` — list/create/details, bilingual name field, rate input, tax-type
+  dropdown, its own nav Area.
+- Nothing new broke — followed the exact `Item`/`CostCenter` pattern. One new wrinkle handled correctly the
+  first time: `ArgumentOutOfRangeException` derives from `ArgumentException`, so `TaxCodesController`
+  catches only `ArgumentException` (catching both would have been an unreachable-code compiler error, which
+  the build caught immediately).
+- **This closes out Phase 1 Master Data** — Business Partner, Chart of Accounts, Items, Cost Centers, and
+  Tax Codes are all built. `Modules.Finance` (GL/AP/AR/Cash-Bank) is next.
+
 ## Real bugs found and fixed while building this (disclosed, not hidden)
 
 1. **`Platform.Core.BusinessObject` had no parameterless constructor.** Its only constructor always
@@ -234,8 +257,8 @@ proven correct, and both were verified against real PostgreSQL from the start.
 
 ## Deferred (disclosed, not hidden)
 
-- Tax codes — the last slice of Phase 1 Master Data. Chart of Accounts, Items, and Cost Centers are now
-  all built (see above).
+- Phase 1 Master Data is now complete (Business Partner, Chart of Accounts, Items, Cost Centers, Tax
+  Codes) — `Modules.Finance` (GL/AP/AR/Cash-Bank) is next.
 - G/L Account and Cost Center both have no parent-hierarchy validation against cycles (`AssignParent`
   accepts any GUID for either); Item has no UoM master — `UnitOfMeasure` is free text with no conversion
   factors, and no Item Group/category hierarchy — all revisit once a real second-unit, roll-up-reporting,

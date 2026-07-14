@@ -33,6 +33,7 @@ public sealed class MasterDataDbContext : DbContext
     public DbSet<GLAccount> GLAccounts => Set<GLAccount>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<CostCenter> CostCenters => Set<CostCenter>();
+    public DbSet<TaxCode> TaxCodes => Set<TaxCode>();
 
     public MasterDataDbContext(DbContextOptions<MasterDataDbContext> options) : base(options)
     {
@@ -347,6 +348,39 @@ public sealed class MasterDataDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ParentCostCenterId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<TaxCode>(entity =>
+        {
+            entity.ToTable("tax_codes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.TaxCodeCode).HasColumnName("tax_code_code").HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => e.TaxCodeCode).IsUnique();
+            entity.Property(e => e.TaxCodeName).HasColumnName("tax_code_name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.TaxCodeNameArabic).HasColumnName("tax_code_name_arabic").HasMaxLength(200);
+            entity.Property(e => e.Rate).HasColumnName("rate").HasColumnType("numeric(5,2)");
+            entity.Property(e => e.TaxType).HasColumnName("tax_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
 
             entity.Property(e => e.ExtensionFields)
                 .HasColumnName("extension_data")

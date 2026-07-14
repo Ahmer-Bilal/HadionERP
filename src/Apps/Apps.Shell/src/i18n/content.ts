@@ -171,7 +171,31 @@ type TranslationKey =
   | "cc.fieldCostCenterNameArabic"
   | "cc.fieldParentCostCenter"
   | "cc.fieldIsPostable"
-  | "cc.noParent";
+  | "cc.noParent"
+  | "nav.taxCodesArea"
+  | "nav.allTaxCodes"
+  | "tax.heading"
+  | "tax.newHeading"
+  | "tax.emptyState"
+  | "tax.actionNew"
+  | "tax.actionCreate"
+  | "tax.actionBack"
+  | "tax.actionSubmit"
+  | "tax.actionApprove"
+  | "tax.actionReject"
+  | "tax.columnCode"
+  | "tax.columnName"
+  | "tax.columnRate"
+  | "tax.columnType"
+  | "tax.columnStatus"
+  | "tax.fieldTaxCodeCode"
+  | "tax.fieldTaxCodeName"
+  | "tax.fieldTaxCodeNameArabic"
+  | "tax.fieldRate"
+  | "tax.fieldTaxType"
+  | "tax.taxTypeStandard"
+  | "tax.taxTypeZeroRated"
+  | "tax.taxTypeExempt";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -344,6 +368,30 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "cc.fieldParentCostCenter": { en: "Parent Cost Center", ar: "مركز التكلفة الأصلي" },
   "cc.fieldIsPostable": { en: "Postable", ar: "قابل للترحيل" },
   "cc.noParent": { en: "— None (top level) —", ar: "— لا يوجد (مستوى أعلى) —" },
+  "nav.taxCodesArea": { en: "Tax Codes", ar: "الرموز الضريبية" },
+  "nav.allTaxCodes": { en: "All Tax Codes", ar: "جميع الرموز الضريبية" },
+  "tax.heading": { en: "Tax Codes", ar: "الرموز الضريبية" },
+  "tax.newHeading": { en: "New Tax Code", ar: "رمز ضريبي جديد" },
+  "tax.emptyState": { en: "No tax codes yet.", ar: "لا توجد رموز ضريبية حتى الآن." },
+  "tax.actionNew": { en: "New", ar: "جديد" },
+  "tax.actionCreate": { en: "Create", ar: "إنشاء" },
+  "tax.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "tax.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "tax.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "tax.actionReject": { en: "Reject", ar: "رفض" },
+  "tax.columnCode": { en: "Code", ar: "الرمز" },
+  "tax.columnName": { en: "Tax Code Name", ar: "اسم الرمز الضريبي" },
+  "tax.columnRate": { en: "Rate", ar: "النسبة" },
+  "tax.columnType": { en: "Type", ar: "النوع" },
+  "tax.columnStatus": { en: "Status", ar: "الحالة" },
+  "tax.fieldTaxCodeCode": { en: "Tax Code", ar: "الرمز الضريبي" },
+  "tax.fieldTaxCodeName": { en: "Tax Code Name", ar: "اسم الرمز الضريبي" },
+  "tax.fieldTaxCodeNameArabic": { en: "Tax Code Name (Arabic)", ar: "اسم الرمز الضريبي بالعربية" },
+  "tax.fieldRate": { en: "Rate (%)", ar: "النسبة (٪)" },
+  "tax.fieldTaxType": { en: "Tax Type", ar: "نوع الضريبة" },
+  "tax.taxTypeStandard": { en: "Standard", ar: "قياسي" },
+  "tax.taxTypeZeroRated": { en: "Zero-Rated", ar: "صفري النسبة" },
+  "tax.taxTypeExempt": { en: "Exempt", ar: "معفى" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

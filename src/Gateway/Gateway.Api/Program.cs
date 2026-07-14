@@ -62,11 +62,13 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
         new[] { administratorRole, BusinessPartnerSecurity.MaintainerRole, BusinessPartnerSecurity.ApproverRole,
                 GLAccountSecurity.MaintainerRole, GLAccountSecurity.ApproverRole,
                 ItemSecurity.MaintainerRole, ItemSecurity.ApproverRole,
-                CostCenterSecurity.MaintainerRole, CostCenterSecurity.ApproverRole },
+                CostCenterSecurity.MaintainerRole, CostCenterSecurity.ApproverRole,
+                TaxCodeSecurity.MaintainerRole, TaxCodeSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
-                CostCenterSecurity.MaintainerDuty, CostCenterSecurity.ApproverDuty });
+                CostCenterSecurity.MaintainerDuty, CostCenterSecurity.ApproverDuty,
+                TaxCodeSecurity.MaintainerDuty, TaxCodeSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -84,6 +86,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         GLAccountSecurity.MaintainerApproverConflict,
         ItemSecurity.MaintainerApproverConflict,
         CostCenterSecurity.MaintainerApproverConflict,
+        TaxCodeSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
@@ -97,11 +100,13 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
         {
             BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey,
             ItemSecurity.MaintainerRoleKey, CostCenterSecurity.MaintainerRoleKey,
+            TaxCodeSecurity.MaintainerRoleKey,
         },
         ["system/approver"] = new[]
         {
             BusinessPartnerWorkflow.ApproverRoleKey, GLAccountWorkflow.ApproverRoleKey,
             ItemWorkflow.ApproverRoleKey, CostCenterWorkflow.ApproverRoleKey,
+            TaxCodeWorkflow.ApproverRoleKey,
         },
     }));
 
@@ -115,6 +120,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         GLAccountWorkflow.SubmitApprovalDefinition,
         ItemWorkflow.SubmitApprovalDefinition,
         CostCenterWorkflow.SubmitApprovalDefinition,
+        TaxCodeWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -187,6 +193,8 @@ builder.Services.AddScoped<IItemRepository, EfItemRepository>();
 builder.Services.AddScoped<ItemService>();
 builder.Services.AddScoped<ICostCenterRepository, EfCostCenterRepository>();
 builder.Services.AddScoped<CostCenterService>();
+builder.Services.AddScoped<ITaxCodeRepository, EfTaxCodeRepository>();
+builder.Services.AddScoped<TaxCodeService>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),
     new[]
@@ -194,7 +202,8 @@ builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeServi
         new NumberRangeDefinition(BusinessPartnerService.NumberRangeKey, "MD", "BP"),
         new NumberRangeDefinition(GLAccountService.NumberRangeKey, "MD", "GL"),
         new NumberRangeDefinition(ItemService.NumberRangeKey, "MD", "ITM"),
-        new NumberRangeDefinition(CostCenterService.NumberRangeKey, "MD", "CC")
+        new NumberRangeDefinition(CostCenterService.NumberRangeKey, "MD", "CC"),
+        new NumberRangeDefinition(TaxCodeService.NumberRangeKey, "MD", "TAX")
     }));
 
 var app = builder.Build();

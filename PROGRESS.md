@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner + Chart of Accounts (G/L Account) + Items + Cost Centers done; Tax codes and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — all 5 Master Data pieces done (Business Partner, Chart of Accounts, Items, Cost Centers, Tax Codes); Modules.Finance (GL/AP/AR/Cash-Bank) remains | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,49 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Tax Codes — Phase 1 Master Data complete
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Built Tax Codes — the ZATCA VAT reference (e.g. "VAT15" at 15%, "ZERO", "EXEMPT") every
+  future AP/AR document will carry, and the fifth and last Phase 1 Master Data piece. `TaxCode`: unique
+  `TaxCodeCode`, bilingual `TaxCodeName`/`TaxCodeNameArabic`, `Rate` (decimal 0–100, validated both in the
+  constructor and on update — the VAT percentage lives here as data, never hardcoded in any module's code),
+  `TaxType` enum (Standard/ZeroRated/Exempt — the ZATCA taxonomy). Deliberately flat like Item, not
+  GLAccount. Same BusinessObject lifecycle, Security (Maintainer vs. Approver + SoD), and Workflow wiring as
+  every other master-data slice. Wired end-to-end: Domain, Application, Infrastructure (EF repo, unique
+  index, migration applied to dev + test), Api (`api/v1/masterdata/tax-codes`), frontend (own nav Area,
+  i18n keys EN+AR). Verified: 300 tests pass (120 unit incl. 20 new Tax Code tests + 23 integration incl. 3
+  new), full solution builds clean, frontend typecheck + Arabic guardrail pass, live API exercise (standard
+  + zero-rated codes, out-of-range rate correctly rejected with a 400), live Playwright browser pass in
+  both English and Arabic (RTL layout mirroring, correct nav placement).
+- One compiler-level thing worth noting: `ArgumentOutOfRangeException` derives from `ArgumentException`,
+  so `TaxCodesController` catches only `ArgumentException` — an extra `catch (ArgumentOutOfRangeException)`
+  after it is unreachable code and the compiler correctly refused to build it. Fixed immediately.
+- **This completes Phase 1 Master Data** — Business Partner, Chart of Accounts, Items, Cost Centers, and
+  Tax Codes are all built, tested, and live-verified. `Modules.Finance` (GL/AP/AR/Cash-Bank) is next, per
+  the user's "tax code and finance in one go" instruction — continuing directly into Finance scaffolding
+  and the first GL Journal Entry slice in this same session.
+- Files touched: `src/Modules/Modules.MasterData/Domain/TaxCode.cs`, `Domain/TaxType.cs`,
+  `Application/TaxCodeDto.cs`, `Application/TaxCodeService.cs`, `Application/ITaxCodeRepository.cs`,
+  `Application/TaxCodeSecurity.cs`, `Application/TaxCodeWorkflow.cs`,
+  `Infrastructure/EfTaxCodeRepository.cs`, `Infrastructure/MasterDataDbContext.cs` (TaxCode mapping),
+  `Infrastructure/Migrations/20260714154624_AddTaxCode*.cs`, `Api/TaxCodesController.cs`,
+  `src/Gateway/Gateway.Api/Program.cs` (DI + security + SoD + workflow + number range),
+  `src/Apps/Apps.Shell/src/api/taxCodeApi.ts`, `src/Apps/Apps.Shell/src/pages/TaxCodesPage.tsx`,
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (tax.* keys), `src/Apps/Apps.Shell/src/App.tsx` (nav Area +
+  routing), `tests/UnitTests/Modules.MasterData.Tests/TaxCodeTests.cs`, `TaxCodeServiceTests.cs`,
+  `FakeTaxCodeRepository.cs`, `tests/IntegrationTests/Modules.MasterData.IntegrationTests/
+  TaxCodePersistenceTests.cs`, `TestDatabase.cs` (truncate tax_codes),
+  `src/Modules/Modules.MasterData/README.md` (added Tax Codes "What's built" section, fixed the stale
+  Deferred line).
+- Next: `Modules.MasterData.Contracts` (published lookup interfaces so Finance never reaches into
+  MasterData's internals — docs/architecture/01 #3.2), then `Modules.Finance` scaffolding and a first real
+  GL Journal Entry (Draft → Submit → Approve → Post → Reverse — the first real use of the Posted/Reversed
+  lifecycle anywhere in this codebase), then AP Invoice referencing Business Partner + Tax Code via
+  Contracts, matching the Phase 1 exit criteria wording exactly: "post/reverse a GL journal and an AP
+  invoice end-to-end with full audit trail."
 
 ### 2026-07-14 — Cost Centers — Phase 1 Master Data
 - Agent: Claude Sonnet 5

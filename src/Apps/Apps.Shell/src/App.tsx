@@ -8,6 +8,7 @@ import { BusinessPartnersPage } from "./pages/BusinessPartnersPage";
 import { GLAccountsPage } from "./pages/GLAccountsPage";
 import { ItemsPage } from "./pages/ItemsPage";
 import { CostCentersPage } from "./pages/CostCentersPage";
+import { TaxCodesPage } from "./pages/TaxCodesPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -15,7 +16,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -23,6 +24,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#gl-accounts") return "gl-accounts";
   if (window.location.hash === "#items") return "items";
   if (window.location.hash === "#cost-centers") return "cost-centers";
+  if (window.location.hash === "#tax-codes") return "tax-codes";
   return "home";
 }
 
@@ -134,6 +136,18 @@ function App() {
             },
           ],
         },
+        {
+          key: "tax-codes",
+          label: t("nav.taxCodesArea", language),
+          items: [
+            {
+              key: "all-tax-codes",
+              label: t("nav.allTaxCodes", language),
+              href: "#tax-codes",
+              isActive: page === "tax-codes",
+            },
+          ],
+        },
       ],
     },
   ];
@@ -167,6 +181,8 @@ function App() {
             <ItemsPage language={language} />
           ) : page === "cost-centers" ? (
             <CostCentersPage language={language} />
+          ) : page === "tax-codes" ? (
+            <TaxCodesPage language={language} />
           ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
           ) : (
