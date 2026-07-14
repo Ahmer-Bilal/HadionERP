@@ -60,9 +60,11 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
 
     return new InMemorySecurityCatalog(
         new[] { administratorRole, BusinessPartnerSecurity.MaintainerRole, BusinessPartnerSecurity.ApproverRole,
-                GLAccountSecurity.MaintainerRole, GLAccountSecurity.ApproverRole },
+                GLAccountSecurity.MaintainerRole, GLAccountSecurity.ApproverRole,
+                ItemSecurity.MaintainerRole, ItemSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
-                GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty });
+                GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
+                ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -74,8 +76,12 @@ builder.Services.AddSingleton<Platform.Security.IAuthorizationService, Authoriza
 // and tested; a future module registers its own conflict rules into this same list.
 builder.Services.AddSingleton<ISodExceptionLog, InMemorySodExceptionLog>();
 builder.Services.AddSingleton<ISodEngine>(sp =>
-    new SodEngine(new[] { BusinessPartnerSecurity.MaintainerApproverConflict, GLAccountSecurity.MaintainerApproverConflict },
-        sp.GetRequiredService<ISodExceptionLog>()));
+    new SodEngine(new[]
+    {
+        BusinessPartnerSecurity.MaintainerApproverConflict,
+        GLAccountSecurity.MaintainerApproverConflict,
+        ItemSecurity.MaintainerApproverConflict,
+    }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
 // Platform.Security/README.md's "Deferred" section) — maps the bare actor-id strings every module
@@ -84,15 +90,20 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
 builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorRoleAssignmentStore(
     new Dictionary<string, IReadOnlyCollection<string>>
     {
-        ["system/ui"] = new[] { BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey },
-        ["system/approver"] = new[] { BusinessPartnerWorkflow.ApproverRoleKey, GLAccountWorkflow.ApproverRoleKey },
+        ["system/ui"] = new[] { BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey, ItemSecurity.MaintainerRoleKey },
+        ["system/approver"] = new[] { BusinessPartnerWorkflow.ApproverRoleKey, GLAccountWorkflow.ApproverRoleKey, ItemWorkflow.ApproverRoleKey },
     }));
 
 // Platform.Workflow: one real approval workflow is registered — Modules.MasterData's Business Partner
 // onboarding approval (BusinessPartnerWorkflow.SubmitApprovalDefinition). A future module registers its
 // own definitions into this same catalog when it's built — nothing here needs to change.
 builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
-    new InMemoryWorkflowDefinitionCatalog(new[] { BusinessPartnerWorkflow.SubmitApprovalDefinition, GLAccountWorkflow.SubmitApprovalDefinition }));
+    new InMemoryWorkflowDefinitionCatalog(new[]
+    {
+        BusinessPartnerWorkflow.SubmitApprovalDefinition,
+        GLAccountWorkflow.SubmitApprovalDefinition,
+        ItemWorkflow.SubmitApprovalDefinition,
+    }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
 builder.Services.AddSingleton<IWorkflowEngine, WorkflowEngine>();
@@ -160,12 +171,15 @@ builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<BusinessPartnerService>();
 builder.Services.AddScoped<IGLAccountRepository, EfGLAccountRepository>();
 builder.Services.AddScoped<GLAccountService>();
+builder.Services.AddScoped<IItemRepository, EfItemRepository>();
+builder.Services.AddScoped<ItemService>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),
     new[]
     {
         new NumberRangeDefinition(BusinessPartnerService.NumberRangeKey, "MD", "BP"),
-        new NumberRangeDefinition(GLAccountService.NumberRangeKey, "MD", "GL")
+        new NumberRangeDefinition(GLAccountService.NumberRangeKey, "MD", "GL"),
+        new NumberRangeDefinition(ItemService.NumberRangeKey, "MD", "ITM")
     }));
 
 var app = builder.Build();

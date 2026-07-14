@@ -31,6 +31,7 @@ public sealed class MasterDataDbContext : DbContext
     // Note is a Platform.Notes kernel type, same reasoning as WorkflowInstance/AttachmentMetadata above.
     public DbSet<Note> Notes => Set<Note>();
     public DbSet<GLAccount> GLAccounts => Set<GLAccount>();
+    public DbSet<Item> Items => Set<Item>();
 
     public MasterDataDbContext(DbContextOptions<MasterDataDbContext> options) : base(options)
     {
@@ -278,6 +279,39 @@ public sealed class MasterDataDbContext : DbContext
                 .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
 
             entity.Ignore(e => e.NormalBalance);
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<Item>(entity =>
+        {
+            entity.ToTable("items");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.ItemCode).HasColumnName("item_code").HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => e.ItemCode).IsUnique();
+            entity.Property(e => e.ItemName).HasColumnName("item_name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ItemNameArabic).HasColumnName("item_name_arabic").HasMaxLength(200);
+            entity.Property(e => e.ItemType).HasColumnName("item_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.UnitOfMeasure).HasColumnName("unit_of_measure").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
             entity.Ignore(e => e.DomainEvents);
             entity.Ignore(e => e.Relations);
             entity.Ignore(e => e.CanHardDelete);

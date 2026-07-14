@@ -5,6 +5,7 @@ import type { LanguageCode, NavModule } from "@platform/ui";
 import { SystemStatusPage } from "./pages/SystemStatusPage";
 import { BusinessPartnersPage } from "./pages/BusinessPartnersPage";
 import { GLAccountsPage } from "./pages/GLAccountsPage";
+import { ItemsPage } from "./pages/ItemsPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -12,11 +13,12 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "system-status" | "business-partners" | "gl-accounts";
+type PageKey = "system-status" | "business-partners" | "gl-accounts" | "items";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#business-partners") return "business-partners";
   if (window.location.hash === "#gl-accounts") return "gl-accounts";
+  if (window.location.hash === "#items") return "items";
   return "system-status";
 }
 
@@ -78,6 +80,12 @@ function App() {
               href: "#gl-accounts",
               isActive: page === "gl-accounts",
             },
+            {
+              key: "all-items",
+              label: t("nav.allItems", language),
+              href: "#items",
+              isActive: page === "items",
+            },
           ],
         },
       ],
@@ -109,6 +117,8 @@ function App() {
             <BusinessPartnersPage language={language} />
           ) : page === "gl-accounts" ? (
             <GLAccountsPage language={language} />
+          ) : page === "items" ? (
+            <ItemsPage language={language} />
           ) : (
             <SystemStatusPage language={language} />
           )}

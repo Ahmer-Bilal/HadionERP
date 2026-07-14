@@ -109,6 +109,50 @@ for real business records that must survive a restart.
   that's deferred until a second business object needs the same shape (see `Platform.UI/README.md`), so
   the common pattern gets extracted from real usage, not guessed at.
 
+## What's built (Phase 1, slice 2: Chart of Accounts / G/L Account)
+
+- **Domain**: `GLAccount` — the "GL Account" dimension every journal line carries
+  (docs/architecture/07-project-accounting-and-financial-architecture.md #1), and the second of the two
+  Phase 1 exit-criteria master-data pieces ("maintain its chart of accounts and vendors"). Unique
+  `AccountCode`, bilingual `AccountName`/`AccountNameArabic`, 5-type `AccountType` enum
+  (Asset/Liability/Equity/Revenue/Expense), derived `NormalBalance` (not stored — single source of truth is
+  the type), self-referencing `ParentAccountId` hierarchy for roll-ups (e.g. "Current Assets" → "Cash"),
+  `IsPostable` (header vs. leaf — journal lines can only touch leaf accounts), `IsActive` (deactivate, not
+  delete). Same BusinessObject lifecycle, Security/SoD split (Maintainer vs. Approver), and Workflow wiring
+  as Business Partner. Originally built by ZCode (GLM-5.2) as `GlmAccount`/`glm_accounts`/`glm-accounts` —
+  its own model name, not a real domain term — then renamed end-to-end to `GLAccount`/`gl_accounts`/
+  `gl-accounts` by Claude Sonnet 5 before it was ever committed (class/file/table/route/i18n-keys, migration
+  regenerated from scratch), fully re-verified afterward. No attachments/notes wired for GLAccount (not a
+  Phase 1 exit-criteria requirement for the chart itself — would be added the same way as Business Partner
+  if a real need shows up).
+- **Api**: `GLAccountsController` at `api/v1/masterdata/gl-accounts` — CRUD + submit/approve/reject, same
+  pattern as `BusinessPartnersController`.
+- **Frontend**: `GLAccountsPage.tsx` — list/create/details, parent-account display, bilingual name field.
+
+## What's built (Phase 1, slice 3: Items)
+
+- **Domain**: `Item` — the material/product/service master record a Procurement PO line, a Construction
+  BOQ line, or (later) an Inventory stock movement all reference, same role as SAP's Material Master or
+  D365's Released Product; the item side of "the vendors and the items/materials those vendors supply."
+  Unique `ItemCode`, bilingual `ItemName`/`ItemNameArabic`, `ItemType` enum (Stock/NonStock/Service — Stock
+  is warehouse-tracked, NonStock is expensed on receipt, Service has no physical quantity at all, e.g.
+  subcontract labor or equipment-rental hours), `UnitOfMeasure` (free-text for Phase 1 — see Deferred),
+  `IsActive`. Same BusinessObject lifecycle, Security/SoD split, and Workflow wiring as Business Partner and
+  G/L Account — adding a miscoded/duplicate item to the master pollutes every PO/BOQ line that references it
+  afterward, the same control-point reasoning as the other two master-data slices. Deliberately flat, no
+  parent hierarchy (unlike G/L Account's chart, an item catalog's grouping is a reporting concern, not a
+  structural one — deferred until a real Item Group need shows up).
+- **Api**: `ItemsController` at `api/v1/masterdata/items` — CRUD + submit/approve/reject, same pattern as
+  `GLAccountsController`.
+- **Frontend**: `ItemsPage.tsx` — list/create/details, bilingual name field, item-type dropdown.
+- Nothing new broke building this — followed the exact `GLAccount` pattern already proven correct. One real
+  bug caught during live browser verification (not by any automated test): the nav entry and hash routing
+  for the Items page were wired in `App.tsx`, but the actual `{page === "items" ? <ItemsPage /> : ...}`
+  render branch was initially left out — clicking "Items" in the nav highlighted it as active but silently
+  kept showing the System Status page underneath. Caught by looking at the live screenshot, not by
+  `tsc --noEmit` (both branches type-check fine on their own) or the guardrail script — a reminder that
+  "the build passes" and "the feature works" are genuinely different claims.
+
 ## Real bugs found and fixed while building this (disclosed, not hidden)
 
 1. **`Platform.Core.BusinessObject` had no parameterless constructor.** Its only constructor always
@@ -166,7 +210,12 @@ proven correct, and both were verified against real PostgreSQL from the start.
 
 ## Deferred (disclosed, not hidden)
 
-- Chart of Accounts, Items, Cost Centers, Tax codes — the rest of Master Data (next slices of Phase 1).
+- Cost Centers, Tax codes — the rest of Master Data (next slices of Phase 1). Chart of Accounts and Items
+  are now both built (see above).
+- G/L Account has no parent-hierarchy validation against cycles (`AssignParent` accepts any GUID); Item has
+  no UoM master — `UnitOfMeasure` is free text with no conversion factors, and no Item Group/category
+  hierarchy — both revisit once a real second-unit or roll-up-reporting need shows up, same "wait for a
+  real need" reasoning as everywhere else in this module.
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.

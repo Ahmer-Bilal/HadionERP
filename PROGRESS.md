@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner + Chart of Accounts (G/L Account) done; Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner + Chart of Accounts (G/L Account) + Items done; Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,49 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Items — Phase 1 Master Data
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Built the Items master-data entity — the material/product/service master a Procurement PO
+  line, a Construction BOQ line, or (later) an Inventory stock movement all reference (same role as SAP's
+  Material Master / D365's Released Product), and the item side of the Phase 1 exit criteria's "the vendors
+  and the items/materials those vendors supply." Followed the exact `GLAccount` pattern end-to-end (which
+  itself follows Business Partner): `Item : BusinessObject` with unique `ItemCode`, bilingual
+  `ItemName`/`ItemNameArabic`, `ItemType` enum (Stock/NonStock/Service), free-text `UnitOfMeasure`,
+  `IsActive`; full Draft → Submit → Approve/Reject lifecycle with Security (Maintainer vs. Approver duties +
+  SoD conflict rule) and Workflow (one-step Any-quorum approval) wired the same way as Business Partner and
+  G/L Account. Deliberately flat, no parent hierarchy (unlike the chart of accounts, an item catalog's
+  grouping is a reporting concern for later, not a Phase 1 structural need). Wired end-to-end: Domain
+  entity + `ItemType` enum, Application (DTOs, service, repository port, security, workflow config),
+  Infrastructure (EF repo, DbContext mapping with unique index on `item_code`, migration applied to dev +
+  test), Api controller (CRUD + submit/approve/reject at `api/v1/masterdata/items`), frontend (API client,
+  page with list/create/details, nav entry, i18n keys EN+AR). Verified: 254 tests pass (82 unit incl. 18 new
+  Item tests + 17 integration incl. 3 new Item persistence/uniqueness tests against real Postgres), full
+  solution builds clean, frontend typecheck + Arabic guardrail both pass, API exercised live via curl
+  (create Stock + Service item, duplicate-code rejection, submit, approve, list — all correct), and a live
+  Playwright browser pass in both English and Arabic (RTL input, full right-to-left layout mirroring).
+- One real bug, caught only by looking at the live screenshot: the nav entry and hash routing for the Items
+  page were wired into `App.tsx`, but the actual `{page === "items" ? <ItemsPage /> : ...}` render branch
+  was initially left out of the ternary — clicking "Items" highlighted it as active in the nav but silently
+  kept rendering System Status underneath. `tsc --noEmit` and the Arabic guardrail script both passed the
+  whole time (neither checks that a page actually renders) — fixed immediately, re-verified with a fresh
+  screenshot.
+- Files touched: `src/Modules/Modules.MasterData/Domain/Item.cs`, `Domain/ItemType.cs`,
+  `Application/ItemDto.cs`, `Application/ItemService.cs`, `Application/IItemRepository.cs`,
+  `Application/ItemSecurity.cs`, `Application/ItemWorkflow.cs`, `Infrastructure/EfItemRepository.cs`,
+  `Infrastructure/MasterDataDbContext.cs` (Item mapping), `Infrastructure/Migrations/20260714140759_AddItem*.cs`,
+  `Api/ItemsController.cs`, `src/Gateway/Gateway.Api/Program.cs` (DI + security + SoD + workflow + number
+  range), `src/Apps/Apps.Shell/src/api/itemApi.ts`, `src/Apps/Apps.Shell/src/pages/ItemsPage.tsx`,
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (item.* keys), `src/Apps/Apps.Shell/src/App.tsx` (nav + routing),
+  `tests/UnitTests/Modules.MasterData.Tests/ItemTests.cs`, `ItemServiceTests.cs`, `FakeItemRepository.cs`,
+  `tests/IntegrationTests/Modules.MasterData.IntegrationTests/ItemPersistenceTests.cs`, `TestDatabase.cs`
+  (truncate items), `src/Modules/Modules.MasterData/README.md` (added Chart of Accounts + Items "What's
+  built" sections — the Chart of Accounts one was missing entirely until now, backfilled while documenting
+  Items).
+- Next: Phase 1 continues with Cost Centers and Tax codes (remaining Master Data), then Finance
+  (GL/AP/AR/Cash-Bank). Needs a fresh go-ahead before starting.
 
 ### 2026-07-14 — Chart of Accounts (G/L Account) — Phase 1 Master Data
 - Agent: ZCode (builtin:zai-coding-plan/GLM-5.2)

@@ -120,7 +120,30 @@ type TranslationKey =
   | "gl.accountTypeLiability"
   | "gl.accountTypeEquity"
   | "gl.accountTypeRevenue"
-  | "gl.accountTypeExpense";
+  | "gl.accountTypeExpense"
+  | "nav.allItems"
+  | "item.heading"
+  | "item.newHeading"
+  | "item.emptyState"
+  | "item.actionNew"
+  | "item.actionCreate"
+  | "item.actionBack"
+  | "item.actionSubmit"
+  | "item.actionApprove"
+  | "item.actionReject"
+  | "item.columnCode"
+  | "item.columnName"
+  | "item.columnType"
+  | "item.columnUnitOfMeasure"
+  | "item.columnStatus"
+  | "item.fieldItemCode"
+  | "item.fieldItemName"
+  | "item.fieldItemNameArabic"
+  | "item.fieldItemType"
+  | "item.fieldUnitOfMeasure"
+  | "item.itemTypeStock"
+  | "item.itemTypeNonStock"
+  | "item.itemTypeService";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -242,6 +265,29 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "gl.accountTypeEquity": { en: "Equity", ar: "حقوق ملكية" },
   "gl.accountTypeRevenue": { en: "Revenue", ar: "إيرادات" },
   "gl.accountTypeExpense": { en: "Expense", ar: "مصروفات" },
+  "nav.allItems": { en: "Items", ar: "الأصناف" },
+  "item.heading": { en: "Items", ar: "الأصناف" },
+  "item.newHeading": { en: "New Item", ar: "صنف جديد" },
+  "item.emptyState": { en: "No items yet.", ar: "لا توجد أصناف حتى الآن." },
+  "item.actionNew": { en: "New", ar: "جديد" },
+  "item.actionCreate": { en: "Create", ar: "إنشاء" },
+  "item.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "item.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "item.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "item.actionReject": { en: "Reject", ar: "رفض" },
+  "item.columnCode": { en: "Code", ar: "الرمز" },
+  "item.columnName": { en: "Item Name", ar: "اسم الصنف" },
+  "item.columnType": { en: "Type", ar: "النوع" },
+  "item.columnUnitOfMeasure": { en: "Unit", ar: "الوحدة" },
+  "item.columnStatus": { en: "Status", ar: "الحالة" },
+  "item.fieldItemCode": { en: "Item Code", ar: "رمز الصنف" },
+  "item.fieldItemName": { en: "Item Name", ar: "اسم الصنف" },
+  "item.fieldItemNameArabic": { en: "Item Name (Arabic)", ar: "اسم الصنف بالعربية" },
+  "item.fieldItemType": { en: "Item Type", ar: "نوع الصنف" },
+  "item.fieldUnitOfMeasure": { en: "Unit of Measure", ar: "وحدة القياس" },
+  "item.itemTypeStock": { en: "Stock", ar: "مخزون" },
+  "item.itemTypeNonStock": { en: "Non-Stock", ar: "غير مخزون" },
+  "item.itemTypeService": { en: "Service", ar: "خدمة" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

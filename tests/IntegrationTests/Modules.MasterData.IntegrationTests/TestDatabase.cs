@@ -47,5 +47,6 @@ internal static class TestDatabase
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.attachments CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.notes");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.gl_accounts");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.items");
     }
 }
