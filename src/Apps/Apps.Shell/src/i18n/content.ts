@@ -278,6 +278,7 @@ type TranslationKey =
   | "nav.vendorPrequalificationsArea"
   | "nav.allVendorPrequalifications"
   | "nav.allPurchaseRequisitions"
+  | "nav.allRequestsForQuotation"
   | "vpq.heading"
   | "vpq.newHeading"
   | "vpq.emptyState"
@@ -321,7 +322,37 @@ type TranslationKey =
   | "pr.fieldQuantity"
   | "pr.fieldEstimatedUnitPrice"
   | "pr.fieldLineDescription"
-  | "pr.columnLineTotal";
+  | "pr.columnLineTotal"
+  | "nav.requestsForQuotationArea"
+  | "rfq.heading"
+  | "rfq.newHeading"
+  | "rfq.emptyState"
+  | "rfq.actionNew"
+  | "rfq.actionCreate"
+  | "rfq.actionBack"
+  | "rfq.actionSubmit"
+  | "rfq.actionApprove"
+  | "rfq.actionReject"
+  | "rfq.actionRecordQuote"
+  | "rfq.columnDocumentNumber"
+  | "rfq.columnDescription"
+  | "rfq.columnRequisition"
+  | "rfq.columnStatus"
+  | "rfq.fieldRequisition"
+  | "rfq.fieldDescription"
+  | "rfq.fieldResponseDeadline"
+  | "rfq.fieldInvitedVendors"
+  | "rfq.tabLines"
+  | "rfq.tabInvitedVendors"
+  | "rfq.tabQuotes"
+  | "rfq.columnItem"
+  | "rfq.columnQuantity"
+  | "rfq.columnVendor"
+  | "rfq.fieldLine"
+  | "rfq.fieldVendor"
+  | "rfq.fieldQuotedUnitPrice"
+  | "rfq.columnQuotedUnitPrice"
+  | "rfq.emptyQuotes";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -601,6 +632,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.vendorPrequalificationsArea": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
   "nav.allVendorPrequalifications": { en: "All Prequalifications", ar: "جميع طلبات التأهيل" },
   "nav.allPurchaseRequisitions": { en: "All Requisitions", ar: "جميع طلبات الشراء" },
+  "nav.allRequestsForQuotation": { en: "All RFQs", ar: "جميع طلبات عروض الأسعار" },
 
   "vpq.heading": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
   "vpq.newHeading": { en: "New Vendor Prequalification", ar: "تأهيل مورّد جديد" },
@@ -648,6 +680,38 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "pr.fieldEstimatedUnitPrice": { en: "Est. Unit Price", ar: "سعر الوحدة التقديري" },
   "pr.fieldLineDescription": { en: "Line Description", ar: "وصف البند" },
   "pr.columnLineTotal": { en: "Line Total", ar: "إجمالي البند" },
+
+  "nav.requestsForQuotationArea": { en: "Requests for Quotation", ar: "طلبات عروض الأسعار" },
+
+  "rfq.heading": { en: "Requests for Quotation", ar: "طلبات عروض الأسعار" },
+  "rfq.newHeading": { en: "New Request for Quotation", ar: "طلب عرض سعر جديد" },
+  "rfq.emptyState": { en: "No requests for quotation yet.", ar: "لا توجد طلبات عروض أسعار حتى الآن." },
+  "rfq.actionNew": { en: "New", ar: "جديد" },
+  "rfq.actionCreate": { en: "Create", ar: "إنشاء" },
+  "rfq.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "rfq.actionSubmit": { en: "Submit (Send to Vendors)", ar: "إرسال إلى الموردين" },
+  "rfq.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "rfq.actionReject": { en: "Reject", ar: "رفض" },
+  "rfq.actionRecordQuote": { en: "Record Quote", ar: "تسجيل عرض السعر" },
+  "rfq.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "rfq.columnDescription": { en: "Description", ar: "الوصف" },
+  "rfq.columnRequisition": { en: "Requisition", ar: "طلب الشراء" },
+  "rfq.columnStatus": { en: "Status", ar: "الحالة" },
+  "rfq.fieldRequisition": { en: "Purchase Requisition", ar: "طلب الشراء" },
+  "rfq.fieldDescription": { en: "Description", ar: "الوصف" },
+  "rfq.fieldResponseDeadline": { en: "Response Deadline", ar: "الموعد النهائي للرد" },
+  "rfq.fieldInvitedVendors": { en: "Invited Vendors", ar: "الموردون المدعوون" },
+  "rfq.tabLines": { en: "Lines", ar: "البنود" },
+  "rfq.tabInvitedVendors": { en: "Invited Vendors", ar: "الموردون المدعوون" },
+  "rfq.tabQuotes": { en: "Vendor Quotes", ar: "عروض أسعار الموردين" },
+  "rfq.columnItem": { en: "Item", ar: "الصنف" },
+  "rfq.columnQuantity": { en: "Quantity", ar: "الكمية" },
+  "rfq.columnVendor": { en: "Vendor", ar: "المورّد" },
+  "rfq.fieldLine": { en: "Line", ar: "البند" },
+  "rfq.fieldVendor": { en: "Vendor", ar: "المورّد" },
+  "rfq.fieldQuotedUnitPrice": { en: "Quoted Unit Price", ar: "سعر الوحدة المعروض" },
+  "rfq.columnQuotedUnitPrice": { en: "Quoted Unit Price", ar: "سعر الوحدة المعروض" },
+  "rfq.emptyQuotes": { en: "No vendor quotes recorded yet.", ar: "لم يتم تسجيل أي عروض أسعار حتى الآن." },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

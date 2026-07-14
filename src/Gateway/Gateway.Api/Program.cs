@@ -73,7 +73,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 VendorPrequalificationSecurity.CommercialReviewerRole, VendorPrequalificationSecurity.LegalReviewerRole,
                 VendorPrequalificationSecurity.TechnicalReviewerRole, VendorPrequalificationSecurity.HseReviewerRole,
                 VendorPrequalificationSecurity.QualityReviewerRole,
-                PurchaseRequisitionSecurity.MaintainerRole, PurchaseRequisitionSecurity.ApproverRole },
+                PurchaseRequisitionSecurity.MaintainerRole, PurchaseRequisitionSecurity.ApproverRole,
+                RequestForQuotationSecurity.MaintainerRole, RequestForQuotationSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -85,7 +86,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 VendorPrequalificationSecurity.CommercialReviewerDuty, VendorPrequalificationSecurity.LegalReviewerDuty,
                 VendorPrequalificationSecurity.TechnicalReviewerDuty, VendorPrequalificationSecurity.HseReviewerDuty,
                 VendorPrequalificationSecurity.QualityReviewerDuty,
-                PurchaseRequisitionSecurity.MaintainerDuty, PurchaseRequisitionSecurity.ApproverDuty });
+                PurchaseRequisitionSecurity.MaintainerDuty, PurchaseRequisitionSecurity.ApproverDuty,
+                RequestForQuotationSecurity.MaintainerDuty, RequestForQuotationSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -112,6 +114,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         VendorPrequalificationSecurity.MaintainerHseReviewerConflict,
         VendorPrequalificationSecurity.MaintainerQualityReviewerConflict,
         PurchaseRequisitionSecurity.MaintainerApproverConflict,
+        RequestForQuotationSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
@@ -127,7 +130,7 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
             ItemSecurity.MaintainerRoleKey, CostCenterSecurity.MaintainerRoleKey,
             TaxCodeSecurity.MaintainerRoleKey, JournalEntrySecurity.MaintainerRoleKey,
             APInvoiceSecurity.MaintainerRoleKey, VendorPrequalificationSecurity.MaintainerRoleKey,
-            PurchaseRequisitionSecurity.MaintainerRoleKey,
+            PurchaseRequisitionSecurity.MaintainerRoleKey, RequestForQuotationSecurity.MaintainerRoleKey,
         },
         ["system/approver"] = new[]
         {
@@ -138,7 +141,7 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
             VendorPrequalificationWorkflow.CommercialReviewerRoleKey, VendorPrequalificationWorkflow.LegalReviewerRoleKey,
             VendorPrequalificationWorkflow.TechnicalReviewerRoleKey, VendorPrequalificationWorkflow.HseReviewerRoleKey,
             VendorPrequalificationWorkflow.QualityReviewerRoleKey,
-            PurchaseRequisitionWorkflow.ApproverRoleKey,
+            PurchaseRequisitionWorkflow.ApproverRoleKey, RequestForQuotationWorkflow.ApproverRoleKey,
         },
     }));
 
@@ -157,6 +160,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         APInvoiceWorkflow.SubmitApprovalDefinition,
         VendorPrequalificationWorkflow.SubmitApprovalDefinition,
         PurchaseRequisitionWorkflow.SubmitApprovalDefinition,
+        RequestForQuotationWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -336,6 +340,23 @@ builder.Services.AddScoped<PurchaseRequisitionService>(sp => new PurchaseRequisi
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IItemLookup>(),
     sp.GetRequiredService<ICostCenterLookup>()));
+
+builder.Services.AddScoped<IRequestForQuotationRepository, Modules.Procurement.Infrastructure.EfRequestForQuotationRepository>();
+// Depends on IPurchaseRequisitionRepository directly (an intra-module dependency, not cross-module — both
+// live in Modules.Procurement.Application, so no Contracts package is needed, same reasoning as
+// APInvoiceService reusing JournalEntryService directly within Modules.Finance).
+builder.Services.AddScoped<RequestForQuotationService>(sp => new RequestForQuotationService(
+    sp.GetRequiredService<IRequestForQuotationRepository>(),
+    sp.GetRequiredService<IPurchaseRequisitionRepository>(),
+    new Modules.Procurement.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>(),
+        new[] { new NumberRangeDefinition(RequestForQuotationService.NumberRangeKey, "PROC", "RFQ") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Procurement.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>()));
 
 var app = builder.Build();
 

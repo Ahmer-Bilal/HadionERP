@@ -13,6 +13,7 @@ import { JournalEntriesPage } from "./pages/JournalEntriesPage";
 import { APInvoicesPage } from "./pages/APInvoicesPage";
 import { VendorPrequalificationsPage } from "./pages/VendorPrequalificationsPage";
 import { PurchaseRequisitionsPage } from "./pages/PurchaseRequisitionsPage";
+import { RequestsForQuotationPage } from "./pages/RequestsForQuotationPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -20,7 +21,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications" | "purchase-requisitions";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -33,6 +34,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#ap-invoices") return "ap-invoices";
   if (window.location.hash === "#vendor-prequalifications") return "vendor-prequalifications";
   if (window.location.hash === "#purchase-requisitions") return "purchase-requisitions";
+  if (window.location.hash === "#requests-for-quotation") return "requests-for-quotation";
   return "home";
 }
 
@@ -216,6 +218,18 @@ function App() {
             },
           ],
         },
+        {
+          key: "requests-for-quotation",
+          label: t("nav.requestsForQuotationArea", language),
+          items: [
+            {
+              key: "all-requests-for-quotation",
+              label: t("nav.allRequestsForQuotation", language),
+              href: "#requests-for-quotation",
+              isActive: page === "requests-for-quotation",
+            },
+          ],
+        },
       ],
     },
   ];
@@ -259,6 +273,8 @@ function App() {
             <VendorPrequalificationsPage language={language} />
           ) : page === "purchase-requisitions" ? (
             <PurchaseRequisitionsPage language={language} />
+          ) : page === "requests-for-quotation" ? (
+            <RequestsForQuotationPage language={language} />
           ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
           ) : (

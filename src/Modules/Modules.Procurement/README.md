@@ -102,10 +102,55 @@ built today.
   header/grouping cost center is correctly rejected. Live Playwright pass in both English and Arabic (full
   RTL mirroring including the line-item grid's column order).
 
+## What's built (Phase 2, slice 4: Request for Quotation)
+
+- **Domain**: `RequestForQuotation` — the second document in the procure-to-pay chain. References an Approved
+  `PurchaseRequisition`; at creation, copies that PR's lines (Item + Quantity only, via child `RfqLine`,
+  keeping `PurchaseRequisitionLineId` purely for traceability) and invites a fixed set of vendors (child
+  `RfqInvitedVendor`) — both frozen once `Submit` sends the RFQ out. `RecordVendorQuote` records each invited
+  vendor's unit price per line (child `RfqVendorQuoteLine`) only once Submitted, only for a vendor that was
+  actually invited and a line that actually belongs to this RFQ, once per (vendor, line) pair. `Approve`
+  means the quote-collection process is closed — there's no separate "award" step here; picking the winning
+  quote is deferred to Purchase Order creation (task #102), which is stated to work "from RFQ-selected quote
+  or direct."
+- **Intra-module dependency, no new Contracts package**: `RequestForQuotationService` depends on
+  `IPurchaseRequisitionRepository` directly (both live in `Modules.Procurement.Application`) to load and
+  validate the source PR is Approved before copying its lines — same "same-module dependency doesn't need a
+  Contracts package" reasoning as `Modules.Finance`'s `APInvoiceService` reusing `JournalEntryService`
+  directly.
+- **Vendor eligibility**: reuses the same commercial-relationship role set
+  `Modules.Finance.Application.APInvoiceService.PayableEligibleRoles` uses — only a vendor holding a
+  Supplier/Subcontractor/Consultant/RentalCompany/Manufacturer/ManpowerSupplier/TestingLaboratory role, and
+  already Approved, can be invited to quote.
+- **`RequestForQuotationSecurity`/`RequestForQuotationWorkflow`**: same one-step Any-quorum
+  Maintainer/Approver shape as Purchase Requisition, a distinct Duty/Role pair from it (running an RFQ vs.
+  approving one is different real-world authority than raising/approving a PR).
+- **Api**: `RequestsForQuotationController` at `api/v1/procurement/requests-for-quotation` —
+  Create/Get/List + `submit`/`approve`/`reject` + `POST {id}/vendor-quotes` to record one vendor's quote.
+- **Frontend**: `RequestsForQuotationPage.tsx` — list/create/details. Create form has a PR dropdown (filtered
+  to Approved requisitions), a vendor checkbox multi-select (filtered to Approved, quote-eligible vendors),
+  description and response-deadline fields. Details view has four FastTabs: General, Lines (copied from the
+  PR), Invited Vendors, and Vendor Quotes (a table of recorded quotes plus a mini quote-entry form, shown
+  only once Submitted). Own nav Area under Procurement, alongside Vendor Prequalification and Purchase
+  Requisition.
+- Verified end-to-end: 21 new unit tests (line/vendor freeze-after-submit rules, quote-recording validation
+  incl. uninvited-vendor/wrong-line/duplicate/non-positive-price rejection, PR-must-be-Approved validation,
+  vendor eligibility validation, the full Draft→Submit→(quote)→Approve/Reject lifecycle) + 2 new integration
+  tests against real PostgreSQL (RFQ with lines/invited vendors/quotes round-trips identically, cascade
+  delete across all three child collections). Live `curl` exercise: created and approved a PR, created an
+  RFQ against it (confirmed the line was copied with the correct Item/Quantity and the vendor was invited),
+  submitted it, recorded a vendor quote, and approved — confirmed the quote persisted through to the
+  Approved response.
+
 ## Deferred (disclosed, not hidden)
 
-- RFQ, Purchase Order, GRN, 3-way match, and the Finance budget-check integration
+- Purchase Order, GRN, 3-way match, and the Finance budget-check integration
   (`Modules.Finance.Contracts.IBudgetCheckService`) — the rest of Phase 2, genuinely next, not built yet.
+- No "award" action on the RFQ itself (e.g. marking one vendor's quote as selected per line) — Approving an
+  RFQ only closes the quote-collection process; the eventual Purchase Order slice picks which recorded quote
+  to use when it's built.
+- No duplicate-detection across RFQs (e.g. the same PR line being quoted on two different open RFQs) —
+  genuinely useful, genuinely deferred, not required by this slice.
 - No amount-conditioned approval matrix for Purchase Requisition — one Any-quorum step for every
   requisition regardless of estimated total, same Phase-1-style simplification every module's first workflow
   cut uses.

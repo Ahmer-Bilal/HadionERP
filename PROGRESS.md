@@ -42,7 +42,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice, both post/reverse-able with full audit trail. AR/Cash-Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-14 |
-| Phase 2 — Procurement | In Progress — BusinessRoles + Vendor Prequalification done. Purchase Requisition built and verified. RFQ/PO/GRN/3-way match/budget-check not started | 2026-07-14 |
+| Phase 2 — Procurement | In Progress — BusinessRoles + Vendor Prequalification + Purchase Requisition + RFQ all built and verified. PO/GRN/3-way match/budget-check not started | 2026-07-14 |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
 | Phase 5 — Reporting, Analytics & Mobile | Not Started | — |
@@ -53,6 +53,48 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Request for Quotation built (Phase 2 slice 4) — session paused here by user request
+- Agent: Claude Sonnet 5
+- Phase: Phase 2 — Procurement
+- Status: Completed (this slice) — user explicitly asked to stop after this slice ("complete and deliver
+  full vertical slice and hold... we have chances"), so Purchase Order/GRN (tasks #102/#103) are NOT started.
+- What changed: Built `RequestForQuotation` — the second document in the procure-to-pay chain — as
+  `Modules.Procurement`'s fourth vertical slice. Domain: `RequestForQuotation` + child `RfqLine` (copied from
+  an Approved source `PurchaseRequisition`'s own lines: Item + Quantity, `PurchaseRequisitionLineId` kept for
+  traceability), `RfqInvitedVendor` (a fixed vendor set, frozen once Submitted), `RfqVendorQuoteLine`
+  (recorded per invited vendor per line, only after Submit, once per vendor+line pair). `Approve` just closes
+  the quote-collection process — there's no "award" step on this entity; picking a winning quote is deferred
+  to the future Purchase Order slice ("from RFQ-selected quote or direct", per the roadmap). Service depends
+  on `IPurchaseRequisitionRepository` directly (same-module, no new Contracts package needed) to validate the
+  referenced PR is Approved before copying its lines, and reuses
+  `Modules.Finance.Application.APInvoiceService.PayableEligibleRoles`' exact commercial-relationship role set
+  to decide which vendors are eligible to be invited to quote.
+- Verified: 85 unit tests in Modules.Procurement.Tests (21 new for this slice) + 9 integration tests in
+  Modules.Procurement.IntegrationTests (2 new) all pass; 379 tests pass solution-wide with zero regressions.
+  Full backend + frontend build clean; both no-hardcoded-Arabic guardrails pass. Live `curl` exercise:
+  created and approved a PR, created an RFQ against it (confirmed the line was copied correctly and the
+  vendor invited), submitted, recorded a vendor quote, approved — confirmed the quote persisted through.
+  Frontend built and typechecked clean; live Playwright pass deferred for this slice given the session's
+  token-budget constraint at the time — the backend contract and full test coverage are proven, but the UI
+  was not re-screenshotted in-browser before this checkpoint. **Next session/tool should do a quick
+  Playwright pass on `RequestsForQuotationPage.tsx` (EN+AR) before building on top of it, to close that gap.**
+- Files touched: `src/Modules/Modules.Procurement/Domain/RequestForQuotation.cs`, `RfqLine.cs`,
+  `RfqInvitedVendor.cs`, `RfqVendorQuoteLine.cs` (new); `Application/RequestForQuotationDto.cs`,
+  `IRequestForQuotationRepository.cs`, `RequestForQuotationSecurity.cs`, `RequestForQuotationWorkflow.cs`,
+  `RequestForQuotationService.cs` (new); `Infrastructure/ProcurementDbContext.cs` (RFQ + 3 child collection
+  mappings), `EfRequestForQuotationRepository.cs` (new), migration `20260714195518_AddRequestForQuotation`;
+  `Api/RequestsForQuotationController.cs` (new); `src/Gateway/Gateway.Api/Program.cs` (DI/Security/SoD/
+  Workflow registrations); frontend `src/Apps/Apps.Shell/src/api/requestForQuotationApi.ts`,
+  `src/Apps/Apps.Shell/src/pages/RequestsForQuotationPage.tsx`, `App.tsx` (new nav Area under Procurement),
+  `i18n/content.ts` (`rfq.*`/`nav.requestsForQuotationArea` keys); tests:
+  `tests/UnitTests/Modules.Procurement.Tests/RequestForQuotationTests.cs`,
+  `RequestForQuotationServiceTests.cs`, `FakeRequestForQuotationRepository.cs` (new);
+  `tests/IntegrationTests/Modules.Procurement.IntegrationTests/RequestForQuotationPersistenceTests.cs` (new),
+  `TestDatabase.cs` (added requests_for_quotation truncate); `src/Modules/Modules.Procurement/README.md`.
+- Next: Purchase Order (task #102) — from an RFQ-selected quote or direct, plus the Finance budget-check
+  integration via a new `Modules.Finance.Contracts.IBudgetCheckService` — then GRN + 3-way match (task
+  #103), completing Phase 2's exit criteria. Do the deferred Playwright pass on this RFQ UI first.
 
 ### 2026-07-14 — Purchase Requisition built (Phase 2 slice 3)
 - Agent: Claude Sonnet 5

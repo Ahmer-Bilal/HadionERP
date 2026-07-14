@@ -20,6 +20,10 @@ public sealed class ProcurementDbContext : DbContext
     public DbSet<VendorPrequalification> VendorPrequalifications => Set<VendorPrequalification>();
     public DbSet<PurchaseRequisition> PurchaseRequisitions => Set<PurchaseRequisition>();
     internal DbSet<PurchaseRequisitionLine> PurchaseRequisitionLines => Set<PurchaseRequisitionLine>();
+    public DbSet<RequestForQuotation> RequestsForQuotation => Set<RequestForQuotation>();
+    internal DbSet<RfqLine> RfqLines => Set<RfqLine>();
+    internal DbSet<RfqInvitedVendor> RfqInvitedVendors => Set<RfqInvitedVendor>();
+    internal DbSet<RfqVendorQuoteLine> RfqVendorQuoteLines => Set<RfqVendorQuoteLine>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
     public DbSet<AttachmentMetadata> Attachments => Set<AttachmentMetadata>();
@@ -113,6 +117,90 @@ public sealed class ProcurementDbContext : DbContext
             entity.Property(e => e.LineDescription).HasColumnName("line_description").HasMaxLength(500);
             entity.Property<Guid>("PurchaseRequisitionId").HasColumnName("purchase_requisition_id");
             entity.Ignore(e => e.EstimatedLineTotal);
+        });
+
+        modelBuilder.Entity<RequestForQuotation>(entity =>
+        {
+            entity.ToTable("requests_for_quotation");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.PurchaseRequisitionId).HasColumnName("purchase_requisition_id");
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.ResponseDeadline).HasColumnName("response_deadline");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("RequestForQuotationId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.HasMany(e => e.InvitedVendors)
+                .WithOne()
+                .HasForeignKey("RequestForQuotationId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.InvitedVendors)
+                .HasField("_invitedVendors")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.HasMany(e => e.VendorQuoteLines)
+                .WithOne()
+                .HasForeignKey("RequestForQuotationId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.VendorQuoteLines)
+                .HasField("_vendorQuoteLines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<RfqLine>(entity =>
+        {
+            entity.ToTable("rfq_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.PurchaseRequisitionLineId).HasColumnName("purchase_requisition_line_id");
+            entity.Property(e => e.ItemId).HasColumnName("item_id");
+            entity.Property(e => e.Quantity).HasColumnName("quantity").HasColumnType("numeric(18,3)");
+            entity.Property<Guid>("RequestForQuotationId").HasColumnName("request_for_quotation_id");
+        });
+
+        modelBuilder.Entity<RfqInvitedVendor>(entity =>
+        {
+            entity.ToTable("rfq_invited_vendors");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.VendorId).HasColumnName("vendor_id");
+            entity.Property<Guid>("RequestForQuotationId").HasColumnName("request_for_quotation_id");
+        });
+
+        modelBuilder.Entity<RfqVendorQuoteLine>(entity =>
+        {
+            entity.ToTable("rfq_vendor_quote_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.VendorId).HasColumnName("vendor_id");
+            entity.Property(e => e.RfqLineId).HasColumnName("rfq_line_id");
+            entity.Property(e => e.QuotedUnitPrice).HasColumnName("quoted_unit_price").HasColumnType("numeric(18,2)");
+            entity.Property<Guid>("RequestForQuotationId").HasColumnName("request_for_quotation_id");
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>
