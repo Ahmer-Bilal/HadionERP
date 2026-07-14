@@ -25,3 +25,23 @@ internal sealed class FakeCostCenterLookup : ICostCenterLookup
     public Task<CostCenterSummary?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_costCenters.GetValueOrDefault(id));
 }
+
+internal sealed class FakeBusinessPartnerLookup : IBusinessPartnerLookup
+{
+    private readonly Dictionary<Guid, BusinessPartnerSummary> _partners = new();
+
+    public void Add(BusinessPartnerSummary partner) => _partners[partner.Id] = partner;
+
+    public Task<BusinessPartnerSummary?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_partners.GetValueOrDefault(id));
+}
+
+internal sealed class FakeTaxCodeLookup : ITaxCodeLookup
+{
+    private readonly Dictionary<Guid, TaxCodeSummary> _taxCodes = new();
+
+    public void Add(TaxCodeSummary taxCode) => _taxCodes[taxCode.Id] = taxCode;
+
+    public Task<TaxCodeSummary?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_taxCodes.GetValueOrDefault(id));
+}

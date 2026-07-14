@@ -66,13 +66,15 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 ItemSecurity.MaintainerRole, ItemSecurity.ApproverRole,
                 CostCenterSecurity.MaintainerRole, CostCenterSecurity.ApproverRole,
                 TaxCodeSecurity.MaintainerRole, TaxCodeSecurity.ApproverRole,
-                JournalEntrySecurity.MaintainerRole, JournalEntrySecurity.ApproverRole },
+                JournalEntrySecurity.MaintainerRole, JournalEntrySecurity.ApproverRole,
+                APInvoiceSecurity.MaintainerRole, APInvoiceSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
                 CostCenterSecurity.MaintainerDuty, CostCenterSecurity.ApproverDuty,
                 TaxCodeSecurity.MaintainerDuty, TaxCodeSecurity.ApproverDuty,
-                JournalEntrySecurity.MaintainerDuty, JournalEntrySecurity.ApproverDuty });
+                JournalEntrySecurity.MaintainerDuty, JournalEntrySecurity.ApproverDuty,
+                APInvoiceSecurity.MaintainerDuty, APInvoiceSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -92,6 +94,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         CostCenterSecurity.MaintainerApproverConflict,
         TaxCodeSecurity.MaintainerApproverConflict,
         JournalEntrySecurity.MaintainerApproverConflict,
+        APInvoiceSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
@@ -106,12 +109,14 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
             BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey,
             ItemSecurity.MaintainerRoleKey, CostCenterSecurity.MaintainerRoleKey,
             TaxCodeSecurity.MaintainerRoleKey, JournalEntrySecurity.MaintainerRoleKey,
+            APInvoiceSecurity.MaintainerRoleKey,
         },
         ["system/approver"] = new[]
         {
             BusinessPartnerWorkflow.ApproverRoleKey, GLAccountWorkflow.ApproverRoleKey,
             ItemWorkflow.ApproverRoleKey, CostCenterWorkflow.ApproverRoleKey,
             TaxCodeWorkflow.ApproverRoleKey, JournalEntryWorkflow.ApproverRoleKey,
+            APInvoiceWorkflow.ApproverRoleKey,
         },
     }));
 
@@ -127,6 +132,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         CostCenterWorkflow.SubmitApprovalDefinition,
         TaxCodeWorkflow.SubmitApprovalDefinition,
         JournalEntryWorkflow.SubmitApprovalDefinition,
+        APInvoiceWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -243,6 +249,26 @@ builder.Services.AddScoped<Modules.Finance.Application.JournalEntryService>(sp =
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IGLAccountLookup>(),
     sp.GetRequiredService<ICostCenterLookup>()));
+builder.Services.AddScoped<Modules.Finance.Application.IAPInvoiceRepository, Modules.Finance.Infrastructure.EfAPInvoiceRepository>();
+// APInvoiceService reuses JournalEntryService directly (both Modules.Finance.Application — an intra-module
+// dependency, not a cross-module one, so no Contracts package is needed here) to generate and reverse the
+// linked posting through JournalEntryService.CreateSystemGeneratedAsync/ReverseAsync — see APInvoice's own
+// doc comment for why Posting an invoice creates a real second document rather than just flipping a flag.
+builder.Services.AddScoped<Modules.Finance.Application.APInvoiceService>(sp => new Modules.Finance.Application.APInvoiceService(
+    sp.GetRequiredService<Modules.Finance.Application.IAPInvoiceRepository>(),
+    new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
+        new[] { new NumberRangeDefinition(Modules.Finance.Application.APInvoiceService.NumberRangeKey, "FIN", "AP") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>(),
+    sp.GetRequiredService<IGLAccountLookup>(),
+    sp.GetRequiredService<ICostCenterLookup>(),
+    sp.GetRequiredService<ITaxCodeLookup>(),
+    sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
 
 var app = builder.Build();
 

@@ -18,6 +18,7 @@ public sealed class FinanceDbContext : DbContext
 {
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
     internal DbSet<JournalLine> JournalLines => Set<JournalLine>();
+    public DbSet<APInvoice> APInvoices => Set<APInvoice>();
     // WorkflowInstance is a Platform.Workflow kernel type, persisted here for the same "storage-agnostic
     // port, persisted by whichever module actually has a database" reasoning as
     // Modules.MasterData.Infrastructure.MasterDataDbContext — but in Finance's own schema/table, not
@@ -87,6 +88,46 @@ public sealed class FinanceDbContext : DbContext
             entity.Property(e => e.CreditAmount).HasColumnName("credit_amount").HasColumnType("numeric(18,2)");
             entity.Property(e => e.LineDescription).HasColumnName("line_description").HasMaxLength(500);
             entity.Property<Guid>("JournalEntryId").HasColumnName("journal_entry_id");
+        });
+
+        modelBuilder.Entity<APInvoice>(entity =>
+        {
+            entity.ToTable("ap_invoices");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.VendorId).HasColumnName("vendor_id");
+            entity.Property(e => e.VendorInvoiceNumber).HasColumnName("vendor_invoice_number").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.InvoiceDate).HasColumnName("invoice_date");
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.ExpenseAccountId).HasColumnName("expense_account_id");
+            entity.Property(e => e.PayableAccountId).HasColumnName("payable_account_id");
+            entity.Property(e => e.CostCenterId).HasColumnName("cost_center_id");
+            entity.Property(e => e.TaxCodeId).HasColumnName("tax_code_id");
+            entity.Property(e => e.TaxRate).HasColumnName("tax_rate").HasColumnType("numeric(5,2)");
+            entity.Property(e => e.VatAccountId).HasColumnName("vat_account_id");
+            entity.Property(e => e.NetAmount).HasColumnName("net_amount").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.LinkedJournalEntryId).HasColumnName("linked_journal_entry_id");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.Ignore(e => e.TaxAmount);
+            entity.Ignore(e => e.GrossAmount);
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

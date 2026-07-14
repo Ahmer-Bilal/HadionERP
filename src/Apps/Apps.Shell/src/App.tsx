@@ -10,6 +10,7 @@ import { ItemsPage } from "./pages/ItemsPage";
 import { CostCentersPage } from "./pages/CostCentersPage";
 import { TaxCodesPage } from "./pages/TaxCodesPage";
 import { JournalEntriesPage } from "./pages/JournalEntriesPage";
+import { APInvoicesPage } from "./pages/APInvoicesPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -17,7 +18,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -27,6 +28,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#cost-centers") return "cost-centers";
   if (window.location.hash === "#tax-codes") return "tax-codes";
   if (window.location.hash === "#journal-entries") return "journal-entries";
+  if (window.location.hash === "#ap-invoices") return "ap-invoices";
   return "home";
 }
 
@@ -168,6 +170,18 @@ function App() {
             },
           ],
         },
+        {
+          key: "ap-invoices",
+          label: t("nav.apInvoicesArea", language),
+          items: [
+            {
+              key: "all-ap-invoices",
+              label: t("nav.allAPInvoices", language),
+              href: "#ap-invoices",
+              isActive: page === "ap-invoices",
+            },
+          ],
+        },
       ],
     },
   ];
@@ -205,6 +219,8 @@ function App() {
             <TaxCodesPage language={language} />
           ) : page === "journal-entries" ? (
             <JournalEntriesPage language={language} />
+          ) : page === "ap-invoices" ? (
+            <APInvoicesPage language={language} />
           ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
           ) : (

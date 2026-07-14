@@ -227,7 +227,39 @@ type TranslationKey =
   | "je.unbalanced"
   | "je.reversalOf"
   | "je.statusPosted"
-  | "je.statusReversed";
+  | "je.statusReversed"
+  | "nav.apInvoicesArea"
+  | "nav.allAPInvoices"
+  | "ap.heading"
+  | "ap.newHeading"
+  | "ap.emptyState"
+  | "ap.actionNew"
+  | "ap.actionCreate"
+  | "ap.actionBack"
+  | "ap.actionSubmit"
+  | "ap.actionApprove"
+  | "ap.actionReject"
+  | "ap.actionPost"
+  | "ap.actionReverse"
+  | "ap.columnDocumentNumber"
+  | "ap.columnVendorInvoiceNumber"
+  | "ap.columnInvoiceDate"
+  | "ap.columnVendor"
+  | "ap.columnGrossAmount"
+  | "ap.columnStatus"
+  | "ap.fieldVendor"
+  | "ap.fieldVendorInvoiceNumber"
+  | "ap.fieldInvoiceDate"
+  | "ap.fieldDescription"
+  | "ap.fieldExpenseAccount"
+  | "ap.fieldPayableAccount"
+  | "ap.fieldTaxCode"
+  | "ap.fieldVatAccount"
+  | "ap.fieldNetAmount"
+  | "ap.noTaxCode"
+  | "ap.columnNetAmount"
+  | "ap.columnTaxAmount"
+  | "ap.linkedJournalEntry";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -456,6 +488,38 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "je.reversalOf": { en: "Reversal of", ar: "عكس لـ" },
   "je.statusPosted": { en: "Posted", ar: "مُرحّل" },
   "je.statusReversed": { en: "Reversed", ar: "معكوس" },
+  "nav.apInvoicesArea": { en: "AP Invoices", ar: "فواتير الموردين" },
+  "nav.allAPInvoices": { en: "All AP Invoices", ar: "جميع فواتير الموردين" },
+  "ap.heading": { en: "AP Invoices", ar: "فواتير الموردين" },
+  "ap.newHeading": { en: "New AP Invoice", ar: "فاتورة مورّد جديدة" },
+  "ap.emptyState": { en: "No AP invoices yet.", ar: "لا توجد فواتير موردين حتى الآن." },
+  "ap.actionNew": { en: "New", ar: "جديد" },
+  "ap.actionCreate": { en: "Create", ar: "إنشاء" },
+  "ap.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "ap.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "ap.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "ap.actionReject": { en: "Reject", ar: "رفض" },
+  "ap.actionPost": { en: "Post", ar: "ترحيل" },
+  "ap.actionReverse": { en: "Reverse", ar: "عكس القيد" },
+  "ap.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "ap.columnVendorInvoiceNumber": { en: "Vendor Invoice #", ar: "رقم فاتورة المورّد" },
+  "ap.columnInvoiceDate": { en: "Invoice Date", ar: "تاريخ الفاتورة" },
+  "ap.columnVendor": { en: "Vendor", ar: "المورّد" },
+  "ap.columnGrossAmount": { en: "Gross Amount", ar: "الإجمالي" },
+  "ap.columnStatus": { en: "Status", ar: "الحالة" },
+  "ap.fieldVendor": { en: "Vendor", ar: "المورّد" },
+  "ap.fieldVendorInvoiceNumber": { en: "Vendor Invoice Number", ar: "رقم فاتورة المورّد" },
+  "ap.fieldInvoiceDate": { en: "Invoice Date", ar: "تاريخ الفاتورة" },
+  "ap.fieldDescription": { en: "Description", ar: "الوصف" },
+  "ap.fieldExpenseAccount": { en: "Expense Account", ar: "حساب المصروف" },
+  "ap.fieldPayableAccount": { en: "Payable Account", ar: "حساب الدائنين" },
+  "ap.fieldTaxCode": { en: "Tax Code", ar: "الرمز الضريبي" },
+  "ap.fieldVatAccount": { en: "VAT Account", ar: "حساب ضريبة القيمة المضافة" },
+  "ap.fieldNetAmount": { en: "Net Amount", ar: "المبلغ الصافي" },
+  "ap.noTaxCode": { en: "— None —", ar: "— لا يوجد —" },
+  "ap.columnNetAmount": { en: "Net", ar: "الصافي" },
+  "ap.columnTaxAmount": { en: "Tax", ar: "الضريبة" },
+  "ap.linkedJournalEntry": { en: "Linked Journal Entry", ar: "قيد اليومية المرتبط" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

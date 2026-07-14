@@ -71,22 +71,67 @@ actually built today.
   `reversalOfEntryId`. Live Playwright pass in both English and Arabic (full RTL mirroring including the
   line-item grid's column order).
 
+## What's built (Phase 1, slice 2: AP Invoice — Phase 1 Finance Core exit criteria complete)
+
+- **Domain**: `APInvoice` — the other half of the Phase 1 exit criteria ("post/reverse a GL journal **and
+  an AP invoice** end-to-end with full audit trail"). Vendor reference (validated as an actually-Approved
+  Vendor/Both partner via `IBusinessPartnerLookup` — an invoice can't be raised against an unapproved or
+  non-vendor partner), the vendor's own `VendorInvoiceNumber`, `NetAmount`, and an explicitly-chosen
+  Expense account + Payable account (rather than a configured "AP control account" default — see the
+  class doc comment for why: a real default needs an admin config screen this application doesn't have
+  yet, and a guessed default with no admin behind it would be worse than making the choice explicit). An
+  optional Tax Code **snapshots** the code's rate into `TaxRate` at creation — a later rate change never
+  retroactively changes an already-created invoice, the standard "freeze financial facts at the moment of
+  the transaction" pattern. `TaxAmount`/`GrossAmount` are computed, never stored, same "computed, not
+  persisted" choice as `JournalEntry.IsBalanced`.
+- **Application**: `APInvoiceService.PostAsync` generates a **real, separate, linked G/L Journal Entry**
+  (Dr Expense, Dr VAT if any, Cr Payable — always balanced by construction since Gross ≡ Net + Tax) by
+  calling `JournalEntryService.CreateSystemGeneratedAsync` — the exact same shared method
+  `JournalEntryService.ReverseAsync`'s own mirror-entry logic was refactored into, once AP Invoice needed
+  the identical "construct → validate lines → number → drive lifecycle, skip human approval" sequence a
+  second time. `ReverseAsync` reverses the linked entry (via `JournalEntryService.ReverseAsync`) and the
+  invoice itself — two independently-audited documents linked by `LinkedJournalEntryId`, not one document
+  pretending to be both.
+- **Api**: `APInvoicesController` at `api/v1/finance/ap-invoices` — Create/Get/List +
+  `submit`/`approve`/`reject`/`post`/`reverse`, same pattern as `JournalEntriesController`.
+- **Frontend**: `APInvoicesPage.tsx` — list/create/details, with a vendor dropdown (filtered to
+  Vendor/Both partners), G/L account dropdowns for Expense/Payable/VAT, a Tax Code dropdown with a live
+  Net/Tax/Gross preview as amounts are entered. Own nav Area under Finance, alongside Journal Entries.
+- Verified end-to-end: 19 new unit tests (vendor/account/tax-code validation, tax-rate snapshotting, the
+  full lifecycle, the generated posting's line count and balance with/without tax, reversal cascading to
+  the linked entry) + 2 new integration tests against real PostgreSQL. Live `curl` exercise: rejected an
+  invoice against an unapproved vendor, approved the vendor, created an invoice with 15% VAT
+  (`FIN-AP-2026-000001`), drove it through Submit → Approve → Post, confirmed the generated
+  `FIN-JE-2026-000004` had exactly Dr Expense 1000 / Dr VAT 150 / Cr Payable 1150 (balanced), reversed the
+  invoice and confirmed the linked journal entry was reversed too, and created a second invoice with no
+  tax code to confirm the two-line (no-VAT-line) posting path. Live Playwright pass in both English and
+  Arabic.
+- **This closes out the Phase 1 exit criteria for Finance Core** — a company can now maintain its chart of
+  accounts and vendors, and post/reverse a GL journal and an AP invoice end-to-end with full audit trail,
+  exactly as docs/architecture/06-roadmap.md's Phase 1 exit criteria states.
+
 ## Deferred (disclosed, not hidden)
 
-- AP Invoice — the other half of the Phase 1 exit criteria ("...and an AP invoice end-to-end") — next.
 - Document Splitting, Parallel Ledgers, Controlling objects beyond a flat Cost Center reference, Budget
-  Control, Results Analysis/Settlement to CO-PA — all real, all in
+  Control, Results Analysis/Settlement to CO-PA, AR/Cash-Bank — all real, all in
   docs/architecture/07-project-accounting-and-financial-architecture.md, all genuinely later work. Phase 1's
-  exit bar is "post/reverse a GL journal and an AP invoice end-to-end with full audit trail," not the full
-  module vision in that document.
-- No dual-approval matrix (e.g. a second approval step for entries above a threshold) — Phase 1 uses one
-  Any-quorum step for every entry, same as every Master Data slice; a real matrix is configuration once
-  Finance has more than one approval path to choose between.
-- No period-close / posting-period lock — an entry can be posted with any `PostingDate`, past or future,
+  exit bar (GL journal + AP invoice, both post/reverse-able with full audit trail) is now met; the full
+  module vision in that document is not, and isn't meant to be yet.
+- No dual-approval matrix (e.g. a second approval step for entries/invoices above a threshold) — Phase 1
+  uses one Any-quorum step everywhere; a real matrix is configuration once Finance has more than one
+  approval path to choose between.
+- No period-close / posting-period lock — an entry or invoice can be posted with any date, past or future,
   with no check against an open/closed fiscal period. Real for Phase 1's exit bar, not for a production
   close process.
+- No configured default AP control/VAT accounts — the invoice creator explicitly picks the Expense/Payable/
+  VAT accounts on every invoice (see `APInvoice`'s own doc comment). Revisit once a real admin
+  configuration screen exists to safely set a Platform.Configuration default without guessing at a GUID no
+  admin actually chose.
+- No duplicate vendor-invoice-number check (a real AP process would flag "this vendor's invoice #456 was
+  already entered" to prevent double payment) — genuinely useful, genuinely deferred, not built because it
+  wasn't asked for and Phase 1's exit bar doesn't require it.
 - G/L Account/Cost Center hierarchy cycle validation still doesn't exist (see Modules.MasterData/README.md's
   own deferred item) — a cyclic parent chain would affect any future roll-up reporting Finance builds on
   top of the chart, not anything in this slice today.
-- Real authentication: `JournalEntriesController` hardcodes `"system/ui"`/`"system/approver"`, same
-  deferred item as every Modules.MasterData controller.
+- Real authentication: both Finance controllers hardcode `"system/ui"`/`"system/approver"`, same deferred
+  item as every Modules.MasterData controller.

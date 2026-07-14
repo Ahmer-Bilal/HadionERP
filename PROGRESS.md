@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — all 5 Master Data pieces done; Modules.Finance started (GL Journal Entry done, first real use of Post/Reverse + cross-module Contracts); AP Invoice remains for the Phase 1 exit criteria | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice, both post/reverse-able with full audit trail. AR/Cash-Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,60 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — AP Invoice — Phase 1 exit criteria for Finance Core met
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Built AP Invoice — the other half of the Phase 1 exit criteria ("post/reverse a GL journal
+  **and an AP invoice** end-to-end with full audit trail"). `APInvoice`: vendor reference validated as an
+  actually-Approved Vendor/Both partner via `IBusinessPartnerLookup` (rejects unapproved or non-vendor
+  partners), an explicitly-chosen Expense account + Payable account (deliberately not a configured "AP
+  control account" default — there's no admin config screen yet to safely set one, and a guessed default
+  would be worse than an explicit choice), and an optional Tax Code that **snapshots** its rate into
+  `TaxRate` at creation so a later rate change never retroactively changes an already-created invoice.
+  `Posting` an invoice generates a real, separate, linked G/L Journal Entry (Dr Expense, Dr VAT if any, Cr
+  Payable — always balanced by construction since Gross ≡ Net + Tax); reversing an invoice reverses that
+  linked entry too. Refactored `JournalEntryService.ReverseAsync`'s mirror-entry logic into a new shared
+  `CreateSystemGeneratedAsync` method so AP Invoice's posting could reuse the exact same "construct →
+  validate lines → number → drive lifecycle, skip human approval" sequence instead of duplicating it — the
+  same reasoning this codebase has used everywhere else for extracting a second real consumer's shared
+  logic. Wired end-to-end: Domain, Application (`APInvoiceService`, `APInvoiceSecurity`,
+  `APInvoiceWorkflow`), Infrastructure (EF mapping in the same `finance` schema, migration applied to dev +
+  test), Api (`api/v1/finance/ap-invoices`), frontend (`APInvoicesPage.tsx` — vendor/account/tax-code
+  dropdowns, a live Net/Tax/Gross preview, own nav Area under Finance).
+- Verified: 349 tests pass across 15 test projects (19 new Finance unit tests + 2 new Finance integration
+  tests against real PostgreSQL), full solution builds clean, frontend typecheck + Arabic guardrail pass,
+  and a full live exercise: created a vendor, confirmed an invoice against it was rejected while still
+  Draft/unapproved, approved the vendor, created GL accounts (Expense/Payable/VAT Recoverable), created an
+  invoice with 15% VAT (`FIN-AP-2026-000001`), drove it through Submit → Approve → Post, confirmed the
+  generated journal entry (`FIN-JE-2026-000004` — continuing the same document-number sequence real
+  user-created entries use) had exactly Dr Expense 1000 / Dr VAT 150 / Cr Payable 1150, reversed the
+  invoice and confirmed the linked entry was reversed too, then created a second invoice with no tax code
+  to confirm the two-line posting path. Live Playwright pass in both English and Arabic.
+- **This closes out the Phase 1 exit criteria for Finance Core.** A company can now maintain its chart of
+  accounts and vendors, and post/reverse a GL journal and an AP invoice end-to-end with full audit trail —
+  exactly what docs/architecture/06-roadmap.md's Phase 1 exit criteria requires. AR/Cash-Bank, Document
+  Splitting, Parallel Ledgers, Budget Control, and Results Analysis/CO-PA remain as later Finance depth
+  (docs/architecture/07), not required to close Phase 1.
+- Files touched: `src/Modules/Modules.Finance/Domain/APInvoice.cs`,
+  `Application/APInvoiceDto.cs`, `APInvoiceService.cs`, `IAPInvoiceRepository.cs`, `APInvoiceSecurity.cs`,
+  `APInvoiceWorkflow.cs`, `JournalEntryService.cs` (refactored `ReverseAsync` into shared
+  `CreateSystemGeneratedAsync`), `Infrastructure/EfAPInvoiceRepository.cs`,
+  `FinanceDbContext.cs` (APInvoice mapping), `Migrations/20260714165636_AddAPInvoice*.cs`,
+  `Api/APInvoicesController.cs`, `src/Gateway/Gateway.Api/Program.cs` (DI + security + SoD + workflow +
+  number range), `src/Apps/Apps.Shell/src/api/apInvoiceApi.ts`,
+  `src/Apps/Apps.Shell/src/pages/APInvoicesPage.tsx`, `src/Apps/Apps.Shell/src/i18n/content.ts` (ap.* keys),
+  `src/Apps/Apps.Shell/src/App.tsx` (AP Invoices nav Area + routing),
+  `tests/UnitTests/Modules.Finance.Tests/APInvoiceTests.cs`, `APInvoiceServiceTests.cs`,
+  `FakeAPInvoiceRepository.cs`, `FakeLookups.cs` (added Business Partner/Tax Code fakes),
+  `tests/IntegrationTests/Modules.Finance.IntegrationTests/APInvoicePersistenceTests.cs`, `TestDatabase.cs`
+  (truncate ap_invoices), `src/Modules/Modules.Finance/README.md` (AP Invoice "What's built" section,
+  updated Deferred list).
+- Next: Phase 1 is functionally complete against its own stated exit criteria. Remaining Finance depth
+  (AR, Cash/Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA) and Phase 2
+  (Procurement) both need a fresh go-ahead before starting — this closes out the user's "tax code and
+  finance in one go" authorization for this session.
 
 ### 2026-07-14 — Modules.Finance started: Modules.MasterData.Contracts + GL Journal Entry
 - Agent: Claude Sonnet 5
