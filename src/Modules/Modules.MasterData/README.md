@@ -200,6 +200,18 @@ for real business records that must survive a restart.
 - **This closes out Phase 1 Master Data** — Business Partner, Chart of Accounts, Items, Cost Centers, and
   Tax Codes are all built. `Modules.Finance` (GL/AP/AR/Cash-Bank) is next.
 
+## `Contracts` — the published surface other modules depend on
+
+`src/Modules/Modules.MasterData/Contracts` is a thin, dependency-free project exposing read-only lookup
+interfaces (`IGLAccountLookup`, `IBusinessPartnerLookup`, `ITaxCodeLookup`, `ICostCenterLookup`) + summary
+DTOs — the only thing another module (`Modules.Finance`) may depend on to reference this module's data,
+per docs/architecture/01-architecture-foundation.md §3.2 ("a module may depend on another module's
+published Contracts package only, never its Domain/Infrastructure/Application internals directly").
+Implemented as thin EF adapters (`EfGLAccountLookup` etc.) in this module's own Infrastructure project,
+projecting straight off `MasterDataDbContext` — no new tables, no behavior change to any existing endpoint.
+First real consumer: `Modules.Finance`'s `JournalEntryService`, which validates every journal line's G/L
+Account/Cost Center reference through these interfaces before ever adding the line.
+
 ## Real bugs found and fixed while building this (disclosed, not hidden)
 
 1. **`Platform.Core.BusinessObject` had no parameterless constructor.** Its only constructor always

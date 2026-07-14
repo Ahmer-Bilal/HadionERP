@@ -22,6 +22,8 @@
     <ProjectReference Include="..\..\Platform\Platform.Configuration\Platform.Configuration.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.MasterData\Api\Modules.MasterData.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.MasterData\Infrastructure\Modules.MasterData.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.Finance\Api\Modules.Finance.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.Finance\Infrastructure\Modules.Finance.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — all 5 Master Data pieces done (Business Partner, Chart of Accounts, Items, Cost Centers, Tax Codes); Modules.Finance (GL/AP/AR/Cash-Bank) remains | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — all 5 Master Data pieces done; Modules.Finance started (GL Journal Entry done, first real use of Post/Reverse + cross-module Contracts); AP Invoice remains for the Phase 1 exit criteria | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,67 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Modules.Finance started: Modules.MasterData.Contracts + GL Journal Entry
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Started `Modules.Finance` — the second real business module, and genuinely the most
+  architecturally significant piece built this session (double-entry validation, a cross-module Contracts
+  boundary actually exercised for the first time, and the first real use anywhere in this codebase of the
+  full Draft → Submit → Approve → Post → Reverse lifecycle — every Master Data slice stops at Approved).
+  Three pieces, built and committed in order:
+  1. **`Modules.MasterData.Contracts`** — a thin, dependency-free project publishing `IGLAccountLookup`/
+     `IBusinessPartnerLookup`/`ITaxCodeLookup`/`ICostCenterLookup` + read-only summary DTOs, implemented as
+     EF adapters projecting off the existing `MasterDataDbContext` (no new tables). This is the boundary
+     docs/architecture/01 §3.2 always specified ("a module may depend on another module's published
+     Contracts package only") but nothing had actually exercised until Finance needed to validate a G/L
+     Account reference.
+  2. **`Modules.Finance` scaffolding** — Domain/Application/Infrastructure/Api projects mirroring
+     Modules.MasterData's exact layering, with its own "finance" Postgres schema (physically enforcing the
+     module boundary the same way "masterdata" does) and its own copies of
+     `EfCoreNumberRangeService`/`EfWorkflowInstanceRepository` (near-duplicates of MasterData's, backed by
+     `FinanceDbContext` instead — a module cannot depend on another module's Infrastructure directly, so
+     these two "look generic but are actually per-module" pieces of plumbing get their own table in each
+     module's own schema; disclosed reasoning in `NumberRangeCounterEntity`'s doc comment).
+  3. **GL Journal Entry** — `JournalEntry`/`JournalLine` (Domain), `JournalEntryService` (validates every
+     line's G/L Account/Cost Center reference through the new Contracts interfaces before adding it),
+     `JournalEntriesController` at `api/v1/finance/journal-entries`, `JournalEntriesPage.tsx` (the first
+     real multi-row line-item entry grid in this application, with a live balanced/unbalanced indicator).
+     `IsBalanced` (total debits = total credits) is enforced at both Submit and Post — not a configurable
+     rule, the accounting identity itself. Reversal creates a brand-new mirror entry with every line's
+     debit/credit swapped (undoing the ledger's actual balance, not just flipping a status flag), driven
+     straight to Posted without a second human approval since its content is mechanically derived from an
+     already-approved document (same reasoning as SAP's FB08 "reverse document") — see
+     `JournalEntryService.ReverseAsync`'s doc comment.
+- Verified: 328 tests pass across 15 test projects (24 new Finance unit tests + 4 new Finance integration
+  tests against real PostgreSQL — entry+lines round-trip, RowVersion across 3 real transitions, cascade
+  delete, a reversal's link to its original persisting), full solution builds clean, frontend typecheck +
+  Arabic guardrail pass, and a live end-to-end exercise: created an unbalanced entry (allowed as Draft,
+  rejected on Submit with the exact imbalance amounts), created a balanced entry and drove it through
+  Submit → Approve → Post → Reverse via curl, confirmed the mirror entry had debit/credit correctly
+  swapped and linked via `reversalOfEntryId`, then confirmed the same live in the browser in both English
+  and Arabic (full RTL mirroring including the line-item grid's column order). New "Finance" nav module,
+  not bolted onto Master Data.
+- Files touched: `src/Modules/Modules.MasterData/Contracts/*` (new project), `Infrastructure/EfGLAccountLookup.cs`,
+  `EfBusinessPartnerLookup.cs`, `EfTaxCodeLookup.cs`, `EfCostCenterLookup.cs` (new),
+  `src/Modules/Modules.Finance/Domain/JournalEntry.cs`, `JournalLine.cs` (new project),
+  `Application/JournalEntryDto.cs`, `JournalEntryService.cs`, `IJournalEntryRepository.cs`,
+  `JournalEntrySecurity.cs`, `JournalEntryWorkflow.cs` (new project),
+  `Infrastructure/FinanceDbContext.cs`, `EfJournalEntryRepository.cs`, `EfCoreNumberRangeService.cs`,
+  `EfWorkflowInstanceRepository.cs`, `NumberRangeCounterEntity.cs`, `DesignTimeDbContextFactory.cs`,
+  `Migrations/20260714162917_InitialCreate*.cs` (new project), `Api/JournalEntriesController.cs` (new
+  project), `src/Gateway/Gateway.Api/Program.cs` (DI for both new modules), `erp-platform.sln`,
+  `src/Apps/Apps.Shell/src/api/journalEntryApi.ts`, `src/Apps/Apps.Shell/src/pages/JournalEntriesPage.tsx`,
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (je.* keys), `src/Apps/Apps.Shell/src/App.tsx` (Finance nav
+  module + routing), `tests/UnitTests/Modules.Finance.Tests/*` (new project),
+  `tests/IntegrationTests/Modules.Finance.IntegrationTests/*` (new project),
+  `src/Modules/Modules.Finance/README.md`, `src/Modules/Modules.MasterData/README.md` (Contracts section).
+- Next: AP Invoice — the other half of the Phase 1 exit criteria ("post/reverse a GL journal **and an AP
+  invoice** end-to-end with full audit trail"). Will reference a vendor via `IBusinessPartnerLookup` and a
+  tax code via `ITaxCodeLookup` (snapshotting the rate at creation), and post a linked GL Journal Entry
+  through the machinery just built. Continuing in this same session per the user's "tax code and finance in
+  one go" instruction.
 
 ### 2026-07-14 — Tax Codes — Phase 1 Master Data complete
 - Agent: Claude Sonnet 5

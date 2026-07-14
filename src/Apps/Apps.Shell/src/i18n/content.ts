@@ -195,7 +195,39 @@ type TranslationKey =
   | "tax.fieldTaxType"
   | "tax.taxTypeStandard"
   | "tax.taxTypeZeroRated"
-  | "tax.taxTypeExempt";
+  | "tax.taxTypeExempt"
+  | "nav.financeModule"
+  | "nav.journalEntriesArea"
+  | "nav.allJournalEntries"
+  | "je.heading"
+  | "je.newHeading"
+  | "je.emptyState"
+  | "je.actionNew"
+  | "je.actionCreate"
+  | "je.actionBack"
+  | "je.actionSubmit"
+  | "je.actionApprove"
+  | "je.actionReject"
+  | "je.actionPost"
+  | "je.actionReverse"
+  | "je.columnDocumentNumber"
+  | "je.columnPostingDate"
+  | "je.columnDescription"
+  | "je.columnStatus"
+  | "je.columnTotalDebits"
+  | "je.columnTotalCredits"
+  | "je.fieldPostingDate"
+  | "je.fieldDescription"
+  | "je.fieldGLAccount"
+  | "je.fieldDebit"
+  | "je.fieldCredit"
+  | "je.fieldLineDescription"
+  | "je.actionAddLine"
+  | "je.balanced"
+  | "je.unbalanced"
+  | "je.reversalOf"
+  | "je.statusPosted"
+  | "je.statusReversed";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -392,6 +424,38 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "tax.taxTypeStandard": { en: "Standard", ar: "قياسي" },
   "tax.taxTypeZeroRated": { en: "Zero-Rated", ar: "صفري النسبة" },
   "tax.taxTypeExempt": { en: "Exempt", ar: "معفى" },
+  "nav.financeModule": { en: "Finance", ar: "المالية" },
+  "nav.journalEntriesArea": { en: "Journal Entries", ar: "قيود اليومية" },
+  "nav.allJournalEntries": { en: "All Journal Entries", ar: "جميع قيود اليومية" },
+  "je.heading": { en: "Journal Entries", ar: "قيود اليومية" },
+  "je.newHeading": { en: "New Journal Entry", ar: "قيد يومية جديد" },
+  "je.emptyState": { en: "No journal entries yet.", ar: "لا توجد قيود يومية حتى الآن." },
+  "je.actionNew": { en: "New", ar: "جديد" },
+  "je.actionCreate": { en: "Create", ar: "إنشاء" },
+  "je.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "je.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "je.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "je.actionReject": { en: "Reject", ar: "رفض" },
+  "je.actionPost": { en: "Post", ar: "ترحيل" },
+  "je.actionReverse": { en: "Reverse", ar: "عكس القيد" },
+  "je.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "je.columnPostingDate": { en: "Posting Date", ar: "تاريخ الترحيل" },
+  "je.columnDescription": { en: "Description", ar: "الوصف" },
+  "je.columnStatus": { en: "Status", ar: "الحالة" },
+  "je.columnTotalDebits": { en: "Total Debits", ar: "إجمالي المدين" },
+  "je.columnTotalCredits": { en: "Total Credits", ar: "إجمالي الدائن" },
+  "je.fieldPostingDate": { en: "Posting Date", ar: "تاريخ الترحيل" },
+  "je.fieldDescription": { en: "Description", ar: "الوصف" },
+  "je.fieldGLAccount": { en: "G/L Account", ar: "الحساب" },
+  "je.fieldDebit": { en: "Debit", ar: "مدين" },
+  "je.fieldCredit": { en: "Credit", ar: "دائن" },
+  "je.fieldLineDescription": { en: "Line Description", ar: "وصف البند" },
+  "je.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "je.balanced": { en: "Balanced", ar: "متوازن" },
+  "je.unbalanced": { en: "Not Balanced", ar: "غير متوازن" },
+  "je.reversalOf": { en: "Reversal of", ar: "عكس لـ" },
+  "je.statusPosted": { en: "Posted", ar: "مُرحّل" },
+  "je.statusReversed": { en: "Reversed", ar: "معكوس" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Modules\Modules.Finance\Domain\Modules.Finance.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Modules.Finance\Application\Modules.Finance.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Modules.MasterData\Contracts\Modules.MasterData.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\src\Platform\Platform.Core\Platform.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\Platform\Platform.Audit\Platform.Audit.csproj" />
+    <ProjectReference Include="..\..\..\src\Platform\Platform.Workflow\Platform.Workflow.csproj" />
+    <ProjectReference Include="..\..\..\src\Platform\Platform.Security\Platform.Security.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,7 @@
 using Gateway.Api.Events;
 using Gateway.Api.Localization;
 using Microsoft.EntityFrameworkCore;
+using Modules.Finance.Application;
 using Modules.MasterData.Application;
 using Modules.MasterData.Contracts;
 using Modules.MasterData.Infrastructure;
@@ -64,12 +65,14 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 GLAccountSecurity.MaintainerRole, GLAccountSecurity.ApproverRole,
                 ItemSecurity.MaintainerRole, ItemSecurity.ApproverRole,
                 CostCenterSecurity.MaintainerRole, CostCenterSecurity.ApproverRole,
-                TaxCodeSecurity.MaintainerRole, TaxCodeSecurity.ApproverRole },
+                TaxCodeSecurity.MaintainerRole, TaxCodeSecurity.ApproverRole,
+                JournalEntrySecurity.MaintainerRole, JournalEntrySecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
                 CostCenterSecurity.MaintainerDuty, CostCenterSecurity.ApproverDuty,
-                TaxCodeSecurity.MaintainerDuty, TaxCodeSecurity.ApproverDuty });
+                TaxCodeSecurity.MaintainerDuty, TaxCodeSecurity.ApproverDuty,
+                JournalEntrySecurity.MaintainerDuty, JournalEntrySecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -88,6 +91,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         ItemSecurity.MaintainerApproverConflict,
         CostCenterSecurity.MaintainerApproverConflict,
         TaxCodeSecurity.MaintainerApproverConflict,
+        JournalEntrySecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
@@ -101,13 +105,13 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
         {
             BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey,
             ItemSecurity.MaintainerRoleKey, CostCenterSecurity.MaintainerRoleKey,
-            TaxCodeSecurity.MaintainerRoleKey,
+            TaxCodeSecurity.MaintainerRoleKey, JournalEntrySecurity.MaintainerRoleKey,
         },
         ["system/approver"] = new[]
         {
             BusinessPartnerWorkflow.ApproverRoleKey, GLAccountWorkflow.ApproverRoleKey,
             ItemWorkflow.ApproverRoleKey, CostCenterWorkflow.ApproverRoleKey,
-            TaxCodeWorkflow.ApproverRoleKey,
+            TaxCodeWorkflow.ApproverRoleKey, JournalEntryWorkflow.ApproverRoleKey,
         },
     }));
 
@@ -122,6 +126,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         ItemWorkflow.SubmitApprovalDefinition,
         CostCenterWorkflow.SubmitApprovalDefinition,
         TaxCodeWorkflow.SubmitApprovalDefinition,
+        JournalEntryWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -202,6 +207,7 @@ builder.Services.AddScoped<TaxCodeService>();
 builder.Services.AddScoped<IGLAccountLookup, EfGLAccountLookup>();
 builder.Services.AddScoped<IBusinessPartnerLookup, EfBusinessPartnerLookup>();
 builder.Services.AddScoped<ITaxCodeLookup, EfTaxCodeLookup>();
+builder.Services.AddScoped<ICostCenterLookup, EfCostCenterLookup>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),
     new[]
@@ -212,6 +218,31 @@ builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeServi
         new NumberRangeDefinition(CostCenterService.NumberRangeKey, "MD", "CC"),
         new NumberRangeDefinition(TaxCodeService.NumberRangeKey, "MD", "TAX")
     }));
+
+// Modules.Finance: the second real, persisted business module. Own "finance" Postgres schema in the same
+// physical database as MasterData's — schema-per-module is the boundary being enforced, not one database
+// per module (docs/architecture/01-architecture-foundation.md #3.2). Depends on
+// Modules.MasterData.Contracts only for cross-module lookups (IGLAccountLookup/ICostCenterLookup above),
+// never on Modules.MasterData.Domain/Infrastructure/Application directly.
+builder.Services.AddDbContext<Modules.Finance.Infrastructure.FinanceDbContext>(options => options.UseNpgsql(masterDataConnectionString));
+builder.Services.AddScoped<Modules.Finance.Application.IJournalEntryRepository, Modules.Finance.Infrastructure.EfJournalEntryRepository>();
+// JournalEntryService's own IWorkflowInstanceRepository/INumberRangeService are constructed directly here,
+// not registered as shared container services — Modules.MasterData already registers those same
+// interfaces bound to ITS OWN DbContext/schema, and a second AddScoped for the same interface would just
+// have the last registration silently win for both modules. Each module's copy stays bound to its own
+// DbContext this way, exactly as the "own schema, own tables" design in FinanceDbContext intends.
+builder.Services.AddScoped<Modules.Finance.Application.JournalEntryService>(sp => new Modules.Finance.Application.JournalEntryService(
+    sp.GetRequiredService<Modules.Finance.Application.IJournalEntryRepository>(),
+    new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
+        new[] { new NumberRangeDefinition(JournalEntryService.NumberRangeKey, "FIN", "JE") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IGLAccountLookup>(),
+    sp.GetRequiredService<ICostCenterLookup>()));
 
 var app = builder.Build();
 

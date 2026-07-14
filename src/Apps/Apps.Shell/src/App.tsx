@@ -9,6 +9,7 @@ import { GLAccountsPage } from "./pages/GLAccountsPage";
 import { ItemsPage } from "./pages/ItemsPage";
 import { CostCentersPage } from "./pages/CostCentersPage";
 import { TaxCodesPage } from "./pages/TaxCodesPage";
+import { JournalEntriesPage } from "./pages/JournalEntriesPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -16,7 +17,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -25,6 +26,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#items") return "items";
   if (window.location.hash === "#cost-centers") return "cost-centers";
   if (window.location.hash === "#tax-codes") return "tax-codes";
+  if (window.location.hash === "#journal-entries") return "journal-entries";
   return "home";
 }
 
@@ -150,6 +152,24 @@ function App() {
         },
       ],
     },
+    {
+      key: "finance",
+      label: t("nav.financeModule", language),
+      areas: [
+        {
+          key: "journal-entries",
+          label: t("nav.journalEntriesArea", language),
+          items: [
+            {
+              key: "all-journal-entries",
+              label: t("nav.allJournalEntries", language),
+              href: "#journal-entries",
+              isActive: page === "journal-entries",
+            },
+          ],
+        },
+      ],
+    },
   ];
 
   const languageOptions = [
@@ -183,6 +203,8 @@ function App() {
             <CostCentersPage language={language} />
           ) : page === "tax-codes" ? (
             <TaxCodesPage language={language} />
+          ) : page === "journal-entries" ? (
+            <JournalEntriesPage language={language} />
           ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
           ) : (
