@@ -54,6 +54,42 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 
 ## Entry Log (newest first)
 
+### 2026-07-14 — Design captured: Vendor Prequalification + Business Roles (documentation only, no code)
+- Agent: Claude Sonnet 5
+- Phase: Architecture Baseline / Phase 2 — Procurement (design captured ahead of the phase starting)
+- Status: Completed (documentation only — no code changes this entry)
+- What changed: The user described how large Saudi construction/EPC owners (Aramco-style vendor
+  registration, MOMRAH contractor classification, ISO/HSE prequalification) actually prequalify vendors —
+  by role and trade/specialty, scored across commercial/legal/technical/HSE/quality criteria, time-bound
+  with re-qualification — and gave an example Business Roles list (Supplier, Subcontractor, Consultant,
+  Client, Joint Venture, Government Authority, Rental Company, Manufacturer). Discussed and captured the
+  design in `docs/architecture/06-roadmap.md` (Phase 2) rather than implementing now, per explicit user
+  decision on both open questions:
+  - **Module ownership**: a future `Modules.Procurement` owns the actual `VendorPrequalification` Business
+    Object and its workflow, NOT `Modules.MasterData` — prequalification is a procurement process against
+    a master-data party, not master data itself (matches SAP Ariba SLP / Dynamics Vendor Onboarding).
+  - **Timing**: document now, build later — `BusinessPartner.PartnerType` (single enum) becoming a
+    multi-select `BusinessRoles` collection is noted under Phase 1 in the roadmap and in
+    `Modules.MasterData/README.md`'s Deferred list, but not implemented this entry, since Attachments
+    (needed to hold prequalification's supporting documents) isn't built yet either and Phase 2 hasn't
+    started.
+  - Design nuances worked through and recorded: "Client" should be one role, not two (it's the
+    construction-industry label for what SAP calls Customer/Debtor — the same AR-invoiced counterparty);
+    "Government Authority" is never prequalified (no commercial relationship, exists only so
+    permit/license correspondence has somewhere to attach) — prequalification logic must be conditional on
+    role, reusing `Platform.Workflow`'s existing `AttributeConstraints` step-condition mechanism, not a
+    blanket process; "Joint Venture" as a simple role can't capture the real partnership (who, which
+    project, ownership split) — deliberately left as a simple role for now, real JV modeling deferred to a
+    future Project/Contract concern; each role-family (especially Manpower Supplier, Testing Laboratory,
+    Rental Company, Manufacturer) needs its own prequalification criteria template, not one generic
+    checklist, since their real-world qualification requirements are genuinely different (GOSI/Iqama/WPS
+    vs. ISO/IEC 17025 lab accreditation vs. equipment calibration records vs. factory audit).
+- Files touched: `docs/architecture/06-roadmap.md`, `src/Modules/Modules.MasterData/README.md`
+- Next: No immediate follow-up required by this entry. When Phase 2 (`Modules.Procurement`) actually
+  starts, revisit the roadmap's Phase 2 section for the full captured design before scaffolding the module.
+  The current queue is unaffected: `Platform.Security` wiring into Business Partner remains next, then
+  Attachments/Notes into `Platform.Core`, then bilingual name fields.
+
 ### 2026-07-14 — Business Partner: Platform.Workflow wired in (second of Audit/Workflow/Security gap-fix pass)
 - Agent: Claude Sonnet 5
 - Phase: Phase 1 — Master Data + Finance Core

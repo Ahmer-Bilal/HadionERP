@@ -135,3 +135,10 @@ the intended lesson for this module going forward.
 - A shared "List+Details form" Platform.UI template, a real npm package for Platform.UI, and a proper
   client-side router are all still deferred for the same reason as before: wait for a second real
   consumer before extracting/generalizing.
+- **`PartnerType` (Customer/Vendor/Both) is planned to become a multi-select `BusinessRoles` collection**
+  (Client/Supplier/Subcontractor/Consultant/Joint Venture Partner/Government Authority/Rental
+  Company/Manufacturer/Manpower Supplier/Testing Laboratory, each with its own configurable Trade/Specialty
+  sub-classification) — a real construction-industry partner commonly holds several roles at once. Design
+  captured in `docs/architecture/06-roadmap.md` Phase 2 (2026-07-14) alongside the full Vendor
+  Prequalification design that motivated it; deliberately documented now and built once Phase 2
+  (`Modules.Procurement`) actually starts, rather than reworking Business Partner's shape twice.
