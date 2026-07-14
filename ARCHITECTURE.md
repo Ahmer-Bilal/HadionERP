@@ -1,13 +1,14 @@
-# ERP Platform — Architecture Index
+# HadionERP — Architecture Index
 
-**Codename:** (TBD) — Enterprise ERP for Construction & Finance companies operating in the Kingdom of Saudi Arabia
+**Product:** HadionERP, by hAdisHere — created by aHmAr
+**Category:** Enterprise ERP for Construction & Finance companies operating in the Kingdom of Saudi Arabia
 **Status:** Architecture baseline v1.0 — no business modules implemented yet
 **Owner:** Chief Architect
 **Date:** 2026-07-13
 
 ## 1. Vision
 
-A modular, multilingual (Arabic/English), KSA-compliant ERP platform that gives construction and finance
+HadionERP is a modular, multilingual (Arabic/English), KSA-compliant ERP platform that gives construction and finance
 companies a single system of record for **Finance, Procurement, Construction/Projects, HR and Payroll** —
 built the way SAP S/4HANA and Dynamics 365 F&O are built: a thin, stable **platform kernel** of cross-cutting
 services (security, localization, workflow, events, audit, reporting) that every business module consumes,

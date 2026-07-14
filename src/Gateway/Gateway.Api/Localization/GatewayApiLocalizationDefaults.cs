@@ -19,7 +19,7 @@ public static class GatewayApiLocalizationDefaults
 
     public static void RegisterDefaults(InMemoryTranslationService translationService)
     {
-        translationService.RegisterDefault(WelcomeMessageKey, SupportedLanguage.English, "Welcome to the ERP Platform.");
-        translationService.RegisterDefault(WelcomeMessageKey, SupportedLanguage.Arabic, "مرحبًا بك في منصة تخطيط موارد المؤسسة.");
+        translationService.RegisterDefault(WelcomeMessageKey, SupportedLanguage.English, "Welcome to HadionERP.");
+        translationService.RegisterDefault(WelcomeMessageKey, SupportedLanguage.Arabic, "مرحبًا بك في HadionERP.");
     }
 }

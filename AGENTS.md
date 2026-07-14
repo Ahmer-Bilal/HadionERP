@@ -1,8 +1,8 @@
 # Agent Instructions
 
-This file is read by AI coding agents generally (Codex and others follow the `AGENTS.md` convention;
-Claude Code reads `CLAUDE.md`, which points back here). Whichever tool you are, follow this before touching
-the repo.
+This repository is **HadionERP**, by **hAdisHere**, created by **aHmAr**. This file is read by AI coding
+agents generally (Codex and others follow the `AGENTS.md` convention; Claude Code reads `CLAUDE.md`, which
+points back here). Whichever tool you are, follow this before touching the repo.
 
 ## This is a multi-session, multi-agent project
 

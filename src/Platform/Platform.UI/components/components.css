@@ -15,9 +15,21 @@
   background: var(--pi-surface);
 }
 
+.pi-shell-bar__brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--pi-space-2);
+}
+
 .pi-shell-bar__title {
   font-weight: var(--pi-font-weight-semibold);
   font-size: var(--pi-font-size-lg);
+}
+
+.pi-shell-bar__tagline {
+  font-size: var(--pi-font-size-sm);
+  font-weight: var(--pi-font-weight-normal);
+  color: var(--pi-text-muted);
 }
 
 .pi-shell-bar__language-switch button {

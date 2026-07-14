@@ -163,7 +163,7 @@ eventBus.Subscribe(GatewayApiEventTypes.ApplicationStarted, (integrationEvent, _
 var integrationEventPublisher = app.Services.GetRequiredService<IIntegrationEventPublisher>();
 integrationEventPublisher.Enqueue(IntegrationEvent.Create(
     GatewayApiEventTypes.ApplicationStarted,
-    new ApplicationStartedPayload("ERP Platform", DateTimeOffset.UtcNow)));
+    new ApplicationStartedPayload("HadionERP", DateTimeOffset.UtcNow)));
 
 var outboxRelay = app.Services.GetRequiredService<OutboxRelay>();
 await outboxRelay.RelayPendingAsync();

@@ -1,4 +1,4 @@
-# Project Progress Log
+# HadionERP — Project Progress Log
 
 This is the **single source of truth for "what has been done so far."** Any contributor — human or AI
 (Claude, Codex, or any other tool) — must read this file before starting work, and append an entry after
@@ -53,6 +53,37 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Branding: the application is named HadionERP, by hAdisHere, created by aHmAr
+- Agent: Claude Sonnet 5
+- Phase: Architecture Baseline (cross-cutting; touches every layer, not a specific module phase)
+- Status: Completed
+- What changed: The generic placeholder name ("ERP Platform") is replaced everywhere with the real product
+  identity — **HadionERP**, by **hAdisHere**, created by **aHmAr**:
+  - Frontend: browser tab title, the shell header (title + a small muted "by hAdisHere" tagline next to
+    it — added an optional `tagline` prop to `Platform.UI`'s `ShellBar`), and a new app-wide footer
+    ("HadionERP by hAdisHere — Created by aHmAr"). All new text goes through the existing i18n system
+    (`content.ts`) in both English and Arabic, same as everything else in this app — nothing hardcoded,
+    verified by the existing hardcoded-Arabic guardrail script.
+  - Backend: `SystemController`'s `application` field (what the System Status page displays), the
+    application-started event payload, and the localization-check welcome message all say "HadionERP" now
+    instead of "ERP Platform".
+  - Top-level docs: `CLAUDE.md`, `AGENTS.md`, `ARCHITECTURE.md` (including its old "Codename: (TBD)"
+    placeholder), `HOW-TO-RUN.md`, and this file's own header all now name the product explicitly, so any
+    future session (human or AI) sees the real name immediately rather than a generic description.
+  - Verified live: full solution builds, all test projects pass (10 projects, including the architecture
+    and hardcoded-Arabic guardrails), and confirmed in a real running browser — tab title, English and
+    Arabic shell — with no console errors, plus confirmed `/api/v1/system/status` returns `"HadionERP"`.
+- Files touched: `src/Apps/Apps.Shell/index.html`, `src/Apps/Apps.Shell/src/i18n/content.ts`,
+  `src/Apps/Apps.Shell/src/App.tsx`, `src/Apps/Apps.Shell/src/App.css`,
+  `src/Platform/Platform.UI/components/{ShellBar.tsx,components.css}`,
+  `src/Gateway/Gateway.Api/Controllers/SystemController.cs`,
+  `src/Gateway/Gateway.Api/Localization/GatewayApiLocalizationDefaults.cs`,
+  `src/Gateway/Gateway.Api/Program.cs`, `CLAUDE.md`, `AGENTS.md`, `ARCHITECTURE.md`, `HOW-TO-RUN.md`,
+  `PROGRESS.md`
+- Next: No functional follow-up required. A real logo/favicon (currently still the generic placeholder
+  SVG) is a separate, later design task if wanted. The current Phase 1 queue is unaffected: `Platform.Security`
+  wiring into Business Partner remains next, then Attachments/Notes, then bilingual name fields.
 
 ### 2026-07-14 — Design captured: Vendor Prequalification + Business Roles (documentation only, no code)
 - Agent: Claude Sonnet 5

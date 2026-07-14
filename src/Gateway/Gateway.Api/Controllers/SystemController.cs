@@ -48,7 +48,7 @@ public class SystemController : PlatformApiController
 
         var payload = new Dictionary<string, object?>
         {
-            ["application"] = "ERP Platform",
+            ["application"] = "HadionERP",
             ["phase"] = "Phase 0 - Platform Foundation",
             ["utcNow"] = DateTimeOffset.UtcNow,
             ["kernelServicesWired"] = new[]

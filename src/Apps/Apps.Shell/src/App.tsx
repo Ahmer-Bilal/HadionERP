@@ -84,6 +84,7 @@ function App() {
     <div className="app-shell">
       <ShellBar
         title={t("shell.title", language)}
+        tagline={t("shell.tagline", language)}
         languages={languageOptions}
         activeLanguage={language}
         onLanguageChange={setLanguage}
@@ -102,6 +103,7 @@ function App() {
           )}
         </main>
       </div>
+      <footer className="app-shell__footer">{t("shell.footer", language)}</footer>
     </div>
   );
 }

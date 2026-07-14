@@ -6,6 +6,8 @@ import type { SupportedLanguageCode } from "./language";
 // t(key, language) — it never embeds a literal string itself.
 type TranslationKey =
   | "shell.title"
+  | "shell.tagline"
+  | "shell.footer"
   | "nav.platformAdministration"
   | "nav.system"
   | "nav.systemStatus"
@@ -77,7 +79,12 @@ type TranslationKey =
   | "bp.statusReversed";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
-  "shell.title": { en: "ERP Platform", ar: "منصة تخطيط الموارد" },
+  "shell.title": { en: "HadionERP", ar: "HadionERP" },
+  "shell.tagline": { en: "by hAdisHere", ar: "من hAdisHere" },
+  "shell.footer": {
+    en: "HadionERP by hAdisHere — Created by aHmAr",
+    ar: "HadionERP من hAdisHere — صُنع بواسطة aHmAr",
+  },
   "nav.platformAdministration": { en: "Platform Administration", ar: "إدارة المنصة" },
   "nav.system": { en: "System", ar: "النظام" },
   "nav.systemStatus": { en: "System Status", ar: "حالة النظام" },

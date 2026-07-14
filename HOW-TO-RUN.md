@@ -1,4 +1,4 @@
-# How to Run This Application
+# How to Run HadionERP
 
 The application has three parts: a **database** (PostgreSQL, holds the real data), a **backend** (the
 server that does the actual work), and a **frontend** (the website you look at in your browser). The

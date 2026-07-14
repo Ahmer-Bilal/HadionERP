@@ -1,8 +1,8 @@
 # Project Instructions
 
-This repository is an enterprise ERP platform for construction and finance companies in Saudi Arabia,
-architecturally inspired by SAP S/4HANA (financial/project accounting architecture) and Microsoft
-Dynamics 365 F&O (UI, navigation, usability).
+This repository is **HadionERP**, by **hAdisHere**, created by **aHmAr** — an enterprise ERP platform for
+construction and finance companies in Saudi Arabia, architecturally inspired by SAP S/4HANA
+(financial/project accounting architecture) and Microsoft Dynamics 365 F&O (UI, navigation, usability).
 
 **This is a multi-session, multi-agent project** — different AI tools (Claude, Codex, others) and humans
 work on it over time with no shared memory except what's written to disk. Before doing anything else:

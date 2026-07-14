@@ -10,6 +10,9 @@ import type { LanguageCode, LanguageOption } from "../types";
  */
 interface ShellBarProps {
   title: string;
+  /** Optional small muted line next to the title (e.g. a "by {company}" brand tagline) — already
+   * translated by the consumer, same contract as `title`. */
+  tagline?: string;
   languages: LanguageOption[];
   activeLanguage: LanguageCode;
   onLanguageChange: (language: LanguageCode) => void;
@@ -19,6 +22,7 @@ interface ShellBarProps {
 
 export function ShellBar({
   title,
+  tagline,
   languages,
   activeLanguage,
   onLanguageChange,
@@ -26,7 +30,10 @@ export function ShellBar({
 }: ShellBarProps) {
   return (
     <header className="pi-shell-bar">
-      <span className="pi-shell-bar__title">{title}</span>
+      <span className="pi-shell-bar__brand">
+        <span className="pi-shell-bar__title">{title}</span>
+        {tagline && <span className="pi-shell-bar__tagline">{tagline}</span>}
+      </span>
       <div className="pi-shell-bar__language-switch" role="group" aria-label={languageSwitchLabel}>
         {languages.map((language) => (
           <button

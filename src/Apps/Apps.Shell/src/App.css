@@ -19,6 +19,14 @@
   padding: var(--pi-space-5) var(--pi-space-6);
 }
 
+.app-shell__footer {
+  text-align: center;
+  padding: var(--pi-space-3) var(--pi-space-5);
+  border-block-start: 1px solid var(--pi-border);
+  font-size: var(--pi-font-size-sm);
+  color: var(--pi-text-muted);
+}
+
 /* Status-page-specific styling (the one real page so far). */
 .status-page__error {
   color: var(--pi-danger);
