@@ -10,17 +10,24 @@ namespace Modules.MasterData.Domain;
 /// real fraud/compliance control point, per docs/architecture/03-platform-services.md #2.2's Segregation
 /// of Duties example) → Approved is the "active, usable" state master data settles into; there's no
 /// "Posted" concept for master data the way there is for a financial document.
+///
+/// Owns two child collections — <see cref="Addresses"/> and <see cref="Contacts"/> — because a real
+/// company has several addresses by purpose (head office, billing, shipping, one or more site offices)
+/// and several contact people (a Procurement Manager, an Accountant, a CEO, a Site Engineer), each with
+/// their own phone/email, not one shared pair of fields for the whole company. Both are child entities,
+/// not independent Business Objects — see <see cref="BusinessPartnerAddress"/>/<see cref="BusinessPartnerContact"/>.
 /// </summary>
 public sealed class BusinessPartner : BusinessObject
 {
+    private readonly List<BusinessPartnerAddress> _addresses = new();
+    private readonly List<BusinessPartnerContact> _contacts = new();
+
     public string Name { get; private set; }
     public PartnerType PartnerType { get; private set; }
     public string? TaxRegistrationNumber { get; private set; }
-    public string? Email { get; private set; }
-    public string? Phone { get; private set; }
-    public string? Country { get; private set; }
-    public string? City { get; private set; }
-    public string? AddressLine { get; private set; }
+
+    public IReadOnlyCollection<BusinessPartnerAddress> Addresses => _addresses.AsReadOnly();
+    public IReadOnlyCollection<BusinessPartnerContact> Contacts => _contacts.AsReadOnly();
 
     public BusinessPartner(string createdBy, string name, PartnerType partnerType) : base(createdBy)
     {
@@ -36,21 +43,32 @@ public sealed class BusinessPartner : BusinessObject
         Name = null!;
     }
 
+    public void UpdateTaxRegistrationNumber(string? taxRegistrationNumber) => TaxRegistrationNumber = taxRegistrationNumber;
+
     /// <summary>
-    /// Master data edits are not gated by lifecycle status the way a financial document's would be (an
-    /// approved vendor's phone number can be corrected without "reversing" anything) — this is a
-    /// deliberate difference from transactional Business Objects, not an oversight.
+    /// Adds an address. Not gated by lifecycle status the way a financial document's fields would be (an
+    /// approved vendor's address can be corrected or extended without "reversing" anything) — a
+    /// deliberate difference from transactional Business Objects, not an oversight. Multiple addresses of
+    /// the same <see cref="AddressType"/> are allowed on purpose (e.g. several Site Office addresses for
+    /// different active projects).
     /// </summary>
-    public void UpdateContactDetails(string? email, string? phone, string? country, string? city, string? addressLine)
+    public BusinessPartnerAddress AddAddress(AddressType addressType, string? country, string? city, string? addressLine)
     {
-        Email = email;
-        Phone = phone;
-        Country = country;
-        City = city;
-        AddressLine = addressLine;
+        var address = new BusinessPartnerAddress(addressType, country, city, addressLine);
+        _addresses.Add(address);
+        return address;
     }
 
-    public void UpdateTaxRegistrationNumber(string? taxRegistrationNumber) => TaxRegistrationNumber = taxRegistrationNumber;
+    public void RemoveAddress(Guid addressId) => _addresses.RemoveAll(a => a.Id == addressId);
+
+    public BusinessPartnerContact AddContact(string name, string? jobTitle, string? email, string? phone)
+    {
+        var contact = new BusinessPartnerContact(name, jobTitle, email, phone);
+        _contacts.Add(contact);
+        return contact;
+    }
+
+    public void RemoveContact(Guid contactId) => _contacts.RemoveAll(c => c.Id == contactId);
 
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 

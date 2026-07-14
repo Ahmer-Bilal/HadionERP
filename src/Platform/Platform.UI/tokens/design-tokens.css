@@ -29,7 +29,11 @@
   --pi-space-6: 2rem;
 
   /* --- Typography --- */
-  --pi-font-family: system-ui, "Segoe UI", Tahoma, Arial, sans-serif;
+  /* Inter (Latin) / Noto Sans Arabic (Arabic) — see src/Platform/Platform.UI/fonts/fonts.css for the
+     self-hosted @font-face declarations. Listed together (not swapped per-language) because a page can
+     mix scripts (e.g. an English label next to an Arabic name); the browser picks whichever face covers
+     each character via its unicode-range, so both need to be in the stack at all times. */
+  --pi-font-family: "Inter", "Noto Sans Arabic", system-ui, "Segoe UI", Tahoma, Arial, sans-serif;
   --pi-font-size-sm: 0.85rem;
   --pi-font-size-base: 1rem;
   --pi-font-size-lg: 1.1rem;

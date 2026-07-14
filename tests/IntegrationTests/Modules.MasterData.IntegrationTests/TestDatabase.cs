@@ -26,12 +26,13 @@ internal static class TestDatabase
         return new MasterDataDbContext(options);
     }
 
-    /// <summary>Wipes both tables so each test starts from a clean, known state — tests share one real
-    /// database rather than each getting an isolated container.</summary>
+    /// <summary>Wipes all tables so each test starts from a clean, known state — tests share one real
+    /// database rather than each getting an isolated container. CASCADE is required now that
+    /// business_partner_addresses/contacts hold a foreign key into business_partners.</summary>
     public static async Task ResetAsync()
     {
         await using var context = CreateContext();
-        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.business_partners");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.business_partners CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.number_range_counters");
     }
 }

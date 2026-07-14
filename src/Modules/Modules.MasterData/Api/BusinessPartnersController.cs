@@ -63,16 +63,37 @@ public sealed class BusinessPartnersController : PlatformApiController
         }
     }
 
-    [HttpPut("{id:guid}/contact")]
-    public async Task<IActionResult> UpdateContact(Guid id, [FromBody] UpdateBusinessPartnerContactRequest request, CancellationToken cancellationToken)
+    [HttpPost("{id:guid}/addresses")]
+    public async Task<IActionResult> AddAddress(Guid id, [FromBody] AddBusinessPartnerAddressRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            return Ok(await _service.UpdateContactAsync(id, request, cancellationToken));
+            return Ok(await _service.AddAddressAsync(id, request, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequestError(ex.Message);
+        }
+    }
+
+    [HttpPost("{id:guid}/contacts")]
+    public async Task<IActionResult> AddContact(Guid id, [FromBody] AddBusinessPartnerContactRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _service.AddContactAsync(id, request, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequestError(ex.Message);
         }
     }
 

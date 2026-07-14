@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done (real, PostgreSQL-persisted); Chart of Accounts/Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done, now with real Addresses/Contacts child collections (real, PostgreSQL-persisted); Chart of Accounts/Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,72 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Business Partner: Addresses/Contacts child collections replace flat fields; self-hosted Inter/Noto Sans Arabic fonts
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed (this slice; rest of Phase 1 remains — see Next)
+- What changed:
+  - **Replaced Business Partner's single flat email/phone/country/city/address fields with two proper
+    child collections**, per real-world correction from the user: a company has several addresses by
+    purpose (Head Office, Billing, Shipping, one or more Site Offices — multiple of the same type allowed,
+    e.g. several active Site Office addresses for different projects) and several contact people
+    (Procurement Manager, Accountant, CEO, Site Engineer), each with their own phone/email — not one
+    shared pair of fields for the whole company. Added `BusinessPartnerAddress` and
+    `BusinessPartnerContact` as child entities (DDD aggregate pattern: `internal` constructors, only
+    creatable through `BusinessPartner.AddAddress`/`AddContact`), mapped as their own Postgres tables
+    (`business_partner_addresses`/`business_partner_contacts`) cascade-deleted with the parent.
+  - Regenerated the EF Core migration from scratch (dropped and reapplied on both the dev and test
+    databases) since this was still pre-release schema, not a production migration chain.
+  - Added `POST .../{id}/addresses` and `POST .../{id}/contacts` endpoints (removed the old
+    `PUT .../{id}/contact` endpoint that no longer matches the data shape); updated the frontend's
+    Business Partner details screen with separate Addresses/Contacts FastTabs, each showing existing rows
+    plus an inline add form — verified end-to-end in a real browser (create partner → add address → add
+    contact → confirm both persist and both render correctly, in English and Arabic/RTL).
+  - Updated all unit and integration tests for the new shape; added new test coverage for
+    add/remove-address, add/remove-contact, and the two new Application-layer service methods.
+  - **Separately, wired in self-hosted Inter (Latin) + Noto Sans Arabic fonts** per user request —
+    downloaded the actual `.woff2` files (not a Google Fonts CDN link, since this app is meant to run
+    self-hosted) into `Platform.UI/fonts/`, added `@font-face` rules, and pointed `--pi-font-family` at
+    both faces together (a screen can mix English and Arabic text, so both must be available at once, not
+    swapped per-language). Found and fixed a real Vite dev-server bug in the process (see bug 5 below).
+  - **Found and fixed one real bug** while doing this (disclosed, not hidden — full details in
+    `src/Modules/Modules.MasterData/README.md`): `TestDatabase.ResetAsync()`'s
+    `TRUNCATE TABLE masterdata.business_partners` broke once the new child tables held a foreign key into
+    it; fixed by adding `CASCADE`.
+  - Also found and fixed (not a Business Partner bug, a Platform.UI/Apps.Shell one): Vite's dev server
+    403'd on the new font files even though `design-tokens.css`/`components.css` from the same
+    `@platform/ui` alias loaded fine — CSS pulled in via a JS `import` is transformed/inlined by Vite and
+    never hits the filesystem-allow check, but a plain `url()` reference inside CSS (the new `@font-face
+    src`) is fetched as a raw static file, which Vite refuses to serve from outside its project root by
+    default. Fixed with an explicit `server.fs.allow` entry in `vite.config.ts` (had to list Apps.Shell's
+    own root too, since setting `allow` replaces Vite's default list rather than extending it). Caught by
+    an actual 403 in the browser console during live verification, not by code review.
+  - Verified the whole solution builds with 0 errors, every test project passes (including the
+    architecture guardrail tests for hardcoded Arabic on both backend and frontend), and the app runs live
+    end-to-end in a real browser in both English and Arabic before considering this done, per the
+    standing "never leave the project in a non-runnable state" rule.
+- Files touched: `src/Modules/Modules.MasterData/Domain/{AddressType,BusinessPartnerAddress,
+  BusinessPartnerContact,BusinessPartner}.cs`, `src/Modules/Modules.MasterData/Infrastructure/
+  {MasterDataDbContext,EfBusinessPartnerRepository}.cs`,
+  `src/Modules/Modules.MasterData/Infrastructure/Migrations/*` (regenerated), `src/Modules/
+  Modules.MasterData/Application/{BusinessPartnerDto,BusinessPartnerService}.cs`,
+  `src/Modules/Modules.MasterData/Api/BusinessPartnersController.cs`, `tests/UnitTests/
+  Modules.MasterData.Tests/{BusinessPartnerTests,BusinessPartnerServiceTests}.cs`, `tests/IntegrationTests/
+  Modules.MasterData.IntegrationTests/{BusinessPartnerPersistenceTests,TestDatabase}.cs`,
+  `src/Apps/Apps.Shell/src/{api/businessPartnerApi.ts,pages/BusinessPartnersPage.tsx,i18n/content.ts}`,
+  `src/Platform/Platform.UI/fonts/{fonts.css,inter-latin.woff2,noto-sans-arabic-arabic.woff2,
+  noto-sans-arabic-latin.woff2}`, `src/Platform/Platform.UI/tokens/design-tokens.css`,
+  `src/Apps/Apps.Shell/src/main.tsx`, `src/Apps/Apps.Shell/vite.config.ts`,
+  `src/Modules/Modules.MasterData/README.md`, `src/Platform/Platform.UI/README.md`
+- Next: Per the user's explicit chosen sequencing, the next slice is a dedicated pass wiring
+  `Platform.Audit`, `Platform.Workflow`, and `Platform.Security` permission checks into the real
+  `BusinessPartnerService`/`BusinessPartnersController` (currently built but NOT wired into this module —
+  Submit/Approve bypass the configurable workflow engine entirely, no audit entries are recorded for
+  Business Partner changes, and no permission checks gate the controller). After that: build Attachments
+  and Notes into `Platform.Core` (never built at all so far), then add bilingual (Arabic + English) name
+  fields to `BusinessPartner` (relevant for ZATCA/KSA legal requirements). Only after those does Phase 1
+  continue to Chart of Accounts/Items/Cost Centers/Tax codes and Finance.
 
 ### 2026-07-14 — Phase 1 begins: real PostgreSQL database + first business module (Business Partner)
 - Agent: Claude Sonnet 5

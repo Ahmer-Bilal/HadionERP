@@ -24,7 +24,8 @@ public class BusinessPartnerPersistenceTests : IAsyncLifetime
         {
             var partner = new BusinessPartner("ahmer.bilal", "Gulf Falcon Trading Co", PartnerType.Vendor);
             partner.UpdateTaxRegistrationNumber("300000000000003");
-            partner.UpdateContactDetails("info@gulffalcon.example", "+966500000000", "Saudi Arabia", "Riyadh", "King Fahd Road");
+            partner.AddAddress(AddressType.HeadOffice, "Saudi Arabia", "Riyadh", "King Fahd Road");
+            partner.AddContact("Fahad Al-Otaibi", "Procurement Manager", "info@gulffalcon.example", "+966500000000");
             partner.AssignNumber("MD-BP-2026-000001");
             partner.ExtensionFields.Set("preferredLanguage", "ar");
 
@@ -34,13 +35,21 @@ public class BusinessPartnerPersistenceTests : IAsyncLifetime
         }
 
         await using var readContext = TestDatabase.CreateContext();
-        var reloaded = await readContext.BusinessPartners.FirstOrDefaultAsync(p => p.Id == id);
+        var reloaded = await readContext.BusinessPartners
+            .Include(p => p.Addresses)
+            .Include(p => p.Contacts)
+            .FirstOrDefaultAsync(p => p.Id == id);
 
         Assert.NotNull(reloaded);
         Assert.Equal("Gulf Falcon Trading Co", reloaded!.Name);
         Assert.Equal(PartnerType.Vendor, reloaded.PartnerType);
         Assert.Equal("300000000000003", reloaded.TaxRegistrationNumber);
-        Assert.Equal("Riyadh", reloaded.City);
+        var address = Assert.Single(reloaded.Addresses);
+        Assert.Equal(AddressType.HeadOffice, address.AddressType);
+        Assert.Equal("Riyadh", address.City);
+        var contact = Assert.Single(reloaded.Contacts);
+        Assert.Equal("Fahad Al-Otaibi", contact.Name);
+        Assert.Equal("info@gulffalcon.example", contact.Email);
         Assert.Equal("MD-BP-2026-000001", reloaded.DocumentNumber);
         Assert.Equal(BusinessObjectStatus.Draft, reloaded.Status);
         Assert.Equal("ahmer.bilal", reloaded.CreatedBy);
@@ -92,13 +101,15 @@ public class BusinessPartnerPersistenceTests : IAsyncLifetime
         var firstView = await firstContext.BusinessPartners.FirstAsync(p => p.Id == id);
         var secondView = await secondContext.BusinessPartners.FirstAsync(p => p.Id == id);
 
-        // ...the first one saves a change...
-        firstView.UpdateContactDetails("first@change.example", null, null, null, null);
+        // ...the first one saves a change to the parent row itself (xmin only tracks the row it lives on
+        // — a child Address/Contact insert wouldn't touch the parent's xmin, so the field being changed
+        // here must be a BusinessPartner property, not a child collection)...
+        firstView.UpdateTaxRegistrationNumber("111111111111111");
         await firstContext.SaveChangesAsync();
 
         // ...the second, now working from a stale row_version, must be rejected rather than silently
         // overwrite the first change.
-        secondView.UpdateContactDetails("second@change.example", null, null, null, null);
+        secondView.UpdateTaxRegistrationNumber("222222222222222");
         await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => secondContext.SaveChangesAsync());
     }
 }

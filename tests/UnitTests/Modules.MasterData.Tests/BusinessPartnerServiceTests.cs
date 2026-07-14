@@ -18,7 +18,7 @@ public class BusinessPartnerServiceTests
     }
 
     private static CreateBusinessPartnerRequest ValidRequest(string partnerType = "Vendor") =>
-        new("Gulf Falcon Trading Co", partnerType, "300000000000003", "info@gulffalcon.example", "+966500000000", "Saudi Arabia", "Riyadh", "King Fahd Road");
+        new("Gulf Falcon Trading Co", partnerType, "300000000000003");
 
     [Fact]
     public async Task Create_assigns_a_document_number_and_starts_in_draft()
@@ -83,6 +83,44 @@ public class BusinessPartnerServiceTests
         var service = BuildService(out _);
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SubmitAsync(Guid.NewGuid(), "ahmer.bilal"));
+    }
+
+    [Fact]
+    public async Task AddAddressAsync_appends_an_address_to_the_partner()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        var updated = await service.AddAddressAsync(
+            created.Id, new AddBusinessPartnerAddressRequest("SiteOffice", "Saudi Arabia", "Riyadh", "King Fahd Road"));
+
+        var address = Assert.Single(updated.Addresses);
+        Assert.Equal("SiteOffice", address.AddressType);
+        Assert.Equal("Riyadh", address.City);
+    }
+
+    [Fact]
+    public async Task AddAddressAsync_rejects_an_invalid_address_type()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.AddAddressAsync(created.Id, new AddBusinessPartnerAddressRequest("NotARealType", null, null, null)));
+    }
+
+    [Fact]
+    public async Task AddContactAsync_appends_a_contact_to_the_partner()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        var updated = await service.AddContactAsync(
+            created.Id, new AddBusinessPartnerContactRequest("Fahad Al-Otaibi", "Procurement Manager", "fahad@vendor.example", "+966500000000"));
+
+        var contact = Assert.Single(updated.Contacts);
+        Assert.Equal("Fahad Al-Otaibi", contact.Name);
+        Assert.Equal("Procurement Manager", contact.JobTitle);
     }
 
     [Fact]

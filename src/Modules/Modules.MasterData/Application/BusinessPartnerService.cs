@@ -34,7 +34,6 @@ public sealed class BusinessPartnerService
 
         var partner = new BusinessPartner(actor, request.Name, partnerType);
         partner.UpdateTaxRegistrationNumber(request.TaxRegistrationNumber);
-        partner.UpdateContactDetails(request.Email, request.Phone, request.Country, request.City, request.AddressLine);
 
         var documentNumber = _numberRangeService.GetNext(NumberRangeKey, companyId, DateTimeOffset.UtcNow.Year);
         partner.AssignNumber(documentNumber);
@@ -59,11 +58,26 @@ public sealed class BusinessPartnerService
         return (items.Select(ToDto).ToList(), total);
     }
 
-    public async Task<BusinessPartnerDto> UpdateContactAsync(
-        Guid id, UpdateBusinessPartnerContactRequest request, CancellationToken cancellationToken = default)
+    public async Task<BusinessPartnerDto> AddAddressAsync(
+        Guid id, AddBusinessPartnerAddressRequest request, CancellationToken cancellationToken = default)
+    {
+        if (!Enum.TryParse<AddressType>(request.AddressType, ignoreCase: true, out var addressType))
+        {
+            throw new ArgumentException(
+                $"Invalid address type '{request.AddressType}'. Expected HeadOffice, Billing, Shipping, or SiteOffice.");
+        }
+
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        partner.AddAddress(addressType, request.Country, request.City, request.AddressLine);
+        await _repository.SaveChangesAsync(cancellationToken);
+        return ToDto(partner);
+    }
+
+    public async Task<BusinessPartnerDto> AddContactAsync(
+        Guid id, AddBusinessPartnerContactRequest request, CancellationToken cancellationToken = default)
     {
         var partner = await RequirePartnerAsync(id, cancellationToken);
-        partner.UpdateContactDetails(request.Email, request.Phone, request.Country, request.City, request.AddressLine);
+        partner.AddContact(request.Name, request.JobTitle, request.Email, request.Phone);
         await _repository.SaveChangesAsync(cancellationToken);
         return ToDto(partner);
     }
@@ -95,11 +109,8 @@ public sealed class BusinessPartnerService
         partner.Name,
         partner.PartnerType.ToString(),
         partner.TaxRegistrationNumber,
-        partner.Email,
-        partner.Phone,
-        partner.Country,
-        partner.City,
-        partner.AddressLine,
+        partner.Addresses.Select(a => new BusinessPartnerAddressDto(a.Id, a.AddressType.ToString(), a.Country, a.City, a.AddressLine)).ToList(),
+        partner.Contacts.Select(c => new BusinessPartnerContactDto(c.Id, c.Name, c.JobTitle, c.Email, c.Phone)).ToList(),
         partner.CreatedAt,
         partner.CreatedBy);
 }

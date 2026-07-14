@@ -1,5 +1,9 @@
 namespace Modules.MasterData.Application;
 
+public sealed record BusinessPartnerAddressDto(Guid Id, string AddressType, string? Country, string? City, string? AddressLine);
+
+public sealed record BusinessPartnerContactDto(Guid Id, string Name, string? JobTitle, string? Email, string? Phone);
+
 public sealed record BusinessPartnerDto(
     Guid Id,
     string? DocumentNumber,
@@ -7,27 +11,13 @@ public sealed record BusinessPartnerDto(
     string Name,
     string PartnerType,
     string? TaxRegistrationNumber,
-    string? Email,
-    string? Phone,
-    string? Country,
-    string? City,
-    string? AddressLine,
+    IReadOnlyList<BusinessPartnerAddressDto> Addresses,
+    IReadOnlyList<BusinessPartnerContactDto> Contacts,
     DateTimeOffset CreatedAt,
     string CreatedBy);
 
-public sealed record CreateBusinessPartnerRequest(
-    string Name,
-    string PartnerType,
-    string? TaxRegistrationNumber,
-    string? Email,
-    string? Phone,
-    string? Country,
-    string? City,
-    string? AddressLine);
+public sealed record CreateBusinessPartnerRequest(string Name, string PartnerType, string? TaxRegistrationNumber);
 
-public sealed record UpdateBusinessPartnerContactRequest(
-    string? Email,
-    string? Phone,
-    string? Country,
-    string? City,
-    string? AddressLine);
+public sealed record AddBusinessPartnerAddressRequest(string AddressType, string? Country, string? City, string? AddressLine);
+
+public sealed record AddBusinessPartnerContactRequest(string Name, string? JobTitle, string? Email, string? Phone);

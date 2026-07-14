@@ -1,5 +1,21 @@
 import { API_BASE_URL } from "../config";
 
+export interface BusinessPartnerAddress {
+  id: string;
+  addressType: string;
+  country: string | null;
+  city: string | null;
+  addressLine: string | null;
+}
+
+export interface BusinessPartnerContact {
+  id: string;
+  name: string;
+  jobTitle: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
 export interface BusinessPartner {
   id: string;
   documentNumber: string | null;
@@ -7,11 +23,8 @@ export interface BusinessPartner {
   name: string;
   partnerType: string;
   taxRegistrationNumber: string | null;
-  email: string | null;
-  phone: string | null;
-  country: string | null;
-  city: string | null;
-  addressLine: string | null;
+  addresses: BusinessPartnerAddress[];
+  contacts: BusinessPartnerContact[];
   createdAt: string;
   createdBy: string;
 }
@@ -27,11 +40,20 @@ export interface CreateBusinessPartnerInput {
   name: string;
   partnerType: string;
   taxRegistrationNumber?: string;
-  email?: string;
-  phone?: string;
+}
+
+export interface AddBusinessPartnerAddressInput {
+  addressType: string;
   country?: string;
   city?: string;
   addressLine?: string;
+}
+
+export interface AddBusinessPartnerContactInput {
+  name: string;
+  jobTitle?: string;
+  email?: string;
+  phone?: string;
 }
 
 const BASE_PATH = "/api/v1/masterdata/business-partners";
@@ -56,6 +78,30 @@ export async function getBusinessPartner(id: string): Promise<BusinessPartner> {
 
 export async function createBusinessPartner(input: CreateBusinessPartnerInput): Promise<BusinessPartner> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handleJson(response);
+}
+
+export async function addBusinessPartnerAddress(
+  id: string,
+  input: AddBusinessPartnerAddressInput,
+): Promise<BusinessPartner> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/addresses`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handleJson(response);
+}
+
+export async function addBusinessPartnerContact(
+  id: string,
+  input: AddBusinessPartnerContactInput,
+): Promise<BusinessPartner> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/contacts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

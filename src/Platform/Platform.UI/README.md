@@ -32,6 +32,23 @@ The single source of truth for color, spacing, typography, and radius — all `-
 Consumed by Platform.UI's own components AND by Apps.Shell's app-level CSS. Theme-able: light/dark today
 (via `@media (prefers-color-scheme)`), per-tenant branding later by redefining the same variables.
 
+### Fonts (`fonts/fonts.css`)
+Inter (Latin) and Noto Sans Arabic, self-hosted (the `.woff2` files live in this folder) rather than
+linked from Google Fonts' CDN — this app is meant to run self-hosted/on-premises, so it shouldn't depend
+on an external network call just to render text. Both are variable fonts covering the 400–600 weight range
+`--pi-font-family` needs, restricted to the latin+arabic subsets since `SupportedLanguageCode` is only
+`en`/`ar` (no cyrillic/greek/vietnamese ever renders). `--pi-font-family` lists both faces together, not
+switched per-language, because a single screen can mix scripts (an English document number next to an
+Arabic partner name); the browser picks whichever face covers each character via its `unicode-range`.
+
+Vite's dev server needed an explicit `server.fs.allow` entry for Platform.UI in `vite.config.ts` — CSS
+pulled in via a JS `import` (like `design-tokens.css`) is transformed/inlined by Vite's own pipeline and
+never hits the filesystem-allow check, but a plain `url()` reference inside CSS (`fonts.css`'s
+`@font-face src`) is fetched as a raw static file, which Vite refuses to serve from outside its project
+root by default. Since Platform.UI lives outside Apps.Shell's root (the same reason the `@platform/ui`
+alias exists at all), it had to be allow-listed explicitly — found by an actual 403 in the browser console
+during live verification, not by code review.
+
 ### Components (`components/`)
 - **ShellBar** — top bar: title + language switcher. Receives translated title and language autonyms as
   props (never calls a translation function itself).

@@ -42,17 +42,63 @@ public class BusinessPartnerTests
     }
 
     [Fact]
-    public void Contact_details_can_be_updated_regardless_of_lifecycle_status()
+    public void Addresses_can_be_added_regardless_of_lifecycle_status()
     {
         var partner = new BusinessPartner("ahmer.bilal", "Approved Vendor Co", PartnerType.Vendor);
         partner.Submit("ahmer.bilal");
         partner.Approve("finance.manager");
 
-        partner.UpdateContactDetails("new@vendor.example", "+966500000000", "Saudi Arabia", "Riyadh", "King Fahd Road");
+        var address = partner.AddAddress(AddressType.SiteOffice, "Saudi Arabia", "Riyadh", "King Fahd Road");
 
-        Assert.Equal("new@vendor.example", partner.Email);
-        Assert.Equal("Riyadh", partner.City);
-        Assert.Equal(BusinessObjectStatus.Approved, partner.Status); // updating contact info never changes lifecycle status
+        Assert.Single(partner.Addresses);
+        Assert.Equal(AddressType.SiteOffice, address.AddressType);
+        Assert.Equal("Riyadh", address.City);
+        Assert.Equal(BusinessObjectStatus.Approved, partner.Status); // adding an address never changes lifecycle status
+    }
+
+    [Fact]
+    public void A_partner_can_have_multiple_addresses_of_the_same_type()
+    {
+        var partner = new BusinessPartner("ahmer.bilal", "Multi-Site Contracting Co", PartnerType.Vendor);
+
+        partner.AddAddress(AddressType.SiteOffice, "Saudi Arabia", "Riyadh", "Project A Site");
+        partner.AddAddress(AddressType.SiteOffice, "Saudi Arabia", "Jeddah", "Project B Site");
+
+        Assert.Equal(2, partner.Addresses.Count);
+    }
+
+    [Fact]
+    public void An_address_can_be_removed()
+    {
+        var partner = new BusinessPartner("ahmer.bilal", "Test Vendor", PartnerType.Vendor);
+        var address = partner.AddAddress(AddressType.Billing, "Saudi Arabia", "Riyadh", "Olaya Street");
+
+        partner.RemoveAddress(address.Id);
+
+        Assert.Empty(partner.Addresses);
+    }
+
+    [Fact]
+    public void Contacts_can_be_added_with_their_own_name_and_details()
+    {
+        var partner = new BusinessPartner("ahmer.bilal", "Approved Vendor Co", PartnerType.Vendor);
+
+        var contact = partner.AddContact("Fahad Al-Otaibi", "Procurement Manager", "fahad@vendor.example", "+966500000000");
+
+        Assert.Single(partner.Contacts);
+        Assert.Equal("Fahad Al-Otaibi", contact.Name);
+        Assert.Equal("Procurement Manager", contact.JobTitle);
+    }
+
+    [Fact]
+    public void A_contact_can_be_removed()
+    {
+        var partner = new BusinessPartner("ahmer.bilal", "Test Vendor", PartnerType.Vendor);
+        var contact = partner.AddContact("Sara Al-Harbi", "Accountant", "sara@vendor.example", "+966511111111");
+
+        partner.RemoveContact(contact.Id);
+
+        Assert.Empty(partner.Contacts);
     }
 
     [Fact]

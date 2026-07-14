@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 //      monorepo without npm workspaces; a real workspace setup later removes the need for it.
 const platformUiPath = fileURLToPath(new URL('../../Platform/Platform.UI', import.meta.url))
 const reactPath = fileURLToPath(new URL('./node_modules/react', import.meta.url))
+const projectRootPath = fileURLToPath(new URL('.', import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,5 +23,17 @@ export default defineConfig({
     },
     // Ensure a single React instance even if resolved from two locations.
     dedupe: ['react'],
+  },
+  server: {
+    fs: {
+      // CSS imported via JS (design-tokens.css, components.css) is transformed/inlined by Vite's own
+      // pipeline and never hits this check — but a plain url() reference inside CSS (fonts.css's
+      // @font-face src) is fetched as a raw static file, which Vite's dev server refuses to serve from
+      // outside its project root by default. Platform.UI lives outside Apps.Shell's root (same reason
+      // the two aliases above exist), so it needs to be explicitly allow-listed. Setting `allow`
+      // REPLACES Vite's default list rather than extending it, so Apps.Shell's own root must be listed
+      // too, or the app's own index.html/source files 403.
+      allow: [projectRootPath, platformUiPath],
+    },
   },
 })

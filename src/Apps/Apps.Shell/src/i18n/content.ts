@@ -44,7 +44,8 @@ type TranslationKey =
   | "bp.columnName"
   | "bp.columnType"
   | "bp.columnStatus"
-  | "bp.tabContact"
+  | "bp.tabAddresses"
+  | "bp.tabContacts"
   | "bp.fieldName"
   | "bp.fieldPartnerType"
   | "bp.fieldTaxRegistrationNumber"
@@ -53,9 +54,20 @@ type TranslationKey =
   | "bp.fieldCountry"
   | "bp.fieldCity"
   | "bp.fieldAddressLine"
+  | "bp.fieldAddressType"
+  | "bp.fieldJobTitle"
+  | "bp.fieldContactName"
+  | "bp.actionAddAddress"
+  | "bp.actionAddContact"
+  | "bp.emptyAddresses"
+  | "bp.emptyContacts"
   | "bp.partnerTypeCustomer"
   | "bp.partnerTypeVendor"
   | "bp.partnerTypeBoth"
+  | "bp.addressTypeHeadOffice"
+  | "bp.addressTypeBilling"
+  | "bp.addressTypeShipping"
+  | "bp.addressTypeSiteOffice"
   | "bp.statusDraft"
   | "bp.statusSubmitted"
   | "bp.statusInApproval"
@@ -104,7 +116,8 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.columnName": { en: "Name", ar: "الاسم" },
   "bp.columnType": { en: "Type", ar: "النوع" },
   "bp.columnStatus": { en: "Status", ar: "الحالة" },
-  "bp.tabContact": { en: "Contact", ar: "بيانات التواصل" },
+  "bp.tabAddresses": { en: "Addresses", ar: "العناوين" },
+  "bp.tabContacts": { en: "Contacts", ar: "جهات الاتصال" },
   "bp.fieldName": { en: "Name", ar: "الاسم" },
   "bp.fieldPartnerType": { en: "Partner Type", ar: "نوع الشريك" },
   "bp.fieldTaxRegistrationNumber": { en: "Tax Registration Number", ar: "الرقم الضريبي" },
@@ -113,9 +126,20 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.fieldCountry": { en: "Country", ar: "الدولة" },
   "bp.fieldCity": { en: "City", ar: "المدينة" },
   "bp.fieldAddressLine": { en: "Address", ar: "العنوان" },
+  "bp.fieldAddressType": { en: "Address Type", ar: "نوع العنوان" },
+  "bp.fieldJobTitle": { en: "Job Title", ar: "المسمى الوظيفي" },
+  "bp.fieldContactName": { en: "Contact Name", ar: "اسم جهة الاتصال" },
+  "bp.actionAddAddress": { en: "Add Address", ar: "إضافة عنوان" },
+  "bp.actionAddContact": { en: "Add Contact", ar: "إضافة جهة اتصال" },
+  "bp.emptyAddresses": { en: "No addresses yet.", ar: "لا توجد عناوين حتى الآن." },
+  "bp.emptyContacts": { en: "No contacts yet.", ar: "لا توجد جهات اتصال حتى الآن." },
   "bp.partnerTypeCustomer": { en: "Customer", ar: "عميل" },
   "bp.partnerTypeVendor": { en: "Vendor", ar: "مورّد" },
   "bp.partnerTypeBoth": { en: "Customer & Vendor", ar: "عميل ومورّد" },
+  "bp.addressTypeHeadOffice": { en: "Head Office", ar: "المكتب الرئيسي" },
+  "bp.addressTypeBilling": { en: "Billing", ar: "الفوترة" },
+  "bp.addressTypeShipping": { en: "Shipping", ar: "الشحن" },
+  "bp.addressTypeSiteOffice": { en: "Site Office", ar: "مكتب الموقع" },
   "bp.statusDraft": { en: "Draft", ar: "مسودة" },
   "bp.statusSubmitted": { en: "Submitted", ar: "مُرسل" },
   "bp.statusInApproval": { en: "In Approval", ar: "قيد الاعتماد" },

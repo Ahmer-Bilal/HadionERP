@@ -4,12 +4,19 @@ import type { ActionItem } from "@platform/ui";
 import type { SupportedLanguageCode } from "../i18n/language";
 import { t } from "../i18n/content";
 import {
+  addBusinessPartnerAddress,
+  addBusinessPartnerContact,
   approveBusinessPartner,
   createBusinessPartner,
   listBusinessPartners,
   submitBusinessPartner,
 } from "../api/businessPartnerApi";
-import type { BusinessPartner, CreateBusinessPartnerInput } from "../api/businessPartnerApi";
+import type {
+  AddBusinessPartnerAddressInput,
+  AddBusinessPartnerContactInput,
+  BusinessPartner,
+  CreateBusinessPartnerInput,
+} from "../api/businessPartnerApi";
 
 interface BusinessPartnersPageProps {
   language: SupportedLanguageCode;
@@ -21,11 +28,20 @@ const emptyForm: CreateBusinessPartnerInput = {
   name: "",
   partnerType: "Vendor",
   taxRegistrationNumber: "",
-  email: "",
-  phone: "",
+};
+
+const emptyAddressForm: AddBusinessPartnerAddressInput = {
+  addressType: "HeadOffice",
   country: "",
   city: "",
   addressLine: "",
+};
+
+const emptyContactForm: AddBusinessPartnerContactInput = {
+  name: "",
+  jobTitle: "",
+  email: "",
+  phone: "",
 };
 
 // The backend returns raw enum names (English) — real data values, not UI copy, so they're never
@@ -66,6 +82,21 @@ function translateStatus(status: string, language: SupportedLanguageCode): strin
   }
 }
 
+function translateAddressType(addressType: string, language: SupportedLanguageCode): string {
+  switch (addressType) {
+    case "HeadOffice":
+      return t("bp.addressTypeHeadOffice", language);
+    case "Billing":
+      return t("bp.addressTypeBilling", language);
+    case "Shipping":
+      return t("bp.addressTypeShipping", language);
+    case "SiteOffice":
+      return t("bp.addressTypeSiteOffice", language);
+    default:
+      return addressType;
+  }
+}
+
 /// The first real business screen in the application (Modules.MasterData's Business Partner) — a
 /// List + create/details view. Not yet using a shared "List+Details form template" from Platform.UI:
 /// that template is deferred until a SECOND business object needs the same shape (see
@@ -76,6 +107,8 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<ViewState>({ kind: "list" });
   const [form, setForm] = useState<CreateBusinessPartnerInput>(emptyForm);
+  const [addressForm, setAddressForm] = useState<AddBusinessPartnerAddressInput>(emptyAddressForm);
+  const [contactForm, setContactForm] = useState<AddBusinessPartnerContactInput>(emptyContactForm);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -139,6 +172,34 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
       const updated = await approveBusinessPartner(partner.id);
       setView({ kind: "details", partner: updated });
       load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAddAddress = async (partner: BusinessPartner) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await addBusinessPartnerAddress(partner.id, addressForm);
+      setView({ kind: "details", partner: updated });
+      setAddressForm(emptyAddressForm);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAddContact = async (partner: BusinessPartner) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await addBusinessPartnerContact(partner.id, contactForm);
+      setView({ kind: "details", partner: updated });
+      setContactForm(emptyContactForm);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -249,34 +310,6 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
                 </div>
               ),
             },
-            {
-              key: "contact",
-              title: t("bp.tabContact", language),
-              content: (
-                <div className="bp-form">
-                  <label>
-                    {t("bp.fieldEmail", language)}
-                    <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                  </label>
-                  <label>
-                    {t("bp.fieldPhone", language)}
-                    <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                  </label>
-                  <label>
-                    {t("bp.fieldCountry", language)}
-                    <input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-                  </label>
-                  <label>
-                    {t("bp.fieldCity", language)}
-                    <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-                  </label>
-                  <label>
-                    {t("bp.fieldAddressLine", language)}
-                    <input value={form.addressLine} onChange={(e) => setForm({ ...form, addressLine: e.target.value })} />
-                  </label>
-                </div>
-              ),
-            },
           ]}
         />
       </section>
@@ -333,25 +366,152 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
             ),
           },
           {
-            key: "contact",
-            title: t("bp.tabContact", language),
+            key: "addresses",
+            title: t("bp.tabAddresses", language),
             content: (
-              <dl className="status-page__facts">
-                <dt>{t("bp.fieldEmail", language)}</dt>
-                <dd>{partner.email ?? "—"}</dd>
+              <div className="bp-form">
+                {partner.addresses.length === 0 && <p>{t("bp.emptyAddresses", language)}</p>}
+                {partner.addresses.length > 0 && (
+                  <table className="bp-table">
+                    <thead>
+                      <tr>
+                        <th>{t("bp.fieldAddressType", language)}</th>
+                        <th>{t("bp.fieldCountry", language)}</th>
+                        <th>{t("bp.fieldCity", language)}</th>
+                        <th>{t("bp.fieldAddressLine", language)}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {partner.addresses.map((address) => (
+                        <tr key={address.id}>
+                          <td>{translateAddressType(address.addressType, language)}</td>
+                          <td>{address.country ?? "—"}</td>
+                          <td>{address.city ?? "—"}</td>
+                          <td>{address.addressLine ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
 
-                <dt>{t("bp.fieldPhone", language)}</dt>
-                <dd><bdi dir="ltr">{partner.phone ?? "—"}</bdi></dd>
+                <label>
+                  {t("bp.fieldAddressType", language)}
+                  <select
+                    value={addressForm.addressType}
+                    onChange={(e) => setAddressForm({ ...addressForm, addressType: e.target.value })}
+                  >
+                    <option value="HeadOffice">{t("bp.addressTypeHeadOffice", language)}</option>
+                    <option value="Billing">{t("bp.addressTypeBilling", language)}</option>
+                    <option value="Shipping">{t("bp.addressTypeShipping", language)}</option>
+                    <option value="SiteOffice">{t("bp.addressTypeSiteOffice", language)}</option>
+                  </select>
+                </label>
+                <label>
+                  {t("bp.fieldCountry", language)}
+                  <input
+                    value={addressForm.country}
+                    onChange={(e) => setAddressForm({ ...addressForm, country: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("bp.fieldCity", language)}
+                  <input
+                    value={addressForm.city}
+                    onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("bp.fieldAddressLine", language)}
+                  <input
+                    value={addressForm.addressLine}
+                    onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
+                  />
+                </label>
+                <ActionPane
+                  actions={[
+                    {
+                      key: "add-address",
+                      label: t("bp.actionAddAddress", language),
+                      onClick: () => handleAddAddress(partner),
+                      variant: "primary",
+                      isDisabled: busy,
+                    },
+                  ]}
+                  ariaLabel={t("aria.actionToolbar", language)}
+                />
+              </div>
+            ),
+          },
+          {
+            key: "contacts",
+            title: t("bp.tabContacts", language),
+            content: (
+              <div className="bp-form">
+                {partner.contacts.length === 0 && <p>{t("bp.emptyContacts", language)}</p>}
+                {partner.contacts.length > 0 && (
+                  <table className="bp-table">
+                    <thead>
+                      <tr>
+                        <th>{t("bp.fieldContactName", language)}</th>
+                        <th>{t("bp.fieldJobTitle", language)}</th>
+                        <th>{t("bp.fieldEmail", language)}</th>
+                        <th>{t("bp.fieldPhone", language)}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {partner.contacts.map((contact) => (
+                        <tr key={contact.id}>
+                          <td>{contact.name}</td>
+                          <td>{contact.jobTitle ?? "—"}</td>
+                          <td>{contact.email ?? "—"}</td>
+                          <td><bdi dir="ltr">{contact.phone ?? "—"}</bdi></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
 
-                <dt>{t("bp.fieldCountry", language)}</dt>
-                <dd>{partner.country ?? "—"}</dd>
-
-                <dt>{t("bp.fieldCity", language)}</dt>
-                <dd>{partner.city ?? "—"}</dd>
-
-                <dt>{t("bp.fieldAddressLine", language)}</dt>
-                <dd>{partner.addressLine ?? "—"}</dd>
-              </dl>
+                <label>
+                  {t("bp.fieldContactName", language)}
+                  <input
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("bp.fieldJobTitle", language)}
+                  <input
+                    value={contactForm.jobTitle}
+                    onChange={(e) => setContactForm({ ...contactForm, jobTitle: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("bp.fieldEmail", language)}
+                  <input
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {t("bp.fieldPhone", language)}
+                  <input
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                  />
+                </label>
+                <ActionPane
+                  actions={[
+                    {
+                      key: "add-contact",
+                      label: t("bp.actionAddContact", language),
+                      onClick: () => handleAddContact(partner),
+                      variant: "primary",
+                      isDisabled: busy || contactForm.name.trim().length === 0,
+                    },
+                  ]}
+                  ariaLabel={t("aria.actionToolbar", language)}
+                />
+              </div>
             ),
           },
         ]}

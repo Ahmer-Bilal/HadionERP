@@ -28,21 +28,6 @@ namespace Modules.MasterData.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AddressLine")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("address_line");
-
-                    b.Property<string>("City")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("city");
-
-                    b.Property<string>("Country")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("country");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -57,11 +42,6 @@ namespace Modules.MasterData.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("doc_number");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("email");
 
                     b.Property<string>("ExtensionFields")
                         .IsRequired()
@@ -89,11 +69,6 @@ namespace Modules.MasterData.Infrastructure.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("partner_type");
 
-                    b.Property<string>("Phone")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("phone");
-
                     b.Property<long>("RowVersion")
                         .HasColumnType("bigint")
                         .HasColumnName("row_version");
@@ -120,6 +95,80 @@ namespace Modules.MasterData.Infrastructure.Migrations
                     b.ToTable("business_partners", "masterdata");
                 });
 
+            modelBuilder.Entity("Modules.MasterData.Domain.BusinessPartnerAddress", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddressLine")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("address_line");
+
+                    b.Property<string>("AddressType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("address_type");
+
+                    b.Property<Guid>("BusinessPartnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_partner_id");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("country");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessPartnerId");
+
+                    b.ToTable("business_partner_addresses", "masterdata");
+                });
+
+            modelBuilder.Entity("Modules.MasterData.Domain.BusinessPartnerContact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BusinessPartnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_partner_id");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("job_title");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("phone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessPartnerId");
+
+                    b.ToTable("business_partner_contacts", "masterdata");
+                });
+
             modelBuilder.Entity("Modules.MasterData.Infrastructure.NumberRangeCounterEntity", b =>
                 {
                     b.Property<string>("RangeKey")
@@ -141,6 +190,31 @@ namespace Modules.MasterData.Infrastructure.Migrations
                     b.HasKey("RangeKey", "CompanyId", "FiscalYear");
 
                     b.ToTable("number_range_counters", "masterdata");
+                });
+
+            modelBuilder.Entity("Modules.MasterData.Domain.BusinessPartnerAddress", b =>
+                {
+                    b.HasOne("Modules.MasterData.Domain.BusinessPartner", null)
+                        .WithMany("Addresses")
+                        .HasForeignKey("BusinessPartnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Modules.MasterData.Domain.BusinessPartnerContact", b =>
+                {
+                    b.HasOne("Modules.MasterData.Domain.BusinessPartner", null)
+                        .WithMany("Contacts")
+                        .HasForeignKey("BusinessPartnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Modules.MasterData.Domain.BusinessPartner", b =>
+                {
+                    b.Navigation("Addresses");
+
+                    b.Navigation("Contacts");
                 });
 #pragma warning restore 612, 618
         }
