@@ -2,6 +2,7 @@ using Gateway.Api.Events;
 using Gateway.Api.Localization;
 using Microsoft.EntityFrameworkCore;
 using Modules.MasterData.Application;
+using Modules.MasterData.Contracts;
 using Modules.MasterData.Infrastructure;
 using Platform.Attachments;
 using Platform.Audit;
@@ -195,6 +196,12 @@ builder.Services.AddScoped<ICostCenterRepository, EfCostCenterRepository>();
 builder.Services.AddScoped<CostCenterService>();
 builder.Services.AddScoped<ITaxCodeRepository, EfTaxCodeRepository>();
 builder.Services.AddScoped<TaxCodeService>();
+// Modules.MasterData.Contracts: the published, read-only lookups Modules.Finance depends on instead of
+// reaching into this module's Domain/Infrastructure/Application internals directly
+// (docs/architecture/01-architecture-foundation.md #3.2).
+builder.Services.AddScoped<IGLAccountLookup, EfGLAccountLookup>();
+builder.Services.AddScoped<IBusinessPartnerLookup, EfBusinessPartnerLookup>();
+builder.Services.AddScoped<ITaxCodeLookup, EfTaxCodeLookup>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),
     new[]

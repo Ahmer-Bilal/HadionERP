@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Domain\Modules.MasterData.Domain.csproj" />
     <ProjectReference Include="..\Application\Modules.MasterData.Application.csproj" />
+    <ProjectReference Include="..\Contracts\Modules.MasterData.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Workflow\Platform.Workflow.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Attachments\Platform.Attachments.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Notes\Platform.Notes.csproj" />
