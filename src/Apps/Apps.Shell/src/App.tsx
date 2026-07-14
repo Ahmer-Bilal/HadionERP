@@ -11,6 +11,7 @@ import { CostCentersPage } from "./pages/CostCentersPage";
 import { TaxCodesPage } from "./pages/TaxCodesPage";
 import { JournalEntriesPage } from "./pages/JournalEntriesPage";
 import { APInvoicesPage } from "./pages/APInvoicesPage";
+import { VendorPrequalificationsPage } from "./pages/VendorPrequalificationsPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -18,7 +19,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -29,6 +30,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#tax-codes") return "tax-codes";
   if (window.location.hash === "#journal-entries") return "journal-entries";
   if (window.location.hash === "#ap-invoices") return "ap-invoices";
+  if (window.location.hash === "#vendor-prequalifications") return "vendor-prequalifications";
   return "home";
 }
 
@@ -184,6 +186,24 @@ function App() {
         },
       ],
     },
+    {
+      key: "procurement",
+      label: t("nav.procurementModule", language),
+      areas: [
+        {
+          key: "vendor-prequalifications",
+          label: t("nav.vendorPrequalificationsArea", language),
+          items: [
+            {
+              key: "all-vendor-prequalifications",
+              label: t("nav.allVendorPrequalifications", language),
+              href: "#vendor-prequalifications",
+              isActive: page === "vendor-prequalifications",
+            },
+          ],
+        },
+      ],
+    },
   ];
 
   const languageOptions = [
@@ -221,6 +241,8 @@ function App() {
             <JournalEntriesPage language={language} />
           ) : page === "ap-invoices" ? (
             <APInvoicesPage language={language} />
+          ) : page === "vendor-prequalifications" ? (
+            <VendorPrequalificationsPage language={language} />
           ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
           ) : (

@@ -42,7 +42,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice, both post/reverse-able with full audit trail. AR/Cash-Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-14 |
-| Phase 2 — Procurement | In Progress — `BusinessPartner.BusinessRoles` (multi-select, replaces PartnerType) built first, ahead of the rest of the phase, since Vendor Prequalification depends on it. `Modules.Procurement` itself (PR→RFQ→PO→GRN→3-way match) and Vendor Prequalification not started | 2026-07-14 |
+| Phase 2 — Procurement | In Progress — `BusinessPartner.BusinessRoles` done. `Modules.Procurement` scaffolded and Vendor Prequalification (5-step workflow) built and verified. PR/RFQ/PO/GRN/3-way match/budget-check not started | 2026-07-14 |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
 | Phase 5 — Reporting, Analytics & Mobile | Not Started | — |
@@ -53,6 +53,55 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Modules.Procurement scaffolded; Vendor Prequalification built (first multi-step workflow)
+- Agent: Claude Sonnet 5
+- Phase: Phase 2 — Procurement
+- Status: Completed
+- What changed: Scaffolded `Modules.Procurement` (Domain/Application/Infrastructure/Api, own "procurement"
+  Postgres schema in the same physical database as MasterData's/Finance's) and built its first vertical
+  slice, Vendor Prequalification, per `docs/architecture/06-roadmap.md`'s Phase 2 design. Domain:
+  `VendorPrequalification` (BusinessPartnerId + RoleType + optional Trade, stops at Approved like other
+  Master-Data-ish BOs, `SetValidityPeriod` sets ValidFrom/ValidUntil exactly once at final approval from a
+  configured validity period). Built and registered `VendorPrequalificationWorkflow` — a real 5-step
+  (Commercial→Legal→Technical→HSE→Quality), Any-quorum, unconditioned approval matrix — **the first
+  multi-step workflow this codebase has ever actually exercised** (every prior workflow used one step);
+  confirmed feasible by reading `Platform.Workflow.WorkflowEngine`/`WorkflowInstance` before building, since
+  each step just needs its own `RequiredRoleKey` and the engine already resolves "which step is current" +
+  checks role eligibility per step. `VendorPrequalificationSecurity` registers one Maintainer duty/role plus
+  five distinct reviewer duties/roles (one per domain) and five Maintainer-vs-reviewer SoD conflict rules.
+  `CreateAsync` rejects Government Authority outright (the roadmap's explicit "not prequalified at all"
+  exclusion) and validates the vendor exists, is Approved, and actually holds the requested role via
+  `IBusinessPartnerLookup`. The validity period (default 24 months) is a real `Platform.Configuration` key
+  (`Procurement.VendorPrequalification.ValidityMonths`), not hardcoded. This module also owns its own copy
+  of `Platform.Attachments`' persistence (own schema, same reasoning as its NumberRange/WorkflowInstance
+  copies) for supporting documents.
+- Verified: 380 tests pass across the solution (23 new unit + 2 new integration tests for this slice,
+  zero regressions elsewhere). Full backend + frontend build clean; both the backend architecture guardrail
+  (`NoHardcodedTranslatableTextTests`) and the frontend script (`check-no-hardcoded-arabic.mjs`) pass. Live
+  `curl` exercise: created a prequalification for an Approved Supplier and drove it through all 5 review
+  steps to Approved with a computed validity window (2026-07-14 to 2028-07-14, 24 months), confirmed
+  Government Authority and unheld-role requests are rejected with clear 400s, confirmed a mid-workflow
+  rejection leaves no validity period set, and exercised the attachment upload/list/download/delete cycle.
+  Live Playwright pass in both English and Arabic (nav tree correctly shows a new "Procurement" module,
+  full RTL mirroring on the details page including FastTabs).
+- Files touched: `src/Modules/Modules.Procurement/Domain/VendorPrequalification.cs`;
+  `Application/VendorPrequalificationDto.cs`, `IVendorPrequalificationRepository.cs`,
+  `VendorPrequalificationSecurity.cs`, `VendorPrequalificationWorkflow.cs`, `VendorPrequalificationService.cs`;
+  `Infrastructure/ProcurementDbContext.cs`, `NumberRangeCounterEntity.cs`, `EfCoreNumberRangeService.cs`,
+  `EfWorkflowInstanceRepository.cs`, `EfVendorPrequalificationRepository.cs`, `AttachmentContentRow.cs`,
+  `EfAttachmentRepository.cs`, `DesignTimeDbContextFactory.cs`, migration `20260714191324_InitialCreate`;
+  `Api/VendorPrequalificationsController.cs`; `src/Gateway/Gateway.Api/Program.cs` (DI/Security/SoD/Workflow/
+  Configuration registrations, Gateway.Api.csproj project references); frontend
+  `src/Apps/Apps.Shell/src/api/vendorPrequalificationApi.ts`,
+  `src/Apps/Apps.Shell/src/pages/VendorPrequalificationsPage.tsx`, `App.tsx` (new "Procurement" nav module),
+  `i18n/content.ts` (`vpq.*`/`nav.procurementModule`/`nav.vendorPrequalificationsArea` keys); tests:
+  `tests/UnitTests/Modules.Procurement.Tests/*` (new project), `tests/IntegrationTests/
+  Modules.Procurement.IntegrationTests/*` (new project); `src/Modules/Modules.Procurement/README.md`.
+- Next: Purchase Requisition (PR) — the next Phase 2 vertical slice per the roadmap, followed by RFQ, PO
+  (+ the Finance budget-check integration via a new `Modules.Finance.Contracts.IBudgetCheckService`), and
+  GRN + 3-way match, which together complete Phase 2's exit criteria ("full procure-to-pay cycle with
+  configurable approval matrix").
 
 ### 2026-07-14 — Phase 2 started: BusinessPartner.PartnerType replaced by multi-select BusinessRoles
 - Agent: Claude Sonnet 5

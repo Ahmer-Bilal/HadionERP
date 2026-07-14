@@ -5,6 +5,7 @@ using Modules.Finance.Application;
 using Modules.MasterData.Application;
 using Modules.MasterData.Contracts;
 using Modules.MasterData.Infrastructure;
+using Modules.Procurement.Application;
 using Platform.Attachments;
 using Platform.Audit;
 using Platform.Configuration;
@@ -67,14 +68,22 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 CostCenterSecurity.MaintainerRole, CostCenterSecurity.ApproverRole,
                 TaxCodeSecurity.MaintainerRole, TaxCodeSecurity.ApproverRole,
                 JournalEntrySecurity.MaintainerRole, JournalEntrySecurity.ApproverRole,
-                APInvoiceSecurity.MaintainerRole, APInvoiceSecurity.ApproverRole },
+                APInvoiceSecurity.MaintainerRole, APInvoiceSecurity.ApproverRole,
+                VendorPrequalificationSecurity.MaintainerRole,
+                VendorPrequalificationSecurity.CommercialReviewerRole, VendorPrequalificationSecurity.LegalReviewerRole,
+                VendorPrequalificationSecurity.TechnicalReviewerRole, VendorPrequalificationSecurity.HseReviewerRole,
+                VendorPrequalificationSecurity.QualityReviewerRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
                 CostCenterSecurity.MaintainerDuty, CostCenterSecurity.ApproverDuty,
                 TaxCodeSecurity.MaintainerDuty, TaxCodeSecurity.ApproverDuty,
                 JournalEntrySecurity.MaintainerDuty, JournalEntrySecurity.ApproverDuty,
-                APInvoiceSecurity.MaintainerDuty, APInvoiceSecurity.ApproverDuty });
+                APInvoiceSecurity.MaintainerDuty, APInvoiceSecurity.ApproverDuty,
+                VendorPrequalificationSecurity.MaintainerDuty,
+                VendorPrequalificationSecurity.CommercialReviewerDuty, VendorPrequalificationSecurity.LegalReviewerDuty,
+                VendorPrequalificationSecurity.TechnicalReviewerDuty, VendorPrequalificationSecurity.HseReviewerDuty,
+                VendorPrequalificationSecurity.QualityReviewerDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -95,6 +104,11 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         TaxCodeSecurity.MaintainerApproverConflict,
         JournalEntrySecurity.MaintainerApproverConflict,
         APInvoiceSecurity.MaintainerApproverConflict,
+        VendorPrequalificationSecurity.MaintainerCommercialReviewerConflict,
+        VendorPrequalificationSecurity.MaintainerLegalReviewerConflict,
+        VendorPrequalificationSecurity.MaintainerTechnicalReviewerConflict,
+        VendorPrequalificationSecurity.MaintainerHseReviewerConflict,
+        VendorPrequalificationSecurity.MaintainerQualityReviewerConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
@@ -109,7 +123,7 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
             BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey,
             ItemSecurity.MaintainerRoleKey, CostCenterSecurity.MaintainerRoleKey,
             TaxCodeSecurity.MaintainerRoleKey, JournalEntrySecurity.MaintainerRoleKey,
-            APInvoiceSecurity.MaintainerRoleKey,
+            APInvoiceSecurity.MaintainerRoleKey, VendorPrequalificationSecurity.MaintainerRoleKey,
         },
         ["system/approver"] = new[]
         {
@@ -117,6 +131,9 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
             ItemWorkflow.ApproverRoleKey, CostCenterWorkflow.ApproverRoleKey,
             TaxCodeWorkflow.ApproverRoleKey, JournalEntryWorkflow.ApproverRoleKey,
             APInvoiceWorkflow.ApproverRoleKey,
+            VendorPrequalificationWorkflow.CommercialReviewerRoleKey, VendorPrequalificationWorkflow.LegalReviewerRoleKey,
+            VendorPrequalificationWorkflow.TechnicalReviewerRoleKey, VendorPrequalificationWorkflow.HseReviewerRoleKey,
+            VendorPrequalificationWorkflow.QualityReviewerRoleKey,
         },
     }));
 
@@ -133,6 +150,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         TaxCodeWorkflow.SubmitApprovalDefinition,
         JournalEntryWorkflow.SubmitApprovalDefinition,
         APInvoiceWorkflow.SubmitApprovalDefinition,
+        VendorPrequalificationWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -171,6 +189,10 @@ builder.Services.AddSingleton<IConfigurationCatalog>(_ =>
     catalog.Register(new ConfigurationKeyDefinition(
         "Features.VerboseSystemStatus", "Whether /api/v1/system/status includes the detailed events/audit breakdown.",
         new[] { ConfigurationLevel.System }, DefaultValue: "true"));
+    catalog.Register(new ConfigurationKeyDefinition(
+        VendorPrequalificationService.ValidityMonthsConfigurationKey,
+        "How many months an Approved Vendor Prequalification certificate stays valid from its approval date.",
+        new[] { ConfigurationLevel.System, ConfigurationLevel.Tenant, ConfigurationLevel.Company }, DefaultValue: "24"));
     return catalog;
 });
 builder.Services.AddSingleton<IConfigurationStore, InMemoryConfigurationStore>();
@@ -269,6 +291,30 @@ builder.Services.AddScoped<Modules.Finance.Application.APInvoiceService>(sp => n
     sp.GetRequiredService<ICostCenterLookup>(),
     sp.GetRequiredService<ITaxCodeLookup>(),
     sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
+
+// Modules.Procurement: the third real, persisted business module, starting Phase 2. Own "procurement"
+// Postgres schema in the same physical database as MasterData's/Finance's. Depends on
+// Modules.MasterData.Contracts only (IBusinessPartnerLookup above), never on MasterData's own Domain/
+// Infrastructure/Application directly.
+builder.Services.AddDbContext<Modules.Procurement.Infrastructure.ProcurementDbContext>(options => options.UseNpgsql(masterDataConnectionString));
+builder.Services.AddScoped<IVendorPrequalificationRepository, Modules.Procurement.Infrastructure.EfVendorPrequalificationRepository>();
+// Same "constructed inline, not container-registered" reasoning as Modules.Finance's own
+// EfCoreNumberRangeService/EfWorkflowInstanceRepository/IAttachmentService above — MasterData already
+// registers IAttachmentRepository/IAttachmentService bound to ITS OWN DbContext, so Procurement's copy
+// stays bound to its own ProcurementDbContext instead of colliding with that registration.
+builder.Services.AddScoped<VendorPrequalificationService>(sp => new VendorPrequalificationService(
+    sp.GetRequiredService<IVendorPrequalificationRepository>(),
+    new Modules.Procurement.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>(),
+        new[] { new NumberRangeDefinition(VendorPrequalificationService.NumberRangeKey, "PROC", "VPQ") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Procurement.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>(),
+    sp.GetRequiredService<IConfigurationResolver>(),
+    new AttachmentService(new Modules.Procurement.Infrastructure.EfAttachmentRepository(sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>()))));
 
 var app = builder.Build();
 

@@ -273,7 +273,30 @@ type TranslationKey =
   | "ap.noTaxCode"
   | "ap.columnNetAmount"
   | "ap.columnTaxAmount"
-  | "ap.linkedJournalEntry";
+  | "ap.linkedJournalEntry"
+  | "nav.procurementModule"
+  | "nav.vendorPrequalificationsArea"
+  | "nav.allVendorPrequalifications"
+  | "vpq.heading"
+  | "vpq.newHeading"
+  | "vpq.emptyState"
+  | "vpq.actionNew"
+  | "vpq.actionCreate"
+  | "vpq.actionBack"
+  | "vpq.actionSubmit"
+  | "vpq.actionApprove"
+  | "vpq.actionReject"
+  | "vpq.columnDocumentNumber"
+  | "vpq.columnVendor"
+  | "vpq.columnRoleType"
+  | "vpq.columnTrade"
+  | "vpq.columnValidFrom"
+  | "vpq.columnValidUntil"
+  | "vpq.columnStatus"
+  | "vpq.fieldVendor"
+  | "vpq.fieldRoleType"
+  | "vpq.fieldTrade"
+  | "vpq.noTrade";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -548,6 +571,31 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "ap.columnNetAmount": { en: "Net", ar: "الصافي" },
   "ap.columnTaxAmount": { en: "Tax", ar: "الضريبة" },
   "ap.linkedJournalEntry": { en: "Linked Journal Entry", ar: "قيد اليومية المرتبط" },
+
+  "nav.procurementModule": { en: "Procurement", ar: "المشتريات" },
+  "nav.vendorPrequalificationsArea": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
+  "nav.allVendorPrequalifications": { en: "All Prequalifications", ar: "جميع طلبات التأهيل" },
+
+  "vpq.heading": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
+  "vpq.newHeading": { en: "New Vendor Prequalification", ar: "تأهيل مورّد جديد" },
+  "vpq.emptyState": { en: "No vendor prequalifications yet.", ar: "لا توجد طلبات تأهيل موردين حتى الآن." },
+  "vpq.actionNew": { en: "New", ar: "جديد" },
+  "vpq.actionCreate": { en: "Create", ar: "إنشاء" },
+  "vpq.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "vpq.actionSubmit": { en: "Submit for Review", ar: "إرسال للمراجعة" },
+  "vpq.actionApprove": { en: "Approve Current Step", ar: "اعتماد الخطوة الحالية" },
+  "vpq.actionReject": { en: "Reject", ar: "رفض" },
+  "vpq.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "vpq.columnVendor": { en: "Vendor", ar: "المورّد" },
+  "vpq.columnRoleType": { en: "Role", ar: "الدور" },
+  "vpq.columnTrade": { en: "Trade", ar: "التخصص" },
+  "vpq.columnValidFrom": { en: "Valid From", ar: "ساري من" },
+  "vpq.columnValidUntil": { en: "Valid Until", ar: "ساري حتى" },
+  "vpq.columnStatus": { en: "Status", ar: "الحالة" },
+  "vpq.fieldVendor": { en: "Vendor", ar: "المورّد" },
+  "vpq.fieldRoleType": { en: "Role", ar: "الدور" },
+  "vpq.fieldTrade": { en: "Trade", ar: "التخصص" },
+  "vpq.noTrade": { en: "—", ar: "—" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

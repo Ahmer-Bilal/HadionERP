@@ -24,6 +24,8 @@
     <ProjectReference Include="..\..\Modules\Modules.MasterData\Infrastructure\Modules.MasterData.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.Finance\Api\Modules.Finance.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.Finance\Infrastructure\Modules.Finance.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.Procurement\Api\Modules.Procurement.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.Procurement\Infrastructure\Modules.Procurement.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
