@@ -59,8 +59,10 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
     var administratorRole = new Role("PlatformAdministrator", "Platform administrator", new[] { manageSecurityDuty.Key });
 
     return new InMemorySecurityCatalog(
-        new[] { administratorRole, BusinessPartnerSecurity.MaintainerRole, BusinessPartnerSecurity.ApproverRole },
-        new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty });
+        new[] { administratorRole, BusinessPartnerSecurity.MaintainerRole, BusinessPartnerSecurity.ApproverRole,
+                GLAccountSecurity.MaintainerRole, GLAccountSecurity.ApproverRole },
+        new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
+                GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -72,7 +74,8 @@ builder.Services.AddSingleton<Platform.Security.IAuthorizationService, Authoriza
 // and tested; a future module registers its own conflict rules into this same list.
 builder.Services.AddSingleton<ISodExceptionLog, InMemorySodExceptionLog>();
 builder.Services.AddSingleton<ISodEngine>(sp =>
-    new SodEngine(new[] { BusinessPartnerSecurity.MaintainerApproverConflict }, sp.GetRequiredService<ISodExceptionLog>()));
+    new SodEngine(new[] { BusinessPartnerSecurity.MaintainerApproverConflict, GLAccountSecurity.MaintainerApproverConflict },
+        sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
 // Platform.Security/README.md's "Deferred" section) — maps the bare actor-id strings every module
@@ -81,15 +84,15 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
 builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorRoleAssignmentStore(
     new Dictionary<string, IReadOnlyCollection<string>>
     {
-        ["system/ui"] = new[] { BusinessPartnerSecurity.MaintainerRoleKey },
-        ["system/approver"] = new[] { BusinessPartnerWorkflow.ApproverRoleKey },
+        ["system/ui"] = new[] { BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey },
+        ["system/approver"] = new[] { BusinessPartnerWorkflow.ApproverRoleKey, GLAccountWorkflow.ApproverRoleKey },
     }));
 
 // Platform.Workflow: one real approval workflow is registered — Modules.MasterData's Business Partner
 // onboarding approval (BusinessPartnerWorkflow.SubmitApprovalDefinition). A future module registers its
 // own definitions into this same catalog when it's built — nothing here needs to change.
 builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
-    new InMemoryWorkflowDefinitionCatalog(new[] { BusinessPartnerWorkflow.SubmitApprovalDefinition }));
+    new InMemoryWorkflowDefinitionCatalog(new[] { BusinessPartnerWorkflow.SubmitApprovalDefinition, GLAccountWorkflow.SubmitApprovalDefinition }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
 builder.Services.AddSingleton<IWorkflowEngine, WorkflowEngine>();
@@ -155,9 +158,15 @@ builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<INoteRepository, EfNoteRepository>();
 builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<BusinessPartnerService>();
+builder.Services.AddScoped<IGLAccountRepository, EfGLAccountRepository>();
+builder.Services.AddScoped<GLAccountService>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),
-    new[] { new NumberRangeDefinition(BusinessPartnerService.NumberRangeKey, "MD", "BP") }));
+    new[]
+    {
+        new NumberRangeDefinition(BusinessPartnerService.NumberRangeKey, "MD", "BP"),
+        new NumberRangeDefinition(GLAccountService.NumberRangeKey, "MD", "GL")
+    }));
 
 var app = builder.Build();
 

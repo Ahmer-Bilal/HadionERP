@@ -30,6 +30,7 @@ public sealed class MasterDataDbContext : DbContext
     internal DbSet<AttachmentContentRow> AttachmentContents => Set<AttachmentContentRow>();
     // Note is a Platform.Notes kernel type, same reasoning as WorkflowInstance/AttachmentMetadata above.
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<GLAccount> GLAccounts => Set<GLAccount>();
 
     public MasterDataDbContext(DbContextOptions<MasterDataDbContext> options) : base(options)
     {
@@ -237,6 +238,49 @@ public sealed class MasterDataDbContext : DbContext
             entity.Property(e => e.CompanyId).HasColumnName("company_id");
             entity.Property(e => e.FiscalYear).HasColumnName("fiscal_year");
             entity.Property(e => e.LastSequence).HasColumnName("last_sequence");
+        });
+
+        modelBuilder.Entity<GLAccount>(entity =>
+        {
+            entity.ToTable("gl_accounts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.AccountCode).HasColumnName("account_code").HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => e.AccountCode).IsUnique();
+            entity.Property(e => e.AccountName).HasColumnName("account_name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.AccountNameArabic).HasColumnName("account_name_arabic").HasMaxLength(200);
+            entity.Property(e => e.AccountType).HasColumnName("account_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.ParentAccountId).HasColumnName("parent_account_id");
+            entity.Property(e => e.IsPostable).HasColumnName("is_postable");
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+
+            // Self-referencing hierarchy: an account's optional parent is another GLAccount. Null for
+            // top-level accounts. No cascade — deleting a parent with children would orphan them, which
+            // the platform's "no hard delete past Draft" rule already prevents at the app layer.
+            entity.HasOne<GLAccount>()
+                .WithMany()
+                .HasForeignKey(e => e.ParentAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.Ignore(e => e.NormalBalance);
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
         });
     }
 

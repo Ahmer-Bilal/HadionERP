@@ -4,6 +4,7 @@ import { ShellBar, NavigationPane } from "@platform/ui";
 import type { LanguageCode, NavModule } from "@platform/ui";
 import { SystemStatusPage } from "./pages/SystemStatusPage";
 import { BusinessPartnersPage } from "./pages/BusinessPartnersPage";
+import { GLAccountsPage } from "./pages/GLAccountsPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -11,10 +12,12 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "system-status" | "business-partners";
+type PageKey = "system-status" | "business-partners" | "gl-accounts";
 
 function currentPageFromHash(): PageKey {
-  return window.location.hash === "#business-partners" ? "business-partners" : "system-status";
+  if (window.location.hash === "#business-partners") return "business-partners";
+  if (window.location.hash === "#gl-accounts") return "gl-accounts";
+  return "system-status";
 }
 
 function App() {
@@ -69,6 +72,12 @@ function App() {
               href: "#business-partners",
               isActive: page === "business-partners",
             },
+            {
+              key: "all-gl-accounts",
+              label: t("nav.allGLAccounts", language),
+              href: "#gl-accounts",
+              isActive: page === "gl-accounts",
+            },
           ],
         },
       ],
@@ -98,6 +107,8 @@ function App() {
         <main className="app-shell__content">
           {page === "business-partners" ? (
             <BusinessPartnersPage language={language} />
+          ) : page === "gl-accounts" ? (
+            <GLAccountsPage language={language} />
           ) : (
             <SystemStatusPage language={language} />
           )}

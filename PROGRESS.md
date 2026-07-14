@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts, every BusinessObject guarantee (Audit/Workflow/Security/Attachments/Notes) actually wired in, and a bilingual (Arabic) name field; Chart of Accounts/Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner + Chart of Accounts (G/L Account) done; Items/Cost Centers/Tax codes and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,58 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Chart of Accounts (G/L Account) — Phase 1 Master Data
+- Agent: ZCode (builtin:zai-coding-plan/GLM-5.2)
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Built the Chart of Accounts master-data entity (`GLAccount`) — the "GL Account" dimension
+  every journal line carries (doc 07 §1) and the second of the two pieces the Phase 1 exit criteria names
+  ("maintain its chart of accounts and vendors"). Mirrors the Business Partner slice's established patterns
+  exactly — no re-architecting. `GLAccount : BusinessObject` with: unique `AccountCode` (business-facing
+  chart position, distinct from the sequential `DocumentNumber` audit id), bilingual `AccountName` +
+  `AccountNameArabic`, 5-type `AccountType` enum (Asset/Liability/Equity/Revenue/Expense), derived
+  `NormalBalance` (Debit/Credit from type — single source of truth, not stored), self-referencing
+  `ParentAccountId` hierarchy, `IsPostable` (header vs leaf), `IsActive` (deactivate not delete). Full
+  BusinessObject lifecycle: Draft → Submit → Approve via workflow, audit on every change, SoD security split
+  (Maintainer vs Approver), unique-code enforcement at service + DB level. Wired end-to-end: Domain entity +
+  enum, Application (DTOs, service, repository port, security, workflow config), Infrastructure (EF repo,
+  DbContext mapping with self-ref FK + unique index, migration applied to dev + test), API controller
+  (CRUD + submit/approve/reject), frontend (API client, page with list/create/details, nav entry, i18n keys
+  EN+AR). Verified: 216 tests pass (64 unit incl. 11 new GLAccount tests + 14 integration incl. 2 new
+  persistence round-trip tests against real Postgres), full solution builds clean, frontend Arabic guardrail
+  + npm build both pass, API exercised live via curl (create header non-postable + child, submit, approve,
+  list — all correct).
+- Files touched: `src/Modules/Modules.MasterData/Domain/GLAccount.cs`, `Domain/AccountType.cs`,
+  `Application/GLAccountDto.cs`, `Application/GLAccountService.cs`, `Application/IGLAccountRepository.cs`,
+  `Application/GLAccountSecurity.cs`, `Application/GLAccountWorkflow.cs`,
+  `Infrastructure/EfGLAccountRepository.cs`, `Infrastructure/MasterDataDbContext.cs` (GLAccount mapping),
+  `Infrastructure/Migrations/20260714134744_AddGLAccount*.cs`,
+  `Api/GLAccountsController.cs`,
+  `src/Gateway/Gateway.Api/Program.cs` (DI + security + SoD + workflow + number range),
+  `src/Apps/Apps.Shell/src/api/glAccountApi.ts`,
+  `src/Apps/Apps.Shell/src/pages/GLAccountsPage.tsx`,
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (gl.* keys),
+  `src/Apps/Apps.Shell/src/App.tsx` (nav + routing),
+  `tests/UnitTests/Modules.MasterData.Tests/GLAccountTests.cs`, `GLAccountServiceTests.cs`,
+  `FakeGLAccountRepository.cs`,
+  `tests/IntegrationTests/Modules.MasterData.IntegrationTests/GLAccountPersistenceTests.cs`,
+  `TestDatabase.cs` (truncate gl_accounts)
+- Deferred, disclosed not hidden: account balances (computed from journal lines — Finance's job), posting
+  validation ("can you post to this account?" — Finance's concern), multi-company CoA (Phase 1 uses C001),
+  standard Saudi CoA template import, contra-account normal-balance overrides (derive-from-type is the
+  Phase 1 baseline). No attachments/notes wired for GLAccount yet (the platform services exist and would
+  be added the same way as Business Partner if needed — not a Phase 1 exit-criteria requirement for the
+  chart itself).
+- Note: this entity's initial implementation used the class/table/route name `GlmAccount`/`glm_accounts`/
+  `glm-accounts` (the generating tool's own model name, not a real domain term). Claude Sonnet 5 renamed it
+  to `GLAccount`/`gl_accounts`/`gl-accounts` end-to-end (Domain/Application/Infrastructure/Api/tests/
+  frontend/i18n) before this was ever committed, rebuilding the EF migration from scratch (dropped and
+  re-applied to both dev and test databases) and re-verifying with the full test suite, a live API exercise,
+  and a live browser screenshot — all still green. No functional change, naming only. Disclosed here rather
+  than silently fixed, per this file's own append-only/no-hidden-corrections principle.
+- Next: Phase 1 continues with Items, Cost Centers, and Tax codes (remaining Master Data), then Finance
+  (GL/AP/AR/Cash-Bank). Needs a fresh go-ahead before starting.
 
 ### 2026-07-14 — Business Partner: bilingual (Arabic) name field added
 - Agent: Claude Sonnet 5

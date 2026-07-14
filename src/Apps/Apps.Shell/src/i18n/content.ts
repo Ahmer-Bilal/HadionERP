@@ -34,6 +34,7 @@ type TranslationKey =
   | "nav.masterData"
   | "nav.businessPartnersArea"
   | "nav.allBusinessPartners"
+  | "nav.allGLAccounts"
   | "bp.heading"
   | "bp.newHeading"
   | "bp.emptyState"
@@ -93,7 +94,33 @@ type TranslationKey =
   | "bp.statusApproved"
   | "bp.statusRejected"
   | "bp.statusCancelled"
-  | "bp.statusReversed";
+  | "bp.statusReversed"
+  | "gl.heading"
+  | "gl.newHeading"
+  | "gl.emptyState"
+  | "gl.actionNew"
+  | "gl.actionCreate"
+  | "gl.actionBack"
+  | "gl.actionSubmit"
+  | "gl.actionApprove"
+  | "gl.actionReject"
+  | "gl.columnCode"
+  | "gl.columnName"
+  | "gl.columnType"
+  | "gl.columnNormalBalance"
+  | "gl.columnStatus"
+  | "gl.fieldAccountCode"
+  | "gl.fieldAccountName"
+  | "gl.fieldAccountNameArabic"
+  | "gl.fieldAccountType"
+  | "gl.fieldParentAccount"
+  | "gl.fieldIsPostable"
+  | "gl.noParent"
+  | "gl.accountTypeAsset"
+  | "gl.accountTypeLiability"
+  | "gl.accountTypeEquity"
+  | "gl.accountTypeRevenue"
+  | "gl.accountTypeExpense";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -128,6 +155,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.masterData": { en: "Master Data", ar: "البيانات الأساسية" },
   "nav.businessPartnersArea": { en: "Business Partners", ar: "شركاء الأعمال" },
   "nav.allBusinessPartners": { en: "All Business Partners", ar: "جميع شركاء الأعمال" },
+  "nav.allGLAccounts": { en: "Chart of Accounts", ar: "دليل الحسابات" },
   "bp.heading": { en: "Business Partners", ar: "شركاء الأعمال" },
   "bp.newHeading": { en: "New Business Partner", ar: "شريك أعمال جديد" },
   "bp.emptyState": { en: "No business partners yet.", ar: "لا يوجد شركاء أعمال حتى الآن." },
@@ -188,6 +216,32 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.statusRejected": { en: "Rejected", ar: "مرفوض" },
   "bp.statusCancelled": { en: "Cancelled", ar: "ملغى" },
   "bp.statusReversed": { en: "Reversed", ar: "معكوس" },
+  "gl.heading": { en: "Chart of Accounts", ar: "دليل الحسابات" },
+  "gl.newHeading": { en: "New G/L Account", ar: "حساب جديد" },
+  "gl.emptyState": { en: "No G/L accounts yet.", ar: "لا توجد حسابات حتى الآن." },
+  "gl.actionNew": { en: "New", ar: "جديد" },
+  "gl.actionCreate": { en: "Create", ar: "إنشاء" },
+  "gl.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "gl.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "gl.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "gl.actionReject": { en: "Reject", ar: "رفض" },
+  "gl.columnCode": { en: "Code", ar: "الرمز" },
+  "gl.columnName": { en: "Account Name", ar: "اسم الحساب" },
+  "gl.columnType": { en: "Type", ar: "النوع" },
+  "gl.columnNormalBalance": { en: "Normal Balance", ar: "الرصيد الطبيعي" },
+  "gl.columnStatus": { en: "Status", ar: "الحالة" },
+  "gl.fieldAccountCode": { en: "Account Code", ar: "رمز الحساب" },
+  "gl.fieldAccountName": { en: "Account Name", ar: "اسم الحساب" },
+  "gl.fieldAccountNameArabic": { en: "Account Name (Arabic)", ar: "اسم الحساب بالعربية" },
+  "gl.fieldAccountType": { en: "Account Type", ar: "نوع الحساب" },
+  "gl.fieldParentAccount": { en: "Parent Account", ar: "الحساب الأصلي" },
+  "gl.fieldIsPostable": { en: "Postable", ar: "قابل للترحيل" },
+  "gl.noParent": { en: "— None (top level) —", ar: "— لا يوجد (مستوى أعلى) —" },
+  "gl.accountTypeAsset": { en: "Asset", ar: "أصول" },
+  "gl.accountTypeLiability": { en: "Liability", ar: "خصوم" },
+  "gl.accountTypeEquity": { en: "Equity", ar: "حقوق ملكية" },
+  "gl.accountTypeRevenue": { en: "Revenue", ar: "إيرادات" },
+  "gl.accountTypeExpense": { en: "Expense", ar: "مصروفات" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {
