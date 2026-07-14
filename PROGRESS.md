@@ -54,6 +54,23 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 
 ## Entry Log (newest first)
 
+### 2026-07-14 — Navigation: split one mislabeled "Business Partners" area into three
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Each new Master Data screen (Chart of Accounts, then Items) had been getting bolted onto
+  the single nav Area created for Business Partners, so all three ended up living under an Area literally
+  labeled "Business Partners" — user-visible confusion, not just internal untidiness. Split into three
+  proper Areas under the Master Data module (Business Partners / Chart of Accounts / Items), matching the
+  Dynamics 365 Module → Area → screen navigation pattern this app is modeled on
+  (docs/architecture/02-business-object-model.md #3). Also renamed the Chart of Accounts and Items menu
+  items to "All Accounts"/"All Items" (from "Chart of Accounts"/"Items") now that the Area itself carries
+  that name, matching the existing "Business Partners" Area → "All Business Partners" item precedent.
+- Files touched: `src/Apps/Apps.Shell/src/App.tsx`, `src/Apps/Apps.Shell/src/i18n/content.ts`
+  (`nav.chartOfAccountsArea`, `nav.itemsArea` added; `nav.allGLAccounts`/`nav.allItems` reworded).
+- Next: Cost Centers and Tax codes will each get their own Area the same way when built, rather than being
+  bolted onto an existing one.
+
 ### 2026-07-14 — Items — Phase 1 Master Data
 - Agent: Claude Sonnet 5
 - Phase: Phase 1 — Master Data + Finance Core

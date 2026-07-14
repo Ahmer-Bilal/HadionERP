@@ -74,12 +74,24 @@ function App() {
               href: "#business-partners",
               isActive: page === "business-partners",
             },
+          ],
+        },
+        {
+          key: "chart-of-accounts",
+          label: t("nav.chartOfAccountsArea", language),
+          items: [
             {
               key: "all-gl-accounts",
               label: t("nav.allGLAccounts", language),
               href: "#gl-accounts",
               isActive: page === "gl-accounts",
             },
+          ],
+        },
+        {
+          key: "items",
+          label: t("nav.itemsArea", language),
+          items: [
             {
               key: "all-items",
               label: t("nav.allItems", language),

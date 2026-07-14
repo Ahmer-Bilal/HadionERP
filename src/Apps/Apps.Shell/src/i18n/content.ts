@@ -34,7 +34,9 @@ type TranslationKey =
   | "nav.masterData"
   | "nav.businessPartnersArea"
   | "nav.allBusinessPartners"
+  | "nav.chartOfAccountsArea"
   | "nav.allGLAccounts"
+  | "nav.itemsArea"
   | "bp.heading"
   | "bp.newHeading"
   | "bp.emptyState"
@@ -178,7 +180,9 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.masterData": { en: "Master Data", ar: "البيانات الأساسية" },
   "nav.businessPartnersArea": { en: "Business Partners", ar: "شركاء الأعمال" },
   "nav.allBusinessPartners": { en: "All Business Partners", ar: "جميع شركاء الأعمال" },
-  "nav.allGLAccounts": { en: "Chart of Accounts", ar: "دليل الحسابات" },
+  "nav.chartOfAccountsArea": { en: "Chart of Accounts", ar: "دليل الحسابات" },
+  "nav.allGLAccounts": { en: "All Accounts", ar: "جميع الحسابات" },
+  "nav.itemsArea": { en: "Items", ar: "الأصناف" },
   "bp.heading": { en: "Business Partners", ar: "شركاء الأعمال" },
   "bp.newHeading": { en: "New Business Partner", ar: "شريك أعمال جديد" },
   "bp.emptyState": { en: "No business partners yet.", ar: "لا يوجد شركاء أعمال حتى الآن." },
@@ -265,7 +269,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "gl.accountTypeEquity": { en: "Equity", ar: "حقوق ملكية" },
   "gl.accountTypeRevenue": { en: "Revenue", ar: "إيرادات" },
   "gl.accountTypeExpense": { en: "Expense", ar: "مصروفات" },
-  "nav.allItems": { en: "Items", ar: "الأصناف" },
+  "nav.allItems": { en: "All Items", ar: "جميع الأصناف" },
   "item.heading": { en: "Items", ar: "الأصناف" },
   "item.newHeading": { en: "New Item", ar: "صنف جديد" },
   "item.emptyState": { en: "No items yet.", ar: "لا توجد أصناف حتى الآن." },
