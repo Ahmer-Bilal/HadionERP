@@ -12,6 +12,7 @@ import { TaxCodesPage } from "./pages/TaxCodesPage";
 import { JournalEntriesPage } from "./pages/JournalEntriesPage";
 import { APInvoicesPage } from "./pages/APInvoicesPage";
 import { VendorPrequalificationsPage } from "./pages/VendorPrequalificationsPage";
+import { PurchaseRequisitionsPage } from "./pages/PurchaseRequisitionsPage";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -19,7 +20,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications" | "purchase-requisitions";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -31,6 +32,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#journal-entries") return "journal-entries";
   if (window.location.hash === "#ap-invoices") return "ap-invoices";
   if (window.location.hash === "#vendor-prequalifications") return "vendor-prequalifications";
+  if (window.location.hash === "#purchase-requisitions") return "purchase-requisitions";
   return "home";
 }
 
@@ -202,6 +204,18 @@ function App() {
             },
           ],
         },
+        {
+          key: "purchase-requisitions",
+          label: t("nav.purchaseRequisitionsArea", language),
+          items: [
+            {
+              key: "all-purchase-requisitions",
+              label: t("nav.allPurchaseRequisitions", language),
+              href: "#purchase-requisitions",
+              isActive: page === "purchase-requisitions",
+            },
+          ],
+        },
       ],
     },
   ];
@@ -243,6 +257,8 @@ function App() {
             <APInvoicesPage language={language} />
           ) : page === "vendor-prequalifications" ? (
             <VendorPrequalificationsPage language={language} />
+          ) : page === "purchase-requisitions" ? (
+            <PurchaseRequisitionsPage language={language} />
           ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
           ) : (

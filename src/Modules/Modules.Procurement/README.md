@@ -70,10 +70,45 @@ built today.
   download/delete cycle. Live Playwright pass in both English and Arabic (full RTL mirroring including the
   nav tree and FastTabs).
 
+## What's built (Phase 2, slice 2: Purchase Requisition)
+
+- **Domain**: `PurchaseRequisition` — the first document in the procure-to-pay chain, a cost-center owner's
+  request to buy specific Items in specific quantities at an estimated (not yet negotiated) price. Child
+  collection `PurchaseRequisitionLine` (ItemId, CostCenterId, Quantity, EstimatedUnitPrice, optional
+  LineDescription), same "0..n child collection, only exists through its parent, frozen once submitted"
+  pattern as `Modules.Finance.Domain.JournalEntry.Lines`. `EstimatedTotal` is computed, never stored — a
+  preview for the requester/approver, not a number the eventual RFQ/PO is bound by. Stops at Approved (no
+  Post/Reverse — a requisition is an internal request, not a financial document).
+- **New Contracts-package lookup**: `Modules.MasterData.Contracts.IItemLookup`/`ItemSummary` (+
+  `EfItemLookup`) — the first cross-module lookup this module needed beyond what Vendor Prequalification
+  already used (`IBusinessPartnerLookup`); `CreateAsync` validates every line's Item (must exist, be Active)
+  and Cost Center (must exist, be Active, be Postable) via `IItemLookup`/`ICostCenterLookup` before the line
+  is ever added, mirroring `JournalEntryService.ValidateLineReferencesAsync`'s exact pattern.
+- **`PurchaseRequisitionSecurity`/`PurchaseRequisitionWorkflow`**: one Maintainer duty/role + one Any-quorum
+  Approver step, the same single-step shape as every module's first-cut workflow (JournalEntry, APInvoice) —
+  a real amount-conditioned approval matrix (the roadmap's own named example) is a natural later refinement
+  once this module has more than one approval path to choose between.
+- **Api**: `PurchaseRequisitionsController` at `api/v1/procurement/purchase-requisitions` — Create/Get/List +
+  `submit`/`approve`/`reject`.
+- **Frontend**: `PurchaseRequisitionsPage.tsx` — list/create/details, the second real multi-row line-item
+  entry grid in this application (Item/Cost Center dropdowns per row, Quantity/Est. Unit Price/Line
+  Description, an "Add Line" button, a live estimated-total preview), same shape as
+  `JournalEntriesPage.tsx`'s grid. Own nav Area under Procurement, alongside Vendor Prequalification.
+- Verified end-to-end: 20 new unit tests (line-addition validation, item/cost-center reference validation
+  incl. inactive/non-postable rejection, the full Draft→Submit→Approve/Reject lifecycle, SoD/security denial
+  cases) + 3 new integration tests against real PostgreSQL (requisition+lines round-trip, RowVersion
+  increments across two real transitions, cascade delete). Live `curl` exercise: created a requisition for
+  100 bags of cement against a real Item+Cost Center, drove it through Submit→Approve, confirmed a
+  header/grouping cost center is correctly rejected. Live Playwright pass in both English and Arabic (full
+  RTL mirroring including the line-item grid's column order).
+
 ## Deferred (disclosed, not hidden)
 
-- Purchase Requisition, RFQ, Purchase Order, GRN, 3-way match, and the Finance budget-check integration
+- RFQ, Purchase Order, GRN, 3-way match, and the Finance budget-check integration
   (`Modules.Finance.Contracts.IBudgetCheckService`) — the rest of Phase 2, genuinely next, not built yet.
+- No amount-conditioned approval matrix for Purchase Requisition — one Any-quorum step for every
+  requisition regardless of estimated total, same Phase-1-style simplification every module's first workflow
+  cut uses.
 - No per-step review criteria/checklist content (e.g. what the Technical reviewer is actually checking) —
   this slice proves the workflow mechanics; real review checklists are a configuration/content concern for
   later.

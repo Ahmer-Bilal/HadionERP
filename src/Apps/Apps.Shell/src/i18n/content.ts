@@ -277,6 +277,7 @@ type TranslationKey =
   | "nav.procurementModule"
   | "nav.vendorPrequalificationsArea"
   | "nav.allVendorPrequalifications"
+  | "nav.allPurchaseRequisitions"
   | "vpq.heading"
   | "vpq.newHeading"
   | "vpq.emptyState"
@@ -296,7 +297,31 @@ type TranslationKey =
   | "vpq.fieldVendor"
   | "vpq.fieldRoleType"
   | "vpq.fieldTrade"
-  | "vpq.noTrade";
+  | "vpq.noTrade"
+  | "nav.purchaseRequisitionsArea"
+  | "pr.heading"
+  | "pr.newHeading"
+  | "pr.emptyState"
+  | "pr.actionNew"
+  | "pr.actionCreate"
+  | "pr.actionBack"
+  | "pr.actionSubmit"
+  | "pr.actionApprove"
+  | "pr.actionReject"
+  | "pr.actionAddLine"
+  | "pr.columnDocumentNumber"
+  | "pr.columnDescription"
+  | "pr.columnRequiredByDate"
+  | "pr.columnEstimatedTotal"
+  | "pr.columnStatus"
+  | "pr.fieldDescription"
+  | "pr.fieldRequiredByDate"
+  | "pr.fieldItem"
+  | "pr.fieldCostCenter"
+  | "pr.fieldQuantity"
+  | "pr.fieldEstimatedUnitPrice"
+  | "pr.fieldLineDescription"
+  | "pr.columnLineTotal";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -575,6 +600,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.procurementModule": { en: "Procurement", ar: "المشتريات" },
   "nav.vendorPrequalificationsArea": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
   "nav.allVendorPrequalifications": { en: "All Prequalifications", ar: "جميع طلبات التأهيل" },
+  "nav.allPurchaseRequisitions": { en: "All Requisitions", ar: "جميع طلبات الشراء" },
 
   "vpq.heading": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
   "vpq.newHeading": { en: "New Vendor Prequalification", ar: "تأهيل مورّد جديد" },
@@ -596,6 +622,32 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "vpq.fieldRoleType": { en: "Role", ar: "الدور" },
   "vpq.fieldTrade": { en: "Trade", ar: "التخصص" },
   "vpq.noTrade": { en: "—", ar: "—" },
+
+  "nav.purchaseRequisitionsArea": { en: "Purchase Requisitions", ar: "طلبات الشراء" },
+
+  "pr.heading": { en: "Purchase Requisitions", ar: "طلبات الشراء" },
+  "pr.newHeading": { en: "New Purchase Requisition", ar: "طلب شراء جديد" },
+  "pr.emptyState": { en: "No purchase requisitions yet.", ar: "لا توجد طلبات شراء حتى الآن." },
+  "pr.actionNew": { en: "New", ar: "جديد" },
+  "pr.actionCreate": { en: "Create", ar: "إنشاء" },
+  "pr.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "pr.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "pr.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "pr.actionReject": { en: "Reject", ar: "رفض" },
+  "pr.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "pr.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "pr.columnDescription": { en: "Description", ar: "الوصف" },
+  "pr.columnRequiredByDate": { en: "Required By", ar: "مطلوب بحلول" },
+  "pr.columnEstimatedTotal": { en: "Estimated Total", ar: "الإجمالي التقديري" },
+  "pr.columnStatus": { en: "Status", ar: "الحالة" },
+  "pr.fieldDescription": { en: "Description", ar: "الوصف" },
+  "pr.fieldRequiredByDate": { en: "Required By Date", ar: "تاريخ الاحتياج" },
+  "pr.fieldItem": { en: "Item", ar: "الصنف" },
+  "pr.fieldCostCenter": { en: "Cost Center", ar: "مركز التكلفة" },
+  "pr.fieldQuantity": { en: "Quantity", ar: "الكمية" },
+  "pr.fieldEstimatedUnitPrice": { en: "Est. Unit Price", ar: "سعر الوحدة التقديري" },
+  "pr.fieldLineDescription": { en: "Line Description", ar: "وصف البند" },
+  "pr.columnLineTotal": { en: "Line Total", ar: "إجمالي البند" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

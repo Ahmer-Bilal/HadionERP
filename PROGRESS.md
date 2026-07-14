@@ -42,7 +42,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice, both post/reverse-able with full audit trail. AR/Cash-Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-14 |
-| Phase 2 — Procurement | In Progress — `BusinessPartner.BusinessRoles` done. `Modules.Procurement` scaffolded and Vendor Prequalification (5-step workflow) built and verified. PR/RFQ/PO/GRN/3-way match/budget-check not started | 2026-07-14 |
+| Phase 2 — Procurement | In Progress — BusinessRoles + Vendor Prequalification done. Purchase Requisition built and verified. RFQ/PO/GRN/3-way match/budget-check not started | 2026-07-14 |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
 | Phase 5 — Reporting, Analytics & Mobile | Not Started | — |
@@ -53,6 +53,52 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Purchase Requisition built (Phase 2 slice 3)
+- Agent: Claude Sonnet 5
+- Phase: Phase 2 — Procurement
+- Status: Completed
+- What changed: Built `PurchaseRequisition` — the first document in the procure-to-pay chain (PR → RFQ →
+  PO → GRN → 3-way match) — as `Modules.Procurement`'s second vertical slice. Domain: `PurchaseRequisition` +
+  child `PurchaseRequisitionLine` (ItemId, CostCenterId, Quantity, EstimatedUnitPrice, optional
+  LineDescription), computed `EstimatedTotal`, stops at Approved (no Post/Reverse — an internal request, not
+  a financial document), lines frozen once submitted, same shape as `Modules.Finance.Domain.JournalEntry`.
+  Added a new cross-module lookup this module needed for the first time beyond Vendor Prequalification's:
+  `Modules.MasterData.Contracts.IItemLookup`/`ItemSummary` + `EfItemLookup`, registered in Gateway.Api's DI
+  container — `PurchaseRequisitionService.CreateAsync` validates every line's Item (exists, Active) and Cost
+  Center (exists, Active, Postable) through it before adding the line, the same "validate through Contracts,
+  never through another module's Domain/Infrastructure directly" pattern every cross-module reference in
+  this codebase uses. `PurchaseRequisitionSecurity`/`PurchaseRequisitionWorkflow` are a plain one-step
+  Any-quorum Maintainer/Approver pair (not Vendor Prequalification's special 5-step case) — a real
+  amount-conditioned approval matrix is deferred until this module has more than one approval path.
+- Verified: 43 unit tests in Modules.Procurement.Tests (20 new for this slice) + 5 integration tests in
+  Modules.Procurement.IntegrationTests (3 new) all pass; 356 tests pass solution-wide with zero regressions.
+  Full backend + frontend build clean; both no-hardcoded-Arabic guardrails pass. Live `curl` exercise:
+  created a requisition for 100 bags of cement against a real Item + Cost Center, drove it through
+  Submit→Approve, confirmed a header/grouping cost center is correctly rejected with a clear 400. Live
+  Playwright pass in both English and Arabic — the second real multi-row line-item entry grid in this
+  application (after Journal Entry's), full RTL mirroring confirmed.
+- Files touched: `src/Modules/Modules.MasterData/Contracts/IItemLookup.cs` (new),
+  `src/Modules/Modules.MasterData/Infrastructure/EfItemLookup.cs` (new);
+  `src/Modules/Modules.Procurement/Domain/PurchaseRequisition.cs`, `PurchaseRequisitionLine.cs` (new);
+  `Application/PurchaseRequisitionDto.cs`, `IPurchaseRequisitionRepository.cs`,
+  `PurchaseRequisitionSecurity.cs`, `PurchaseRequisitionWorkflow.cs`, `PurchaseRequisitionService.cs` (new);
+  `Infrastructure/ProcurementDbContext.cs` (PurchaseRequisition/Line mapping),
+  `EfPurchaseRequisitionRepository.cs` (new), migration `20260714193752_AddPurchaseRequisition`;
+  `Api/PurchaseRequisitionsController.cs` (new); `src/Gateway/Gateway.Api/Program.cs` (IItemLookup + PR
+  DI/Security/SoD/Workflow registrations); frontend
+  `src/Apps/Apps.Shell/src/api/purchaseRequisitionApi.ts`,
+  `src/Apps/Apps.Shell/src/pages/PurchaseRequisitionsPage.tsx`, `App.tsx` (new nav Area under Procurement),
+  `i18n/content.ts` (`pr.*`/`nav.purchaseRequisitionsArea` keys); tests:
+  `tests/UnitTests/Modules.Procurement.Tests/PurchaseRequisitionTests.cs`,
+  `PurchaseRequisitionServiceTests.cs`, `FakePurchaseRequisitionRepository.cs`, `FakeLookups.cs` (new);
+  `tests/IntegrationTests/Modules.Procurement.IntegrationTests/PurchaseRequisitionPersistenceTests.cs` (new),
+  `TestDatabase.cs` (added purchase_requisitions truncate); `src/Modules/Modules.Procurement/README.md`,
+  `src/Modules/Modules.MasterData/README.md` (Contracts section notes IItemLookup).
+- Next: RFQ (Request for Quotation) — references an Approved PR + invited Vendors (via
+  `IBusinessPartnerLookup`) with vendor quote lines — then Purchase Order (+ the Finance budget-check
+  integration via a new `Modules.Finance.Contracts.IBudgetCheckService`), then GRN + 3-way match, completing
+  Phase 2's exit criteria.
 
 ### 2026-07-14 — Modules.Procurement scaffolded; Vendor Prequalification built (first multi-step workflow)
 - Agent: Claude Sonnet 5

@@ -18,6 +18,8 @@ namespace Modules.Procurement.Infrastructure;
 public sealed class ProcurementDbContext : DbContext
 {
     public DbSet<VendorPrequalification> VendorPrequalifications => Set<VendorPrequalification>();
+    public DbSet<PurchaseRequisition> PurchaseRequisitions => Set<PurchaseRequisition>();
+    internal DbSet<PurchaseRequisitionLine> PurchaseRequisitionLines => Set<PurchaseRequisitionLine>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
     public DbSet<AttachmentMetadata> Attachments => Set<AttachmentMetadata>();
@@ -60,6 +62,57 @@ public sealed class ProcurementDbContext : DbContext
             entity.Ignore(e => e.DomainEvents);
             entity.Ignore(e => e.Relations);
             entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<PurchaseRequisition>(entity =>
+        {
+            entity.ToTable("purchase_requisitions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.RequiredByDate).HasColumnName("required_by_date");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("PurchaseRequisitionId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.EstimatedTotal);
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<PurchaseRequisitionLine>(entity =>
+        {
+            entity.ToTable("purchase_requisition_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.ItemId).HasColumnName("item_id");
+            entity.Property(e => e.CostCenterId).HasColumnName("cost_center_id");
+            entity.Property(e => e.Quantity).HasColumnName("quantity").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.EstimatedUnitPrice).HasColumnName("estimated_unit_price").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.LineDescription).HasColumnName("line_description").HasMaxLength(500);
+            entity.Property<Guid>("PurchaseRequisitionId").HasColumnName("purchase_requisition_id");
+            entity.Ignore(e => e.EstimatedLineTotal);
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

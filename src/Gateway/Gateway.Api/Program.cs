@@ -72,7 +72,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 VendorPrequalificationSecurity.MaintainerRole,
                 VendorPrequalificationSecurity.CommercialReviewerRole, VendorPrequalificationSecurity.LegalReviewerRole,
                 VendorPrequalificationSecurity.TechnicalReviewerRole, VendorPrequalificationSecurity.HseReviewerRole,
-                VendorPrequalificationSecurity.QualityReviewerRole },
+                VendorPrequalificationSecurity.QualityReviewerRole,
+                PurchaseRequisitionSecurity.MaintainerRole, PurchaseRequisitionSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -83,7 +84,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 VendorPrequalificationSecurity.MaintainerDuty,
                 VendorPrequalificationSecurity.CommercialReviewerDuty, VendorPrequalificationSecurity.LegalReviewerDuty,
                 VendorPrequalificationSecurity.TechnicalReviewerDuty, VendorPrequalificationSecurity.HseReviewerDuty,
-                VendorPrequalificationSecurity.QualityReviewerDuty });
+                VendorPrequalificationSecurity.QualityReviewerDuty,
+                PurchaseRequisitionSecurity.MaintainerDuty, PurchaseRequisitionSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -109,6 +111,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         VendorPrequalificationSecurity.MaintainerTechnicalReviewerConflict,
         VendorPrequalificationSecurity.MaintainerHseReviewerConflict,
         VendorPrequalificationSecurity.MaintainerQualityReviewerConflict,
+        PurchaseRequisitionSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
@@ -124,6 +127,7 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
             ItemSecurity.MaintainerRoleKey, CostCenterSecurity.MaintainerRoleKey,
             TaxCodeSecurity.MaintainerRoleKey, JournalEntrySecurity.MaintainerRoleKey,
             APInvoiceSecurity.MaintainerRoleKey, VendorPrequalificationSecurity.MaintainerRoleKey,
+            PurchaseRequisitionSecurity.MaintainerRoleKey,
         },
         ["system/approver"] = new[]
         {
@@ -134,6 +138,7 @@ builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorR
             VendorPrequalificationWorkflow.CommercialReviewerRoleKey, VendorPrequalificationWorkflow.LegalReviewerRoleKey,
             VendorPrequalificationWorkflow.TechnicalReviewerRoleKey, VendorPrequalificationWorkflow.HseReviewerRoleKey,
             VendorPrequalificationWorkflow.QualityReviewerRoleKey,
+            PurchaseRequisitionWorkflow.ApproverRoleKey,
         },
     }));
 
@@ -151,6 +156,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         JournalEntryWorkflow.SubmitApprovalDefinition,
         APInvoiceWorkflow.SubmitApprovalDefinition,
         VendorPrequalificationWorkflow.SubmitApprovalDefinition,
+        PurchaseRequisitionWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -236,6 +242,7 @@ builder.Services.AddScoped<IGLAccountLookup, EfGLAccountLookup>();
 builder.Services.AddScoped<IBusinessPartnerLookup, EfBusinessPartnerLookup>();
 builder.Services.AddScoped<ITaxCodeLookup, EfTaxCodeLookup>();
 builder.Services.AddScoped<ICostCenterLookup, EfCostCenterLookup>();
+builder.Services.AddScoped<IItemLookup, EfItemLookup>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),
     new[]
@@ -315,6 +322,20 @@ builder.Services.AddScoped<VendorPrequalificationService>(sp => new VendorPrequa
     sp.GetRequiredService<IBusinessPartnerLookup>(),
     sp.GetRequiredService<IConfigurationResolver>(),
     new AttachmentService(new Modules.Procurement.Infrastructure.EfAttachmentRepository(sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>()))));
+
+builder.Services.AddScoped<IPurchaseRequisitionRepository, Modules.Procurement.Infrastructure.EfPurchaseRequisitionRepository>();
+builder.Services.AddScoped<PurchaseRequisitionService>(sp => new PurchaseRequisitionService(
+    sp.GetRequiredService<IPurchaseRequisitionRepository>(),
+    new Modules.Procurement.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>(),
+        new[] { new NumberRangeDefinition(PurchaseRequisitionService.NumberRangeKey, "PROC", "PR") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Procurement.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IItemLookup>(),
+    sp.GetRequiredService<ICostCenterLookup>()));
 
 var app = builder.Build();
 
