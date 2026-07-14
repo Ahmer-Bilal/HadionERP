@@ -13,11 +13,13 @@ public sealed class EfBusinessPartnerLookup : IBusinessPartnerLookup
 
     public async Task<BusinessPartnerSummary?> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var partner = await _dbContext.BusinessPartners.AsNoTracking()
+        var partner = await _dbContext.BusinessPartners.AsNoTracking().Include(p => p.BusinessRoles)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         return partner is null
             ? null
-            : new BusinessPartnerSummary(partner.Id, partner.Name, partner.NameArabic, partner.PartnerType.ToString(), partner.Status.ToString());
+            : new BusinessPartnerSummary(
+                partner.Id, partner.Name, partner.NameArabic,
+                partner.BusinessRoles.Select(r => r.RoleType.ToString()).ToList(), partner.Status.ToString());
     }
 }

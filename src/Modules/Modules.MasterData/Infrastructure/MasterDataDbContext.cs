@@ -65,7 +65,6 @@ public sealed class MasterDataDbContext : DbContext
 
             entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
             entity.Property(e => e.NameArabic).HasColumnName("name_arabic").HasMaxLength(200);
-            entity.Property(e => e.PartnerType).HasColumnName("partner_type").HasConversion<string>().HasMaxLength(20);
             entity.Property(e => e.TaxRegistrationNumber).HasColumnName("tax_registration_number").HasMaxLength(50);
 
             // ExtensionFieldBag doesn't expose its internals — it exists specifically so extensions can
@@ -94,6 +93,14 @@ public sealed class MasterDataDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
             entity.Navigation(e => e.Contacts)
                 .HasField("_contacts")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.HasMany(e => e.BusinessRoles)
+                .WithOne()
+                .HasForeignKey("BusinessPartnerId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.BusinessRoles)
+                .HasField("_businessRoles")
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
 
             // Not persisted in this first slice: DomainEvents is transient by definition (drained and
@@ -126,6 +133,16 @@ public sealed class MasterDataDbContext : DbContext
             entity.Property(e => e.JobTitle).HasColumnName("job_title").HasMaxLength(150);
             entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(200);
             entity.Property(e => e.Phone).HasColumnName("phone").HasMaxLength(50);
+            entity.Property<Guid>("BusinessPartnerId").HasColumnName("business_partner_id");
+        });
+
+        modelBuilder.Entity<BusinessRole>(entity =>
+        {
+            entity.ToTable("business_partner_roles");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.RoleType).HasColumnName("role_type").HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.Trade).HasColumnName("trade").HasMaxLength(100);
             entity.Property<Guid>("BusinessPartnerId").HasColumnName("business_partner_id");
         });
 

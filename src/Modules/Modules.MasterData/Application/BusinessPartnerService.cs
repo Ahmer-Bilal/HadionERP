@@ -67,12 +67,14 @@ public sealed class BusinessPartnerService
     {
         RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
 
-        if (!Enum.TryParse<PartnerType>(request.PartnerType, ignoreCase: true, out var partnerType))
+        if (!Enum.TryParse<BusinessRoleType>(request.InitialRole, ignoreCase: true, out var initialRole))
         {
-            throw new ArgumentException($"Invalid partner type '{request.PartnerType}'. Expected Customer, Vendor, or Both.");
+            throw new ArgumentException(
+                $"Invalid business role '{request.InitialRole}'. Expected Client, Supplier, Subcontractor, Consultant, " +
+                "JointVenturePartner, GovernmentAuthority, RentalCompany, Manufacturer, ManpowerSupplier, or TestingLaboratory.");
         }
 
-        var partner = new BusinessPartner(actor, request.Name, partnerType);
+        var partner = new BusinessPartner(actor, request.Name, initialRole, request.InitialTrade);
         partner.UpdateTaxRegistrationNumber(request.TaxRegistrationNumber);
         partner.UpdateNameArabic(request.NameArabic);
 
@@ -158,6 +160,49 @@ public sealed class BusinessPartnerService
                     NewValueJson: JsonSerializer.Serialize(new BusinessPartnerContactDto(
                         contact.Id, contact.Name, contact.JobTitle, contact.Email, contact.Phone)))
             },
+            AuditSource);
+
+        return ToDto(partner);
+    }
+
+    public async Task<BusinessPartnerDto> AddBusinessRoleAsync(
+        Guid id, AddBusinessRoleRequest request, string actor, CancellationToken cancellationToken = default)
+    {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
+        if (!Enum.TryParse<BusinessRoleType>(request.RoleType, ignoreCase: true, out var roleType))
+        {
+            throw new ArgumentException(
+                $"Invalid business role '{request.RoleType}'. Expected Client, Supplier, Subcontractor, Consultant, " +
+                "JointVenturePartner, GovernmentAuthority, RentalCompany, Manufacturer, ManpowerSupplier, or TestingLaboratory.");
+        }
+
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        var role = partner.AddBusinessRole(roleType, request.Trade);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id),
+            actor,
+            $"Business role '{role.RoleType}' added to '{partner.Name}'.",
+            new[] { new FieldValueChange("BusinessRoles", OldValueJson: null, NewValueJson: JsonSerializer.Serialize(new BusinessRoleDto(role.Id, role.RoleType.ToString(), role.Trade))) },
+            AuditSource);
+
+        return ToDto(partner);
+    }
+
+    public async Task<BusinessPartnerDto> RemoveBusinessRoleAsync(
+        Guid id, Guid roleId, string actor, CancellationToken cancellationToken = default)
+    {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        partner.RemoveBusinessRole(roleId);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id), actor, $"Business role removed from '{partner.Name}'.",
+            new[] { new FieldValueChange("BusinessRoles", OldValueJson: JsonSerializer.Serialize(roleId), NewValueJson: null) },
             AuditSource);
 
         return ToDto(partner);
@@ -285,6 +330,9 @@ public sealed class BusinessPartnerService
         RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
 
         var partner = await RequirePartnerAsync(id, cancellationToken);
+        if (partner.BusinessRoles.Count == 0)
+            throw new ArgumentException($"Business partner '{partner.Name}' has no business role and cannot be submitted.");
+
         var fromStatus = partner.Status;
         partner.Submit(actor);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -433,10 +481,10 @@ public sealed class BusinessPartnerService
         partner.Status.ToString(),
         partner.Name,
         partner.NameArabic,
-        partner.PartnerType.ToString(),
         partner.TaxRegistrationNumber,
         partner.Addresses.Select(a => new BusinessPartnerAddressDto(a.Id, a.AddressType.ToString(), a.Country, a.City, a.AddressLine)).ToList(),
         partner.Contacts.Select(c => new BusinessPartnerContactDto(c.Id, c.Name, c.JobTitle, c.Email, c.Phone)).ToList(),
+        partner.BusinessRoles.Select(r => new BusinessRoleDto(r.Id, r.RoleType.ToString(), r.Trade)).ToList(),
         partner.CreatedAt,
         partner.CreatedBy);
 }

@@ -42,7 +42,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice, both post/reverse-able with full audit trail. AR/Cash-Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-14 |
-| Phase 2 — Procurement | Not Started | — |
+| Phase 2 — Procurement | In Progress — `BusinessPartner.BusinessRoles` (multi-select, replaces PartnerType) built first, ahead of the rest of the phase, since Vendor Prequalification depends on it. `Modules.Procurement` itself (PR→RFQ→PO→GRN→3-way match) and Vendor Prequalification not started | 2026-07-14 |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
 | Phase 5 — Reporting, Analytics & Mobile | Not Started | — |
@@ -53,6 +53,57 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Phase 2 started: BusinessPartner.PartnerType replaced by multi-select BusinessRoles
+- Agent: Claude Sonnet 5
+- Phase: Phase 2 — Procurement
+- Status: Completed
+- What changed: Replaced `BusinessPartner.PartnerType` (Customer/Vendor/Both, a single enum) with
+  `BusinessRoles` — a multi-select child collection (`BusinessRole`: `RoleType` + optional `Trade`) — per
+  the design captured in `docs/architecture/06-roadmap.md` Phase 2 (2026-07-14, earlier this session).
+  Built first, ahead of the rest of Phase 2, because Vendor Prequalification needs it to exist before it
+  can be built on top of it — exactly the sequencing the roadmap entry called for. Ten role types: Client
+  (replaces Customer), Supplier, Subcontractor, Consultant, JointVenturePartner, GovernmentAuthority,
+  RentalCompany, Manufacturer, ManpowerSupplier, TestingLaboratory. Government Authority is mutually
+  exclusive with every other role (no commercial relationship at all, per the roadmap); the same role can
+  be held twice with different Trades (e.g. Subcontractor–Electrical and Subcontractor–Concrete on the
+  same company), since Vendor Prequalification will qualify per Role+Trade combination, not once per Role.
+  A real data migration converted every existing `partner_type` value into an equivalent role instead of
+  silently dropping it (Customer/Both → Client, Vendor/Both → Supplier — a "Both" partner correctly ends
+  up holding two roles) — confirmed live against the dev database's existing partners. Updated the one
+  cross-module consumer, `Modules.Finance.Application.APInvoiceService`, to check for a payable-eligible
+  role via `IBusinessPartnerLookup.BusinessRoles` instead of the old `PartnerType` string — the first real
+  proof that a Contracts-package consumer survives a shape change on the publishing side.
+- Trade/Specialty is free text with no server-side validation against the role-specific taxonomies the
+  roadmap names (disclosed deferred — there's no admin config screen yet to manage a suggested-values
+  list per role).
+- Verified: 355 tests pass across 15 test projects (6 new Domain tests for role add/remove/mutual-exclusion/
+  duplicate-trade rules), full solution builds clean, frontend typecheck + Arabic guardrail pass, live
+  curl exercise (confirmed the migrated data, created a multi-role partner, added a Subcontractor role
+  with a Trade, confirmed Government Authority's mutual exclusivity returns 409), live Playwright pass in
+  both English and Arabic showing the new Business Roles FastTab (list + add + remove) and the reworked
+  create form (role dropdown + conditional Trade field).
+- Files touched: `src/Modules/Modules.MasterData/Domain/BusinessRoleType.cs`, `BusinessRole.cs`,
+  `BusinessPartner.cs` (AddBusinessRole/RemoveBusinessRole, constructor takes an initial role), deleted
+  `PartnerType.cs`; `Application/BusinessPartnerDto.cs`, `BusinessPartnerService.cs`
+  (AddBusinessRoleAsync/RemoveBusinessRoleAsync, Submit requires ≥1 role);
+  `Contracts/IBusinessPartnerLookup.cs` (BusinessRoles list replaces PartnerType string);
+  `Infrastructure/EfBusinessPartnerLookup.cs`, `EfBusinessPartnerRepository.cs`, `MasterDataDbContext.cs`
+  (business_partner_roles table mapping), `Migrations/20260714183315_ReplacePartnerTypeWithBusinessRoles*.cs`
+  (hand-edited to migrate data, not just drop the column); `Api/BusinessPartnersController.cs`
+  (business-roles endpoints); `src/Modules/Modules.Finance/Application/APInvoiceService.cs`
+  (PayableEligibleRoles check); `src/Apps/Apps.Shell/src/api/businessPartnerApi.ts`,
+  `src/Apps/Apps.Shell/src/pages/BusinessPartnersPage.tsx` (Business Roles FastTab, reworked create form),
+  `src/Apps/Apps.Shell/src/pages/APInvoicesPage.tsx` (vendor filter), `src/Apps/Apps.Shell/src/i18n/content.ts`
+  (bp.role*/bp.fieldBusinessRole/etc. keys, removed bp.partnerType* keys);
+  `tests/UnitTests/Modules.MasterData.Tests/BusinessPartnerTests.cs`, `BusinessPartnerServiceTests.cs`;
+  `tests/IntegrationTests/Modules.MasterData.IntegrationTests/BusinessPartnerPersistenceTests.cs`;
+  `tests/UnitTests/Modules.Finance.Tests/APInvoiceServiceTests.cs`, `FakeLookups.cs`;
+  `docs/architecture/06-roadmap.md`, `src/Modules/Modules.MasterData/README.md`.
+- Next: Vendor Prequalification (the real Business Object this session's BusinessRoles work was building
+  toward) and `Modules.Procurement` itself (PR→RFQ→PO→GRN→3-way match) both need a fresh go-ahead before
+  starting — this was a large, self-contained rework, a natural checkpoint before going further into
+  Phase 2.
 
 ### 2026-07-14 — AP Invoice — Phase 1 exit criteria for Finance Core met
 - Agent: Claude Sonnet 5

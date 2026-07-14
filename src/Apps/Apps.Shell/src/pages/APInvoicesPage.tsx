@@ -40,6 +40,12 @@ function translateStatus(status: string, language: SupportedLanguageCode): strin
   return key ? t(key, language) : status;
 }
 
+// Mirrors Modules.Finance.Application.APInvoiceService.PayableEligibleRoles — which BusinessRoles this
+// platform can raise an AP invoice against (excludes Client/JointVenturePartner/GovernmentAuthority).
+const PAYABLE_ELIGIBLE_ROLES = new Set([
+  "Supplier", "Subcontractor", "Consultant", "RentalCompany", "Manufacturer", "ManpowerSupplier", "TestingLaboratory",
+]);
+
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -76,7 +82,7 @@ export function APInvoicesPage({ language }: APInvoicesPageProps) {
         listTaxCodes(200, 0),
       ]);
       setInvoices(invoiceResult.items);
-      setVendors(vendorResult.items.filter((v) => v.partnerType === "Vendor" || v.partnerType === "Both"));
+      setVendors(vendorResult.items.filter((v) => v.businessRoles.some((r) => PAYABLE_ELIGIBLE_ROLES.has(r.roleType))));
       setAccounts(accountResult.items);
       setTaxCodes(taxCodeResult.items);
     } catch {

@@ -43,9 +43,9 @@ public class APInvoiceServiceTests
     private static FakeBusinessPartnerLookup BuildBusinessPartnerLookup()
     {
         var lookup = new FakeBusinessPartnerLookup();
-        lookup.Add(new BusinessPartnerSummary(VendorId, "Gulf Falcon Trading Co", "شركة صقر الخليج", "Vendor", "Approved"));
-        lookup.Add(new BusinessPartnerSummary(NonVendorPartnerId, "Customer Only Co", null, "Customer", "Approved"));
-        lookup.Add(new BusinessPartnerSummary(UnapprovedVendorId, "Unapproved Vendor Co", null, "Vendor", "Draft"));
+        lookup.Add(new BusinessPartnerSummary(VendorId, "Gulf Falcon Trading Co", "شركة صقر الخليج", new[] { "Supplier" }, "Approved"));
+        lookup.Add(new BusinessPartnerSummary(NonVendorPartnerId, "Client Only Co", null, new[] { "Client" }, "Approved"));
+        lookup.Add(new BusinessPartnerSummary(UnapprovedVendorId, "Unapproved Vendor Co", null, new[] { "Supplier" }, "Draft"));
         return lookup;
     }
 

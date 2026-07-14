@@ -15,6 +15,17 @@ public sealed class APInvoiceService
     private const string AuditTargetType = "APInvoice";
     private const string AuditSource = "Modules.Finance";
 
+    /// <summary>Which <c>Modules.MasterData.Domain.BusinessRoleType</c> values (by name, since Finance
+    /// only sees the string form through <see cref="IBusinessPartnerLookup"/>, never MasterData's own
+    /// enum type) this platform can raise an AP invoice against — deliberately excludes Client (an
+    /// AR-invoiced counterparty, not a payable one), JointVenturePartner (a relationship, not a commercial
+    /// vendor), and GovernmentAuthority (no commercial relationship at all, per
+    /// docs/architecture/06-roadmap.md's Phase 2 design).</summary>
+    private static readonly HashSet<string> PayableEligibleRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Supplier", "Subcontractor", "Consultant", "RentalCompany", "Manufacturer", "ManpowerSupplier", "TestingLaboratory",
+    };
+
     private readonly IAPInvoiceRepository _repository;
     private readonly INumberRangeService _numberRangeService;
     private readonly IAuditRecorder _auditRecorder;
@@ -63,8 +74,10 @@ public sealed class APInvoiceService
 
         var vendor = await _businessPartnerLookup.GetAsync(request.VendorId, cancellationToken)
             ?? throw new ArgumentException($"Business partner {request.VendorId} was not found.");
-        if (vendor.PartnerType is not ("Vendor" or "Both"))
-            throw new ArgumentException($"Business partner '{vendor.Name}' is not a Vendor.");
+        if (!vendor.BusinessRoles.Any(PayableEligibleRoles.Contains))
+            throw new ArgumentException(
+                $"Business partner '{vendor.Name}' holds no role this platform can raise an AP invoice against " +
+                $"(needs Supplier, Subcontractor, Consultant, RentalCompany, Manufacturer, ManpowerSupplier, or TestingLaboratory).");
         if (vendor.Status != "Approved")
             throw new ArgumentException($"Business partner '{vendor.Name}' is not Approved (status: {vendor.Status}).");
 

@@ -122,6 +122,48 @@ public sealed class BusinessPartnersController : PlatformApiController
         }
     }
 
+    [HttpPost("{id:guid}/business-roles")]
+    public async Task<IActionResult> AddBusinessRole(Guid id, [FromBody] AddBusinessRoleRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _service.AddBusinessRoleAsync(id, request, MaintainerActor, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequestError(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ConflictError(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenError(ex.Message);
+        }
+    }
+
+    [HttpDelete("{id:guid}/business-roles/{roleId:guid}")]
+    public async Task<IActionResult> RemoveBusinessRole(Guid id, Guid roleId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _service.RemoveBusinessRoleAsync(id, roleId, MaintainerActor, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenError(ex.Message);
+        }
+    }
+
     [HttpPost("{id:guid}/attachments")]
     [RequestSizeLimit(AttachmentService.MaxSizeBytes)]
     public async Task<IActionResult> AddAttachment(Guid id, IFormFile file, CancellationToken cancellationToken)

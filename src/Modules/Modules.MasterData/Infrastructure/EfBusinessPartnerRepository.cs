@@ -14,9 +14,10 @@ public sealed class EfBusinessPartnerRepository : IBusinessPartnerRepository
     }
 
     // .Include() is required here — EF Core does not eager-load navigation collections by default, so
-    // Addresses/Contacts would silently come back empty without this even though the child rows exist.
+    // Addresses/Contacts/BusinessRoles would silently come back empty without this even though the child
+    // rows exist.
     private IQueryable<BusinessPartner> WithChildren() =>
-        _dbContext.BusinessPartners.Include(p => p.Addresses).Include(p => p.Contacts);
+        _dbContext.BusinessPartners.Include(p => p.Addresses).Include(p => p.Contacts).Include(p => p.BusinessRoles);
 
     public Task<BusinessPartner?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         WithChildren().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);

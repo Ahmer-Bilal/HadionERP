@@ -7,6 +7,7 @@ import {
   addBusinessPartnerAddress,
   addBusinessPartnerContact,
   addBusinessPartnerNote,
+  addBusinessPartnerRole,
   approveBusinessPartner,
   businessPartnerAttachmentDownloadUrl,
   createBusinessPartner,
@@ -16,12 +17,14 @@ import {
   listBusinessPartnerNotes,
   listBusinessPartners,
   rejectBusinessPartner,
+  removeBusinessPartnerRole,
   submitBusinessPartner,
   uploadBusinessPartnerAttachment,
 } from "../api/businessPartnerApi";
 import type {
   AddBusinessPartnerAddressInput,
   AddBusinessPartnerContactInput,
+  AddBusinessRoleInput,
   Attachment,
   BusinessPartner,
   CreateBusinessPartnerInput,
@@ -42,10 +45,26 @@ type ViewState = { kind: "list" } | { kind: "create" } | { kind: "details"; part
 
 const emptyForm: CreateBusinessPartnerInput = {
   name: "",
-  partnerType: "Vendor",
+  initialRole: "Supplier",
   taxRegistrationNumber: "",
   nameArabic: "",
+  initialTrade: "",
 };
+
+const emptyRoleForm: AddBusinessRoleInput = {
+  roleType: "Supplier",
+  trade: "",
+};
+
+const ROLE_TYPES = [
+  "Client", "Supplier", "Subcontractor", "Consultant", "JointVenturePartner",
+  "GovernmentAuthority", "RentalCompany", "Manufacturer", "ManpowerSupplier", "TestingLaboratory",
+] as const;
+
+// Only the Supplier/Subcontractor/Consultant-family roles have a meaningful Trade/Specialty concept —
+// docs/architecture/06-roadmap.md's Phase 2 design (Client/JointVenturePartner/GovernmentAuthority have
+// none).
+const TRADE_ELIGIBLE_ROLES = new Set(["Supplier", "Subcontractor", "Consultant"]);
 
 const emptyAddressForm: AddBusinessPartnerAddressInput = {
   addressType: "HeadOffice",
@@ -65,16 +84,30 @@ const emptyContactForm: AddBusinessPartnerContactInput = {
 // hardcoded strings in this file. But displaying them AS-IS in Arabic would leave the one part of the
 // screen still reading in English; these translate them for display only. Logic (e.g. `status === "Draft"`)
 // always compares against the untranslated backend value, never the display label.
-function translatePartnerType(partnerType: string, language: SupportedLanguageCode): string {
-  switch (partnerType) {
-    case "Customer":
-      return t("bp.partnerTypeCustomer", language);
-    case "Vendor":
-      return t("bp.partnerTypeVendor", language);
-    case "Both":
-      return t("bp.partnerTypeBoth", language);
+function translateRoleType(roleType: string, language: SupportedLanguageCode): string {
+  switch (roleType) {
+    case "Client":
+      return t("bp.roleClient", language);
+    case "Supplier":
+      return t("bp.roleSupplier", language);
+    case "Subcontractor":
+      return t("bp.roleSubcontractor", language);
+    case "Consultant":
+      return t("bp.roleConsultant", language);
+    case "JointVenturePartner":
+      return t("bp.roleJointVenturePartner", language);
+    case "GovernmentAuthority":
+      return t("bp.roleGovernmentAuthority", language);
+    case "RentalCompany":
+      return t("bp.roleRentalCompany", language);
+    case "Manufacturer":
+      return t("bp.roleManufacturer", language);
+    case "ManpowerSupplier":
+      return t("bp.roleManpowerSupplier", language);
+    case "TestingLaboratory":
+      return t("bp.roleTestingLaboratory", language);
     default:
-      return partnerType;
+      return roleType;
   }
 }
 
@@ -126,6 +159,7 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
   const [form, setForm] = useState<CreateBusinessPartnerInput>(emptyForm);
   const [addressForm, setAddressForm] = useState<AddBusinessPartnerAddressInput>(emptyAddressForm);
   const [contactForm, setContactForm] = useState<AddBusinessPartnerContactInput>(emptyContactForm);
+  const [roleForm, setRoleForm] = useState<AddBusinessRoleInput>(emptyRoleForm);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -316,6 +350,37 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
     }
   };
 
+  const handleAddRole = async (partner: BusinessPartner) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const input: AddBusinessRoleInput = {
+        roleType: roleForm.roleType,
+        trade: TRADE_ELIGIBLE_ROLES.has(roleForm.roleType) ? roleForm.trade?.trim() || undefined : undefined,
+      };
+      const updated = await addBusinessPartnerRole(partner.id, input);
+      setView({ kind: "details", partner: updated });
+      setRoleForm(emptyRoleForm);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemoveRole = async (partner: BusinessPartner, roleId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await removeBusinessPartnerRole(partner.id, roleId);
+      setView({ kind: "details", partner: updated });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (view.kind === "list") {
     const actions: ActionItem[] = [
       { key: "new", label: t("bp.actionNew", language), onClick: openCreate, variant: "primary" },
@@ -336,7 +401,7 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
               <tr>
                 <th>{t("bp.columnDocumentNumber", language)}</th>
                 <th>{t("bp.columnName", language)}</th>
-                <th>{t("bp.columnType", language)}</th>
+                <th>{t("bp.columnRoles", language)}</th>
                 <th>{t("bp.columnStatus", language)}</th>
               </tr>
             </thead>
@@ -357,7 +422,7 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
                 >
                   <td><bdi dir="ltr">{partner.documentNumber ?? "—"}</bdi></td>
                   <td>{partner.name}</td>
-                  <td>{translatePartnerType(partner.partnerType, language)}</td>
+                  <td>{partner.businessRoles.map((r) => translateRoleType(r.roleType, language)).join(", ")}</td>
                   <td>{translateStatus(partner.status, language)}</td>
                 </tr>
               ))}
@@ -407,16 +472,25 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
                     />
                   </label>
                   <label>
-                    {t("bp.fieldPartnerType", language)}
+                    {t("bp.fieldBusinessRole", language)}
                     <select
-                      value={form.partnerType}
-                      onChange={(e) => setForm({ ...form, partnerType: e.target.value })}
+                      value={form.initialRole}
+                      onChange={(e) => setForm({ ...form, initialRole: e.target.value })}
                     >
-                      <option value="Customer">{t("bp.partnerTypeCustomer", language)}</option>
-                      <option value="Vendor">{t("bp.partnerTypeVendor", language)}</option>
-                      <option value="Both">{t("bp.partnerTypeBoth", language)}</option>
+                      {ROLE_TYPES.map((role) => (
+                        <option key={role} value={role}>{translateRoleType(role, language)}</option>
+                      ))}
                     </select>
                   </label>
+                  {TRADE_ELIGIBLE_ROLES.has(form.initialRole) && (
+                    <label>
+                      {t("bp.fieldTrade", language)}
+                      <input
+                        value={form.initialTrade}
+                        onChange={(e) => setForm({ ...form, initialTrade: e.target.value })}
+                      />
+                    </label>
+                  )}
                   <label>
                     {t("bp.fieldTaxRegistrationNumber", language)}
                     <input
@@ -480,15 +554,75 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
                 <dt>{t("bp.columnStatus", language)}</dt>
                 <dd>{translateStatus(partner.status, language)}</dd>
 
-                <dt>{t("bp.fieldPartnerType", language)}</dt>
-                <dd>{translatePartnerType(partner.partnerType, language)}</dd>
-
                 <dt>{t("bp.fieldNameArabic", language)}</dt>
                 <dd>{partner.nameArabic ?? "—"}</dd>
 
                 <dt>{t("bp.fieldTaxRegistrationNumber", language)}</dt>
                 <dd><bdi dir="ltr">{partner.taxRegistrationNumber ?? "—"}</bdi></dd>
               </dl>
+            ),
+          },
+          {
+            key: "business-roles",
+            title: t("bp.tabBusinessRoles", language),
+            content: (
+              <div className="bp-form">
+                {partner.businessRoles.length === 0 && <p>{t("bp.emptyBusinessRoles", language)}</p>}
+                {partner.businessRoles.length > 0 && (
+                  <table className="bp-table">
+                    <thead>
+                      <tr>
+                        <th>{t("bp.columnRoleType", language)}</th>
+                        <th>{t("bp.columnTrade", language)}</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {partner.businessRoles.map((role) => (
+                        <tr key={role.id}>
+                          <td>{translateRoleType(role.roleType, language)}</td>
+                          <td>{role.trade ?? "—"}</td>
+                          <td>
+                            <button type="button" disabled={busy} onClick={() => handleRemoveRole(partner, role.id)}>
+                              {t("bp.actionRemoveRole", language)}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+
+                <label>
+                  {t("bp.fieldBusinessRole", language)}
+                  <select
+                    value={roleForm.roleType}
+                    onChange={(e) => setRoleForm({ ...roleForm, roleType: e.target.value })}
+                  >
+                    {ROLE_TYPES.map((role) => (
+                      <option key={role} value={role}>{translateRoleType(role, language)}</option>
+                    ))}
+                  </select>
+                </label>
+                {TRADE_ELIGIBLE_ROLES.has(roleForm.roleType) && (
+                  <label>
+                    {t("bp.fieldTrade", language)}
+                    <input value={roleForm.trade} onChange={(e) => setRoleForm({ ...roleForm, trade: e.target.value })} />
+                  </label>
+                )}
+                <ActionPane
+                  actions={[
+                    {
+                      key: "add-role",
+                      label: t("bp.actionAddRole", language),
+                      onClick: () => handleAddRole(partner),
+                      variant: "primary",
+                      isDisabled: busy,
+                    },
+                  ]}
+                  ariaLabel={t("aria.actionToolbar", language)}
+                />
+              </div>
             ),
           },
           {

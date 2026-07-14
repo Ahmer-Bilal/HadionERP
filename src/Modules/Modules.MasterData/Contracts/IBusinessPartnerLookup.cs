@@ -10,7 +10,7 @@ public sealed record BusinessPartnerSummary(
     Guid Id,
     string Name,
     string? NameArabic,
-    string PartnerType,
+    IReadOnlyList<string> BusinessRoles,
     string Status);
 
 /// <summary>Read-only lookup Finance calls to validate a vendor reference (e.g. on an AP Invoice) before

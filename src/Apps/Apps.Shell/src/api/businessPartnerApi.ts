@@ -16,16 +16,22 @@ export interface BusinessPartnerContact {
   phone: string | null;
 }
 
+export interface BusinessRole {
+  id: string;
+  roleType: string;
+  trade: string | null;
+}
+
 export interface BusinessPartner {
   id: string;
   documentNumber: string | null;
   status: string;
   name: string;
   nameArabic: string | null;
-  partnerType: string;
   taxRegistrationNumber: string | null;
   addresses: BusinessPartnerAddress[];
   contacts: BusinessPartnerContact[];
+  businessRoles: BusinessRole[];
   createdAt: string;
   createdBy: string;
 }
@@ -39,9 +45,15 @@ export interface PagedResult<T> {
 
 export interface CreateBusinessPartnerInput {
   name: string;
-  partnerType: string;
+  initialRole: string;
   taxRegistrationNumber?: string;
   nameArabic?: string;
+  initialTrade?: string;
+}
+
+export interface AddBusinessRoleInput {
+  roleType: string;
+  trade?: string;
 }
 
 export interface AddBusinessPartnerAddressInput {
@@ -124,6 +136,23 @@ export async function addBusinessPartnerContact(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+  return handleJson(response);
+}
+
+export async function addBusinessPartnerRole(
+  id: string,
+  input: AddBusinessRoleInput,
+): Promise<BusinessPartner> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/business-roles`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return handleJson(response);
+}
+
+export async function removeBusinessPartnerRole(id: string, roleId: string): Promise<BusinessPartner> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/business-roles/${roleId}`, { method: "DELETE" });
   return handleJson(response);
 }
 

@@ -54,10 +54,11 @@ type TranslationKey =
   | "bp.actionReject"
   | "bp.columnDocumentNumber"
   | "bp.columnName"
-  | "bp.columnType"
+  | "bp.columnRoles"
   | "bp.columnStatus"
   | "bp.tabAddresses"
   | "bp.tabContacts"
+  | "bp.tabBusinessRoles"
   | "bp.tabAttachments"
   | "bp.actionUpload"
   | "bp.actionDownload"
@@ -75,7 +76,13 @@ type TranslationKey =
   | "bp.emptyNotes"
   | "bp.fieldName"
   | "bp.fieldNameArabic"
-  | "bp.fieldPartnerType"
+  | "bp.fieldBusinessRole"
+  | "bp.fieldTrade"
+  | "bp.actionAddRole"
+  | "bp.actionRemoveRole"
+  | "bp.columnRoleType"
+  | "bp.columnTrade"
+  | "bp.emptyBusinessRoles"
   | "bp.fieldTaxRegistrationNumber"
   | "bp.fieldEmail"
   | "bp.fieldPhone"
@@ -89,9 +96,16 @@ type TranslationKey =
   | "bp.actionAddContact"
   | "bp.emptyAddresses"
   | "bp.emptyContacts"
-  | "bp.partnerTypeCustomer"
-  | "bp.partnerTypeVendor"
-  | "bp.partnerTypeBoth"
+  | "bp.roleClient"
+  | "bp.roleSupplier"
+  | "bp.roleSubcontractor"
+  | "bp.roleConsultant"
+  | "bp.roleJointVenturePartner"
+  | "bp.roleGovernmentAuthority"
+  | "bp.roleRentalCompany"
+  | "bp.roleManufacturer"
+  | "bp.roleManpowerSupplier"
+  | "bp.roleTestingLaboratory"
   | "bp.addressTypeHeadOffice"
   | "bp.addressTypeBilling"
   | "bp.addressTypeShipping"
@@ -314,7 +328,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.actionReject": { en: "Reject", ar: "رفض" },
   "bp.columnDocumentNumber": { en: "Number", ar: "الرقم" },
   "bp.columnName": { en: "Name", ar: "الاسم" },
-  "bp.columnType": { en: "Type", ar: "النوع" },
+  "bp.columnRoles": { en: "Roles", ar: "الأدوار" },
   "bp.columnStatus": { en: "Status", ar: "الحالة" },
   "bp.tabAddresses": { en: "Addresses", ar: "العناوين" },
   "bp.tabContacts": { en: "Contacts", ar: "جهات الاتصال" },
@@ -335,7 +349,14 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.emptyNotes": { en: "No notes yet.", ar: "لا توجد ملاحظات حتى الآن." },
   "bp.fieldName": { en: "Name", ar: "الاسم" },
   "bp.fieldNameArabic": { en: "Name (Arabic)", ar: "الاسم بالعربية" },
-  "bp.fieldPartnerType": { en: "Partner Type", ar: "نوع الشريك" },
+  "bp.fieldBusinessRole": { en: "Business Role", ar: "دور العمل" },
+  "bp.fieldTrade": { en: "Trade / Specialty", ar: "التخصص" },
+  "bp.actionAddRole": { en: "Add Role", ar: "إضافة دور" },
+  "bp.actionRemoveRole": { en: "Remove", ar: "إزالة" },
+  "bp.columnRoleType": { en: "Role", ar: "الدور" },
+  "bp.columnTrade": { en: "Trade / Specialty", ar: "التخصص" },
+  "bp.emptyBusinessRoles": { en: "No business roles yet.", ar: "لا توجد أدوار عمل حتى الآن." },
+  "bp.tabBusinessRoles": { en: "Business Roles", ar: "أدوار العمل" },
   "bp.fieldTaxRegistrationNumber": { en: "Tax Registration Number", ar: "الرقم الضريبي" },
   "bp.fieldEmail": { en: "Email", ar: "البريد الإلكتروني" },
   "bp.fieldPhone": { en: "Phone", ar: "الهاتف" },
@@ -349,9 +370,16 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.actionAddContact": { en: "Add Contact", ar: "إضافة جهة اتصال" },
   "bp.emptyAddresses": { en: "No addresses yet.", ar: "لا توجد عناوين حتى الآن." },
   "bp.emptyContacts": { en: "No contacts yet.", ar: "لا توجد جهات اتصال حتى الآن." },
-  "bp.partnerTypeCustomer": { en: "Customer", ar: "عميل" },
-  "bp.partnerTypeVendor": { en: "Vendor", ar: "مورّد" },
-  "bp.partnerTypeBoth": { en: "Customer & Vendor", ar: "عميل ومورّد" },
+  "bp.roleClient": { en: "Client", ar: "عميل" },
+  "bp.roleSupplier": { en: "Supplier", ar: "مورّد" },
+  "bp.roleSubcontractor": { en: "Subcontractor", ar: "مقاول من الباطن" },
+  "bp.roleConsultant": { en: "Consultant", ar: "استشاري" },
+  "bp.roleJointVenturePartner": { en: "Joint Venture Partner", ar: "شريك ائتلاف" },
+  "bp.roleGovernmentAuthority": { en: "Government Authority", ar: "جهة حكومية" },
+  "bp.roleRentalCompany": { en: "Rental Company", ar: "شركة تأجير" },
+  "bp.roleManufacturer": { en: "Manufacturer", ar: "مُصنّع" },
+  "bp.roleManpowerSupplier": { en: "Manpower Supplier", ar: "مورّد قوى عاملة" },
+  "bp.roleTestingLaboratory": { en: "Testing Laboratory", ar: "مختبر فحص" },
   "bp.addressTypeHeadOffice": { en: "Head Office", ar: "المكتب الرئيسي" },
   "bp.addressTypeBilling": { en: "Billing", ar: "الفوترة" },
   "bp.addressTypeShipping": { en: "Shipping", ar: "الشحن" },

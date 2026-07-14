@@ -8,11 +8,12 @@ for real business records that must survive a restart.
 
 ## What's built (Phase 1, slice 1: Business Partner)
 
-- **Domain**: `BusinessPartner` (extends `Platform.Core.BusinessObject`) — Name, PartnerType
-  (Customer/Vendor/Both), tax registration number, an optional `NameArabic` (`UpdateNameArabic`), and two
-  child collections, `Addresses` and `Contacts`. `NameArabic` exists because ZATCA e-invoicing requires the
-  seller's Arabic legal name on a tax invoice — it's optional at the Domain level today (not every partner
-  will be invoiced yet) but see Deferred for what isn't enforced.
+- **Domain**: `BusinessPartner` (extends `Platform.Core.BusinessObject`) — Name, tax registration number,
+  an optional `NameArabic` (`UpdateNameArabic`), and three child collections: `Addresses`, `Contacts`, and
+  `BusinessRoles` (see the "Phase 2: BusinessRoles" section below — this replaced the original single
+  `PartnerType` enum once Phase 2 was actually reached). `NameArabic` exists because ZATCA e-invoicing
+  requires the seller's Arabic legal name on a tax invoice — it's optional at the Domain level today (not
+  every partner will be invoiced yet) but see Deferred for what isn't enforced.
   Uses the standard BO lifecycle (Draft → Submit → Approve) since new-partner onboarding is a real
   fraud/compliance control point (docs/architecture/03-platform-services.md #2.2's Segregation of Duties
   example); adding/removing an address or contact is NOT gated by lifecycle status (a deliberate
@@ -314,10 +315,38 @@ proven correct, and both were verified against real PostgreSQL from the start.
 - A shared "List+Details form" Platform.UI template, a real npm package for Platform.UI, and a proper
   client-side router are all still deferred for the same reason as before: wait for a second real
   consumer before extracting/generalizing.
-- **`PartnerType` (Customer/Vendor/Both) is planned to become a multi-select `BusinessRoles` collection**
-  (Client/Supplier/Subcontractor/Consultant/Joint Venture Partner/Government Authority/Rental
-  Company/Manufacturer/Manpower Supplier/Testing Laboratory, each with its own configurable Trade/Specialty
-  sub-classification) — a real construction-industry partner commonly holds several roles at once. Design
-  captured in `docs/architecture/06-roadmap.md` Phase 2 (2026-07-14) alongside the full Vendor
-  Prequalification design that motivated it; deliberately documented now and built once Phase 2
-  (`Modules.Procurement`) actually starts, rather than reworking Business Partner's shape twice.
+- Trade/Specialty (on `BusinessRole`) is free text with no server-side validation against the
+  role-specific taxonomies docs/architecture/06-roadmap.md's Phase 2 design names (Subcontractor →
+  Electrical/Concrete/Mechanical/..., Supplier → Steel/Cement/MEP Materials/...) — the roadmap is explicit
+  these belong in configuration, not a hardcoded enum, but there's no admin screen yet to manage a
+  per-role suggested-values list. Revisit once one exists; until then this is a real but soft gap, not
+  hidden.
+- Vendor Prequalification itself (`VendorPrequalification` or similar BO, role-specific review steps,
+  configurable validity period) is not built yet — `BusinessRoles` was step one of Phase 2's design
+  (docs/architecture/06-roadmap.md), deliberately built first since Prequalification needs it to exist.
+
+## Phase 2: BusinessRoles replaces PartnerType
+
+`BusinessPartner.PartnerType` (Customer/Vendor/Both, a single enum) has been replaced by
+`BusinessRoles` — a multi-select child collection (`BusinessRole`: `RoleType` +
+optional `Trade`) — per the design captured in `docs/architecture/06-roadmap.md` Phase 2 (2026-07-14)
+alongside the full Vendor Prequalification design that motivated it. A real construction-industry partner
+commonly holds several roles at once (a company can be both a Supplier and a Subcontractor), which a
+single enum could never express. Ten role types: Client (replaces Customer — the construction-industry
+label for what SAP calls Customer/Debtor, deliberately not modeled as a separate role), Supplier,
+Subcontractor, Consultant, JointVenturePartner, GovernmentAuthority, RentalCompany, Manufacturer,
+ManpowerSupplier, TestingLaboratory.
+
+- **Government Authority is mutually exclusive with every other role** — "no commercial relationship, no
+  AP/AR posting, no scorecard" per the roadmap — enforced in `BusinessPartner.AddBusinessRole`.
+- **The same role can be held twice with different Trades** — e.g. Subcontractor–Electrical and
+  Subcontractor–Concrete on the same company — because Vendor Prequalification (a future BO) qualifies a
+  partner per Role+Trade combination, not once per Role.
+- A data migration (`20260714183315_ReplacePartnerTypeWithBusinessRoles`) converted every existing
+  `partner_type` value into an equivalent role rather than silently dropping it: Customer/Both → Client,
+  Vendor/Both → Supplier (a "Both" partner correctly ends up holding two roles).
+- `Modules.Finance.Application.APInvoiceService` was updated to check for a payable-eligible role
+  (Supplier/Subcontractor/Consultant/RentalCompany/Manufacturer/ManpowerSupplier/TestingLaboratory) via
+  `IBusinessPartnerLookup.BusinessRoles` instead of the old `PartnerType` string — the first real proof
+  that a Contracts-package consumer survives a shape change on the publishing side without needing to
+  know about internal renames beyond the DTO's own published shape.

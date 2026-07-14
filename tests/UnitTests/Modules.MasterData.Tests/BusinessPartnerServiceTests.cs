@@ -65,8 +65,8 @@ public class BusinessPartnerServiceTests
             authorizationService, BuildActorRoles(), attachmentService, noteService);
     }
 
-    private static CreateBusinessPartnerRequest ValidRequest(string partnerType = "Vendor") =>
-        new("Gulf Falcon Trading Co", partnerType, "300000000000003");
+    private static CreateBusinessPartnerRequest ValidRequest(string businessRole = "Supplier") =>
+        new("Gulf Falcon Trading Co", businessRole, "300000000000003");
 
     private static IReadOnlyList<AuditEntry> AuditEntriesFor(IAuditLog auditLog, Guid partnerId) =>
         auditLog.GetFor(new BusinessObjectReference(partnerId, "BusinessPartner", "Self"));
@@ -88,7 +88,7 @@ public class BusinessPartnerServiceTests
     public async Task CreateAsync_persists_the_Arabic_name_when_provided()
     {
         var service = BuildService(out _);
-        var request = new CreateBusinessPartnerRequest("Gulf Falcon Trading Co", "Vendor", "300000000000003", "شركة صقر الخليج التجارية");
+        var request = new CreateBusinessPartnerRequest("Gulf Falcon Trading Co", "Supplier", "300000000000003", "شركة صقر الخليج التجارية");
 
         var created = await service.CreateAsync(request, "ahmer.bilal", "C001");
 
@@ -101,7 +101,7 @@ public class BusinessPartnerServiceTests
         var service = BuildService(out _);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CreateAsync(ValidRequest(partnerType: "NotARealType"), "ahmer.bilal", "C001"));
+            service.CreateAsync(ValidRequest(businessRole: "NotARealType"), "ahmer.bilal", "C001"));
     }
 
     [Fact]

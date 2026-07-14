@@ -28,13 +28,12 @@ replaced later. See AGENTS.md.
 - `Modules.MasterData`: Business Partners, Chart of Accounts, Items, Cost Centers, Tax codes, Number ranges
 - `Modules.Finance`: GL, AP, AR, Cash/Bank — the ledger every other module eventually posts into
 - ZATCA e-invoicing Phase 1 (QR-coded compliant invoices) live for AR
-- **Documented, not yet built**: `BusinessPartner.PartnerType` (Customer/Vendor/Both, a single enum) is
-  planned to become `BusinessRoles` — a multi-select child collection, same pattern as
+- **Built 2026-07-14 (ahead of the rest of Phase 2)**: `BusinessPartner.PartnerType` (Customer/Vendor/Both,
+  a single enum) has been replaced by `BusinessRoles` — a multi-select child collection, same pattern as
   `Addresses`/`Contacts` — since a real construction-industry partner commonly holds several roles at once
-  (a company can be both a Supplier and a Subcontractor). See "Vendor Prequalification & Business Roles"
-  under Phase 2 for the full design; captured here because it changes `BusinessPartner`'s own shape,
-  decided 2026-07-14 to document now and implement once this slice is actually reached rather than rework
-  Business Partner twice.
+  (a company can be both a Supplier and a Subcontractor). Built first, ahead of the rest of Phase 2, because
+  Vendor Prequalification (below) needs it to exist. See `Modules.MasterData/README.md`'s "Phase 2:
+  BusinessRoles replaces PartnerType" section for what actually shipped.
 - **Exit criteria**: a company can maintain its chart of accounts and vendors, and post/reverse a GL journal
   and an AP invoice end-to-end with full audit trail.
 
