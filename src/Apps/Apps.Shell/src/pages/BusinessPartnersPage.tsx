@@ -7,16 +7,28 @@ import {
   addBusinessPartnerAddress,
   addBusinessPartnerContact,
   approveBusinessPartner,
+  businessPartnerAttachmentDownloadUrl,
   createBusinessPartner,
+  deleteBusinessPartnerAttachment,
+  listBusinessPartnerAttachments,
   listBusinessPartners,
+  rejectBusinessPartner,
   submitBusinessPartner,
+  uploadBusinessPartnerAttachment,
 } from "../api/businessPartnerApi";
 import type {
   AddBusinessPartnerAddressInput,
   AddBusinessPartnerContactInput,
+  Attachment,
   BusinessPartner,
   CreateBusinessPartnerInput,
 } from "../api/businessPartnerApi";
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface BusinessPartnersPageProps {
   language: SupportedLanguageCode;
@@ -109,6 +121,8 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
   const [form, setForm] = useState<CreateBusinessPartnerInput>(emptyForm);
   const [addressForm, setAddressForm] = useState<AddBusinessPartnerAddressInput>(emptyAddressForm);
   const [contactForm, setContactForm] = useState<AddBusinessPartnerContactInput>(emptyContactForm);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -123,6 +137,19 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Attachments aren't embedded in BusinessPartnerDto (metadata-only list, fetched separately) — reload
+  // whenever the details view's partner changes (opening a partner, or after upload/delete/reload above).
+  useEffect(() => {
+    if (view.kind === "details") {
+      listBusinessPartnerAttachments(view.partner.id)
+        .then(setAttachments)
+        .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    } else {
+      setAttachments([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view.kind === "details" ? view.partner.id : null]);
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -172,6 +199,50 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
       const updated = await approveBusinessPartner(partner.id);
       setView({ kind: "details", partner: updated });
       load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReject = async (partner: BusinessPartner) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await rejectBusinessPartner(partner.id);
+      setView({ kind: "details", partner: updated });
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUploadAttachment = async (partner: BusinessPartner) => {
+    if (!pendingFile) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await uploadBusinessPartnerAttachment(partner.id, pendingFile);
+      setPendingFile(null);
+      setAttachments(await listBusinessPartnerAttachments(partner.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (partner: BusinessPartner, attachmentId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteBusinessPartnerAttachment(partner.id, attachmentId);
+      setAttachments(await listBusinessPartnerAttachments(partner.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -333,6 +404,12 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
       label: t("bp.actionApprove", language),
       onClick: () => handleApprove(partner),
       variant: "primary",
+      isDisabled: busy,
+    });
+    detailActions.push({
+      key: "reject",
+      label: t("bp.actionReject", language),
+      onClick: () => handleReject(partner),
       isDisabled: busy,
     });
   }
@@ -507,6 +584,67 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
                       onClick: () => handleAddContact(partner),
                       variant: "primary",
                       isDisabled: busy || contactForm.name.trim().length === 0,
+                    },
+                  ]}
+                  ariaLabel={t("aria.actionToolbar", language)}
+                />
+              </div>
+            ),
+          },
+          {
+            key: "attachments",
+            title: t("bp.tabAttachments", language),
+            content: (
+              <div className="bp-form">
+                {attachments.length === 0 && <p>{t("bp.emptyAttachments", language)}</p>}
+                {attachments.length > 0 && (
+                  <table className="bp-table">
+                    <thead>
+                      <tr>
+                        <th>{t("bp.columnFileName", language)}</th>
+                        <th>{t("bp.columnFileSize", language)}</th>
+                        <th>{t("bp.columnUploadedBy", language)}</th>
+                        <th>{t("bp.columnUploadedAt", language)}</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attachments.map((attachment) => (
+                        <tr key={attachment.id}>
+                          <td>{attachment.fileName}</td>
+                          <td><bdi dir="ltr">{formatFileSize(attachment.sizeBytes)}</bdi></td>
+                          <td>{attachment.uploadedBy}</td>
+                          <td><bdi dir="ltr">{new Date(attachment.uploadedAt).toLocaleString(language)}</bdi></td>
+                          <td>
+                            <a href={businessPartnerAttachmentDownloadUrl(partner.id, attachment.id)}>
+                              {t("bp.actionDownload", language)}
+                            </a>
+                            {" · "}
+                            <button type="button" onClick={() => handleDeleteAttachment(partner, attachment.id)} disabled={busy}>
+                              {t("bp.actionDelete", language)}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+
+                <label>
+                  {t("bp.actionUpload", language)}
+                  <input
+                    type="file"
+                    onChange={(e) => setPendingFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <ActionPane
+                  actions={[
+                    {
+                      key: "upload-attachment",
+                      label: t("bp.actionUpload", language),
+                      onClick: () => handleUploadAttachment(partner),
+                      variant: "primary",
+                      isDisabled: busy || !pendingFile,
                     },
                   ]}
                   ariaLabel={t("aria.actionToolbar", language)}

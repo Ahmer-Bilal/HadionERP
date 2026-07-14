@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Modules.MasterData.Application;
 using Platform.Api;
+using Platform.Attachments;
 
 namespace Modules.MasterData.Api;
 
@@ -113,6 +115,82 @@ public sealed class BusinessPartnersController : PlatformApiController
         catch (ArgumentException ex)
         {
             return BadRequestError(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenError(ex.Message);
+        }
+    }
+
+    [HttpPost("{id:guid}/attachments")]
+    [RequestSizeLimit(AttachmentService.MaxSizeBytes)]
+    public async Task<IActionResult> AddAttachment(Guid id, IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file.Length == 0)
+        {
+            return BadRequestError("A file is required.");
+        }
+
+        await using var stream = file.OpenReadStream();
+        using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream, cancellationToken);
+
+        try
+        {
+            var attachment = await _service.AddAttachmentAsync(
+                id, file.FileName, file.ContentType, memoryStream.ToArray(), MaintainerActor, cancellationToken);
+            return Ok(attachment);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequestError(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenError(ex.Message);
+        }
+    }
+
+    [HttpGet("{id:guid}/attachments")]
+    public async Task<IActionResult> ListAttachments(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _service.ListAttachmentsAsync(id, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpGet("{id:guid}/attachments/{attachmentId:guid}/content")]
+    public async Task<IActionResult> DownloadAttachment(Guid id, Guid attachmentId, CancellationToken cancellationToken)
+    {
+        var download = await _service.DownloadAttachmentAsync(id, attachmentId, cancellationToken);
+        if (download is null)
+        {
+            return NotFound();
+        }
+
+        return File(download.Value.Content, download.Value.Metadata.ContentType, download.Value.Metadata.FileName);
+    }
+
+    [HttpDelete("{id:guid}/attachments/{attachmentId:guid}")]
+    public async Task<IActionResult> DeleteAttachment(Guid id, Guid attachmentId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _service.DeleteAttachmentAsync(id, attachmentId, MaintainerActor, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
         }
         catch (UnauthorizedAccessException ex)
         {

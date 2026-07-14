@@ -6,6 +6,7 @@
     <ProjectReference Include="..\..\..\Platform\Platform.Audit\Platform.Audit.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Workflow\Platform.Workflow.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Security\Platform.Security.csproj" />
+    <ProjectReference Include="..\..\..\Platform\Platform.Attachments\Platform.Attachments.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

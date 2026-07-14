@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Application\Modules.MasterData.Application.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Api\Platform.Api.csproj" />
+    <ProjectReference Include="..\..\..\Platform\Platform.Attachments\Platform.Attachments.csproj" />
   </ItemGroup>
 
 </Project>

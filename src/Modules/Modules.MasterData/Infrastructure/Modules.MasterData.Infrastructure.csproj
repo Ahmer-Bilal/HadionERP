@@ -4,6 +4,7 @@
     <ProjectReference Include="..\Domain\Modules.MasterData.Domain.csproj" />
     <ProjectReference Include="..\Application\Modules.MasterData.Application.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Workflow\Platform.Workflow.csproj" />
+    <ProjectReference Include="..\..\..\Platform\Platform.Attachments\Platform.Attachments.csproj" />
   </ItemGroup>
 
   <ItemGroup>

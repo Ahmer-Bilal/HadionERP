@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Modules.MasterData.Domain;
+using Platform.Attachments;
 using Platform.Core;
 using Platform.Workflow;
 
@@ -21,6 +22,11 @@ public sealed class MasterDataDbContext : DbContext
     // this is the only module with a real database so far. A running approval can span separate HTTP
     // requests (submit today, decision days later), so it must survive here, not stay in memory.
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
+    // AttachmentMetadata is a Platform.Attachments kernel type, same "storage-agnostic port, persisted by
+    // the one module with a real database" reasoning as WorkflowInstance above. AttachmentContents is
+    // internal on purpose — only EfAttachmentRepository ever queries it directly.
+    public DbSet<AttachmentMetadata> Attachments => Set<AttachmentMetadata>();
+    internal DbSet<AttachmentContentRow> AttachmentContents => Set<AttachmentContentRow>();
 
     public MasterDataDbContext(DbContextOptions<MasterDataDbContext> options) : base(options)
     {
@@ -168,6 +174,37 @@ public sealed class MasterDataDbContext : DbContext
             entity.Ignore(e => e.CurrentStep);
             entity.Ignore(e => e.RequiredApproversForCurrentStep);
             entity.Ignore(e => e.History);
+        });
+
+        modelBuilder.Entity<AttachmentMetadata>(entity =>
+        {
+            entity.ToTable("attachments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.BusinessObjectType).HasColumnName("business_object_type").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.BusinessObjectId).HasColumnName("business_object_id");
+            entity.Property(e => e.FileName).HasColumnName("file_name").HasMaxLength(260).IsRequired();
+            entity.Property(e => e.ContentType).HasColumnName("content_type").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.SizeBytes).HasColumnName("size_bytes");
+            entity.Property(e => e.UploadedBy).HasColumnName("uploaded_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.UploadedAt).HasColumnName("uploaded_at");
+            entity.HasIndex(e => new { e.BusinessObjectType, e.BusinessObjectId });
+        });
+
+        // No CLR navigation either direction (AttachmentContentRow is internal — nothing outside
+        // EfAttachmentRepository should ever join to it), so the relationship is configured purely via
+        // Fluent API: AttachmentContentRow.AttachmentId is both its own primary key and the foreign key
+        // into attachments.Id, cascade-deleted so removing an attachment's metadata also removes its bytes.
+        modelBuilder.Entity<AttachmentContentRow>(entity =>
+        {
+            entity.ToTable("attachment_contents");
+            entity.HasKey(e => e.AttachmentId);
+            entity.Property(e => e.AttachmentId).HasColumnName("attachment_id").ValueGeneratedNever();
+            entity.Property(e => e.Content).HasColumnName("content").HasColumnType("bytea").IsRequired();
+            entity.HasOne<AttachmentMetadata>()
+                .WithOne()
+                .HasForeignKey<AttachmentContentRow>(e => e.AttachmentId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<NumberRangeCounterEntity>(entity =>

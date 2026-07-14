@@ -1,4 +1,5 @@
 using Modules.MasterData.Application;
+using Platform.Attachments;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
@@ -55,10 +56,11 @@ public class BusinessPartnerServiceTests
             new[] { BusinessPartnerSecurity.MaintainerRole, BusinessPartnerSecurity.ApproverRole },
             new[] { BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty });
         var authorizationService = new AuthorizationService(securityCatalog);
+        var attachmentService = new AttachmentService(new FakeAttachmentRepository());
 
         return new BusinessPartnerService(
             repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances,
-            authorizationService, BuildActorRoles());
+            authorizationService, BuildActorRoles(), attachmentService);
     }
 
     private static CreateBusinessPartnerRequest ValidRequest(string partnerType = "Vendor") =>
@@ -168,6 +170,72 @@ public class BusinessPartnerServiceTests
         var contact = Assert.Single(updated.Contacts);
         Assert.Equal("Fahad Al-Otaibi", contact.Name);
         Assert.Equal("Procurement Manager", contact.JobTitle);
+    }
+
+    [Fact]
+    public async Task AddAttachmentAsync_stores_the_file_and_returns_its_metadata()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        var attachment = await service.AddAttachmentAsync(
+            created.Id, "cr-copy.pdf", "application/pdf", new byte[] { 1, 2, 3 }, "ahmer.bilal");
+
+        Assert.Equal("cr-copy.pdf", attachment.FileName);
+        Assert.Equal(3, attachment.SizeBytes);
+        Assert.Equal("ahmer.bilal", attachment.UploadedBy);
+    }
+
+    [Fact]
+    public async Task ListAttachmentsAsync_returns_only_attachments_for_that_partner()
+    {
+        var service = BuildService(out _);
+        var first = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var second = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await service.AddAttachmentAsync(first.Id, "a.pdf", "application/pdf", new byte[] { 1 }, "ahmer.bilal");
+        await service.AddAttachmentAsync(second.Id, "b.pdf", "application/pdf", new byte[] { 1 }, "ahmer.bilal");
+
+        var attachments = await service.ListAttachmentsAsync(first.Id);
+
+        var only = Assert.Single(attachments);
+        Assert.Equal("a.pdf", only.FileName);
+    }
+
+    [Fact]
+    public async Task DownloadAttachmentAsync_returns_null_when_the_attachment_belongs_to_a_different_partner()
+    {
+        var service = BuildService(out _);
+        var first = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var second = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var attachment = await service.AddAttachmentAsync(first.Id, "a.pdf", "application/pdf", new byte[] { 1 }, "ahmer.bilal");
+
+        // Asking for first's attachment via second's id must not leak it.
+        Assert.Null(await service.DownloadAttachmentAsync(second.Id, attachment.Id));
+        Assert.NotNull(await service.DownloadAttachmentAsync(first.Id, attachment.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAttachmentAsync_removes_it_and_records_an_audit_entry()
+    {
+        var service = BuildService(out _, out var auditLog);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var attachment = await service.AddAttachmentAsync(created.Id, "old.pdf", "application/pdf", new byte[] { 1 }, "ahmer.bilal");
+
+        await service.DeleteAttachmentAsync(created.Id, attachment.Id, "ahmer.bilal");
+
+        Assert.Empty(await service.ListAttachmentsAsync(created.Id));
+        var removalEntry = Assert.Single(AuditEntriesFor(auditLog, created.Id), e => e.FieldValueChanges.Any(c => c.NewValueJson is null));
+        Assert.Equal("Attachments", removalEntry.FieldValueChanges.Single().FieldName);
+    }
+
+    [Fact]
+    public async Task AddAttachmentAsync_throws_for_an_actor_with_no_Maintainer_role()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.AddAttachmentAsync(created.Id, "a.pdf", "application/pdf", new byte[] { 1 }, "finance.manager"));
     }
 
     [Fact]

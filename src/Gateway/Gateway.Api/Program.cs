@@ -3,6 +3,7 @@ using Gateway.Api.Localization;
 using Microsoft.EntityFrameworkCore;
 using Modules.MasterData.Application;
 using Modules.MasterData.Infrastructure;
+using Platform.Attachments;
 using Platform.Audit;
 using Platform.Configuration;
 using Platform.Configuration.FeatureFlags;
@@ -144,6 +145,11 @@ var masterDataConnectionString = builder.Configuration.GetConnectionString("Defa
 builder.Services.AddDbContext<MasterDataDbContext>(options => options.UseNpgsql(masterDataConnectionString));
 builder.Services.AddScoped<IBusinessPartnerRepository, EfBusinessPartnerRepository>();
 builder.Services.AddScoped<IWorkflowInstanceRepository, EfWorkflowInstanceRepository>();
+// Platform.Attachments: file bytes are stored in Postgres via Modules.MasterData's own DbContext for now
+// (see Platform.Attachments/README.md's "Deferred" section on real blob storage) — scoped, same lifetime
+// as the DbContext it depends on.
+builder.Services.AddScoped<IAttachmentRepository, EfAttachmentRepository>();
+builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 builder.Services.AddScoped<BusinessPartnerService>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),

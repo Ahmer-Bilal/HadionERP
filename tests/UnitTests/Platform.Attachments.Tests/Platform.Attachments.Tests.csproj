@@ -21,12 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Modules\Modules.MasterData\Domain\Modules.MasterData.Domain.csproj" />
-    <ProjectReference Include="..\..\..\src\Modules\Modules.MasterData\Application\Modules.MasterData.Application.csproj" />
-    <ProjectReference Include="..\..\..\src\Platform\Platform.Core\Platform.Core.csproj" />
-    <ProjectReference Include="..\..\..\src\Platform\Platform.Audit\Platform.Audit.csproj" />
-    <ProjectReference Include="..\..\..\src\Platform\Platform.Workflow\Platform.Workflow.csproj" />
-    <ProjectReference Include="..\..\..\src\Platform\Platform.Security\Platform.Security.csproj" />
     <ProjectReference Include="..\..\..\src\Platform\Platform.Attachments\Platform.Attachments.csproj" />
   </ItemGroup>
 

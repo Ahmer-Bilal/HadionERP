@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts and real Platform.Audit + Platform.Workflow + Platform.Security wiring (the full Audit/Workflow/Security gap-fix pass is complete); Attachments/Notes, bilingual names, and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts, real Platform.Audit/Workflow/Security wiring, and a new real Platform.Attachments capability; Notes, bilingual names, and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,59 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — New Platform.Attachments capability, wired into Business Partner
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed:
+  - **Built `Platform.Attachments` from scratch** — one of the guarantees `Platform.Core.BusinessObject`
+    was supposed to carry (Identity/Status/Lifecycle/Audit/Attachments/Notes/Workflow/Localization/
+    ExtensionData/Concurrency/Permissions) that had never been built at all, per the gap the user caught
+    when pressing on what a Business Object really embodies. New project, new test project (9 unit tests):
+    `AttachmentMetadata` (file metadata, deliberately without the file bytes as a property — listing
+    attachments must never load every file's content just to show a filename/size),
+    `IAttachmentRepository` (a storage-agnostic port, same "kernel defines it, a module with a real
+    database implements it" pattern as `IWorkflowInstanceRepository`), and `IAttachmentService`/
+    `AttachmentService` (the single entry point modules call — a 10 MB size ceiling and a content-type
+    **allowlist**, not a denylist, rejecting anything that isn't PDF/PNG/JPEG/Word/Excel; no executable,
+    script, or macro-capable format is ever accepted).
+  - Implemented `EfAttachmentRepository` in `Modules.MasterData.Infrastructure` — file metadata in a new
+    `attachments` table, bytes in a separate `attachment_contents` table (cascade-deleted with the
+    metadata row), new migration applied to both dev and test databases.
+  - Wired into `BusinessPartnerService`: `AddAttachmentAsync`/`ListAttachmentsAsync`/
+    `DownloadAttachmentAsync`/`DeleteAttachmentAsync`, gated by the same Maintainer privilege as everything
+    else (uploading a document is a maintenance action). `DownloadAttachmentAsync` double-checks the
+    attachment's own business-object id matches the requested partner before returning it, so guessing an
+    id can never fetch another partner's file. Added matching endpoints to `BusinessPartnersController`
+    (`POST/GET/DELETE .../{id}/attachments...`, `multipart/form-data` upload, correct
+    `Content-Type`/`Content-Disposition` on download).
+  - **Also closed a small, separate, pre-existing gap while touching this controller**: added a `Reject`
+    button to the frontend next to Approve — the backend endpoint has existed since the Workflow slice but
+    was never exposed in the UI until now.
+  - **Verified live**: full solution builds with 0 errors, every test project passes (198 tests across the
+    solution: 9 new in `Platform.Attachments.Tests`, 5 new in `Modules.MasterData.Tests`, 2 new integration
+    tests proving metadata + bytes round-trip through real PostgreSQL via a fresh `DbContext`), then
+    exercised the real running API end-to-end with `curl` — upload, list, download (byte-for-byte match),
+    delete, and confirmed the content-type allowlist actually rejects a disallowed upload (`400`). Also
+    verified the full upload/list/download/delete flow live in a real browser with no console errors.
+- Files touched: `src/Platform/Platform.Attachments/*` (new project: `AttachmentMetadata`,
+  `IAttachmentRepository`, `IAttachmentService`, `AttachmentService`, `README`),
+  `tests/UnitTests/Platform.Attachments.Tests/*` (new project), `src/Modules/Modules.MasterData/
+  Infrastructure/{EfAttachmentRepository,AttachmentContentRow,MasterDataDbContext,
+  Modules.MasterData.Infrastructure.csproj}`, `src/Modules/Modules.MasterData/Infrastructure/
+  Migrations/*AddAttachments*` (new), `src/Modules/Modules.MasterData/Application/
+  {BusinessPartnerService,BusinessPartnerDto,Modules.MasterData.Application.csproj}`,
+  `src/Modules/Modules.MasterData/Api/{BusinessPartnersController,Modules.MasterData.Api.csproj}`,
+  `src/Gateway/Gateway.Api/Program.cs`, `src/Apps/Apps.Shell/src/{api/businessPartnerApi.ts,
+  pages/BusinessPartnersPage.tsx,i18n/content.ts}`, `tests/UnitTests/Modules.MasterData.Tests/
+  {BusinessPartnerServiceTests,FakeAttachmentRepository,Modules.MasterData.Tests.csproj}`,
+  `tests/IntegrationTests/Modules.MasterData.IntegrationTests/{AttachmentPersistenceTests,TestDatabase}.cs`,
+  `src/Modules/Modules.MasterData/README.md`, `src/Platform/Platform.Core/README.md`,
+  `erp-platform.sln`
+- Next: Build Notes into `Platform.Core` (the last of the never-built BusinessObject guarantees), then add
+  bilingual (Arabic + English) name fields to `BusinessPartner` (ZATCA/KSA legal requirement). Only after
+  those does Phase 1 continue to Chart of Accounts/Items/Cost Centers/Tax codes and Finance.
 
 ### 2026-07-14 — Business Partner: Platform.Security wired in (third and last of the Audit/Workflow/Security gap-fix pass)
 - Agent: Claude Sonnet 5

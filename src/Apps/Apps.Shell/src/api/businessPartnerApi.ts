@@ -56,6 +56,15 @@ export interface AddBusinessPartnerContactInput {
   phone?: string;
 }
 
+export interface Attachment {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
 const BASE_PATH = "/api/v1/masterdata/business-partners";
 
 async function handleJson<T>(response: Response): Promise<T> {
@@ -117,4 +126,36 @@ export async function submitBusinessPartner(id: string): Promise<BusinessPartner
 export async function approveBusinessPartner(id: string): Promise<BusinessPartner> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST" });
   return handleJson(response);
+}
+
+export async function rejectBusinessPartner(id: string): Promise<BusinessPartner> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST" });
+  return handleJson(response);
+}
+
+export async function uploadBusinessPartnerAttachment(id: string, file: File): Promise<Attachment> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`, {
+    method: "POST",
+    body: formData,
+  });
+  return handleJson(response);
+}
+
+export async function listBusinessPartnerAttachments(id: string): Promise<Attachment[]> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`);
+  return handleJson(response);
+}
+
+export function businessPartnerAttachmentDownloadUrl(id: string, attachmentId: string): string {
+  return `${API_BASE_URL}${BASE_PATH}/${id}/attachments/${attachmentId}/content`;
+}
+
+export async function deleteBusinessPartnerAttachment(id: string, attachmentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments/${attachmentId}`, { method: "DELETE" });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.detail ?? body?.title ?? `Request failed with status ${response.status}`);
+  }
 }

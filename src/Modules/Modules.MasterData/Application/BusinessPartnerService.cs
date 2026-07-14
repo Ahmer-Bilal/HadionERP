@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Modules.MasterData.Domain;
+using Platform.Attachments;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
@@ -35,6 +36,7 @@ public sealed class BusinessPartnerService
     private readonly IWorkflowInstanceRepository _workflowInstanceRepository;
     private readonly IAuthorizationService _authorizationService;
     private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
+    private readonly IAttachmentService _attachmentService;
 
     public BusinessPartnerService(
         IBusinessPartnerRepository repository,
@@ -43,7 +45,8 @@ public sealed class BusinessPartnerService
         IWorkflowEngine workflowEngine,
         IWorkflowInstanceRepository workflowInstanceRepository,
         IAuthorizationService authorizationService,
-        IActorRoleAssignmentStore actorRoleAssignmentStore)
+        IActorRoleAssignmentStore actorRoleAssignmentStore,
+        IAttachmentService attachmentService)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
@@ -52,6 +55,7 @@ public sealed class BusinessPartnerService
         _workflowInstanceRepository = workflowInstanceRepository;
         _authorizationService = authorizationService;
         _actorRoleAssignmentStore = actorRoleAssignmentStore;
+        _attachmentService = attachmentService;
     }
 
     public async Task<BusinessPartnerDto> CreateAsync(
@@ -152,6 +156,68 @@ public sealed class BusinessPartnerService
             AuditSource);
 
         return ToDto(partner);
+    }
+
+    public async Task<AttachmentDto> AddAttachmentAsync(
+        Guid id, string fileName, string contentType, byte[] content, string actor, CancellationToken cancellationToken = default)
+    {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        var metadata = await _attachmentService.UploadAsync(
+            AuditTargetType, partner.Id, fileName, contentType, content, actor, cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id),
+            actor,
+            $"Attachment '{fileName}' added to '{partner.Name}'.",
+            new[] { new FieldValueChange("Attachments", OldValueJson: null, NewValueJson: JsonSerializer.Serialize(fileName)) },
+            AuditSource);
+
+        return ToAttachmentDto(metadata);
+    }
+
+    public async Task<IReadOnlyList<AttachmentDto>> ListAttachmentsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await RequirePartnerAsync(id, cancellationToken);
+        var attachments = await _attachmentService.ListAsync(AuditTargetType, id, cancellationToken);
+        return attachments.Select(ToAttachmentDto).ToList();
+    }
+
+    /// <summary>Null if the attachment doesn't exist, or exists but doesn't belong to this partner — the
+    /// controller treats both as 404, never leaking whether an id belongs to some other Business Partner.</summary>
+    public async Task<(AttachmentDto Metadata, byte[] Content)?> DownloadAttachmentAsync(
+        Guid id, Guid attachmentId, CancellationToken cancellationToken = default)
+    {
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        var download = await _attachmentService.DownloadAsync(attachmentId, cancellationToken);
+        if (download is null || download.Value.Metadata.BusinessObjectId != partner.Id)
+        {
+            return null;
+        }
+
+        return (ToAttachmentDto(download.Value.Metadata), download.Value.Content);
+    }
+
+    public async Task DeleteAttachmentAsync(Guid id, Guid attachmentId, string actor, CancellationToken cancellationToken = default)
+    {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        var metadata = await _attachmentService.DownloadAsync(attachmentId, cancellationToken);
+        if (metadata is null || metadata.Value.Metadata.BusinessObjectId != partner.Id)
+        {
+            throw new KeyNotFoundException($"Attachment {attachmentId} was not found on business partner {id}.");
+        }
+
+        await _attachmentService.DeleteAsync(attachmentId, cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id),
+            actor,
+            $"Attachment '{metadata.Value.Metadata.FileName}' removed from '{partner.Name}'.",
+            new[] { new FieldValueChange("Attachments", OldValueJson: JsonSerializer.Serialize(metadata.Value.Metadata.FileName), NewValueJson: null) },
+            AuditSource);
     }
 
     /// <summary>
@@ -306,6 +372,9 @@ public sealed class BusinessPartnerService
     private async Task<BusinessPartner> RequirePartnerAsync(Guid id, CancellationToken cancellationToken) =>
         await _repository.GetAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"Business partner {id} was not found.");
+
+    private static AttachmentDto ToAttachmentDto(AttachmentMetadata metadata) => new(
+        metadata.Id, metadata.FileName, metadata.ContentType, metadata.SizeBytes, metadata.UploadedBy, metadata.UploadedAt);
 
     private static BusinessPartnerDto ToDto(BusinessPartner partner) => new(
         partner.Id,

@@ -42,12 +42,22 @@ type TranslationKey =
   | "bp.actionBack"
   | "bp.actionSubmit"
   | "bp.actionApprove"
+  | "bp.actionReject"
   | "bp.columnDocumentNumber"
   | "bp.columnName"
   | "bp.columnType"
   | "bp.columnStatus"
   | "bp.tabAddresses"
   | "bp.tabContacts"
+  | "bp.tabAttachments"
+  | "bp.actionUpload"
+  | "bp.actionDownload"
+  | "bp.actionDelete"
+  | "bp.columnFileName"
+  | "bp.columnFileSize"
+  | "bp.columnUploadedBy"
+  | "bp.columnUploadedAt"
+  | "bp.emptyAttachments"
   | "bp.fieldName"
   | "bp.fieldPartnerType"
   | "bp.fieldTaxRegistrationNumber"
@@ -119,12 +129,22 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
   "bp.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
   "bp.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "bp.actionReject": { en: "Reject", ar: "رفض" },
   "bp.columnDocumentNumber": { en: "Number", ar: "الرقم" },
   "bp.columnName": { en: "Name", ar: "الاسم" },
   "bp.columnType": { en: "Type", ar: "النوع" },
   "bp.columnStatus": { en: "Status", ar: "الحالة" },
   "bp.tabAddresses": { en: "Addresses", ar: "العناوين" },
   "bp.tabContacts": { en: "Contacts", ar: "جهات الاتصال" },
+  "bp.tabAttachments": { en: "Attachments", ar: "المرفقات" },
+  "bp.actionUpload": { en: "Upload", ar: "رفع" },
+  "bp.actionDownload": { en: "Download", ar: "تنزيل" },
+  "bp.actionDelete": { en: "Delete", ar: "حذف" },
+  "bp.columnFileName": { en: "File Name", ar: "اسم الملف" },
+  "bp.columnFileSize": { en: "Size", ar: "الحجم" },
+  "bp.columnUploadedBy": { en: "Uploaded By", ar: "رفعه" },
+  "bp.columnUploadedAt": { en: "Uploaded At", ar: "تاريخ الرفع" },
+  "bp.emptyAttachments": { en: "No attachments yet.", ar: "لا توجد مرفقات حتى الآن." },
   "bp.fieldName": { en: "Name", ar: "الاسم" },
   "bp.fieldPartnerType": { en: "Partner Type", ar: "نوع الشريك" },
   "bp.fieldTaxRegistrationNumber": { en: "Tax Registration Number", ar: "الرقم الضريبي" },

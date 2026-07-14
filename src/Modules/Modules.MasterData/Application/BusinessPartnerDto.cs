@@ -21,3 +21,8 @@ public sealed record CreateBusinessPartnerRequest(string Name, string PartnerTyp
 public sealed record AddBusinessPartnerAddressRequest(string AddressType, string? Country, string? City, string? AddressLine);
 
 public sealed record AddBusinessPartnerContactRequest(string Name, string? JobTitle, string? Email, string? Phone);
+
+/// <summary>Metadata only — never the file bytes, which are fetched separately by id (see
+/// <c>BusinessPartnersController.DownloadAttachment</c>) so listing attachments stays cheap.</summary>
+public sealed record AttachmentDto(
+    Guid Id, string FileName, string ContentType, long SizeBytes, string UploadedBy, DateTimeOffset UploadedAt);

@@ -55,6 +55,17 @@ for real business records that must survive a restart.
     Approver Role key (`MasterData.ApproveBusinessPartner`) is deliberately the same one
     `BusinessPartnerWorkflow`'s step already used, so one Role means "can approve" to both the workflow
     engine's eligibility check and Security's privilege-grant resolution.
+  - **`Platform.Attachments` is wired in too** — the last of the guarantees `Platform.Core.BusinessObject`
+    was supposed to carry but had never been built at all (Attachments/Notes, alongside Audit/Workflow/
+    Security, per the gap the user caught). `AddAttachmentAsync`/`ListAttachmentsAsync`/
+    `DownloadAttachmentAsync`/`DeleteAttachmentAsync` call `Platform.Attachments.IAttachmentService` —
+    upload/delete are gated by the same Maintainer privilege as everything else (uploading a document is
+    a maintenance action, not a separate permission). `DownloadAttachmentAsync` double-checks the
+    attachment's own `BusinessObjectId` matches the requested partner before returning it, so an id
+    guessed for one partner can never fetch another partner's file. First real use case: Business
+    Partner onboarding documents (CR copy, GOSI certificate, ISO certificates, bank letter) — exactly the
+    supporting documents Vendor Prequalification's future design already anticipated (see
+    `docs/architecture/06-roadmap.md` Phase 2).
 - **Infrastructure**: `MasterDataDbContext` (EF Core, Postgres, its own `masterdata` schema — physically
   enforcing the module-boundary rule at the database level), `EfBusinessPartnerRepository`,
   `EfCoreNumberRangeService` (a real, atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`
@@ -68,15 +79,24 @@ for real business records that must survive a restart.
     requests). Mapped into its own `workflow_instances` table with `ApplicableSteps`/history/approver-set
     fields stored as `jsonb` (same choice as `ExtensionFields`), each with an explicit `ValueComparer` —
     see bug 7 below for why that matters here specifically.
+  - **`EfAttachmentRepository`** implements `Platform.Attachments.IAttachmentRepository` — file metadata in
+    an `attachments` table, bytes in a separate `attachment_contents` table (cascade-deleted with the
+    metadata row) so that listing attachments never has to load every file's full content just to show a
+    filename and size (see `AttachmentMetadata`'s own doc comment in `Platform.Attachments`).
 - **Api**: `BusinessPartnersController` (inherits `Platform.Api.PlatformApiController`) at
   `api/v1/masterdata/business-partners`, with `POST .../{id}/addresses` and `POST .../{id}/contacts` to
-  append a child (there is no update/remove endpoint yet — see Deferred), and `POST .../{id}/reject`
-  alongside the existing `.../submit`/`.../approve`.
+  append a child (there is no update/remove endpoint yet — see Deferred), `POST .../{id}/reject` alongside
+  the existing `.../submit`/`.../approve`, and `POST .../{id}/attachments` (multipart file upload),
+  `GET .../{id}/attachments` (list metadata), `GET .../{id}/attachments/{attachmentId}/content` (download,
+  correct `Content-Type`/`Content-Disposition`), `DELETE .../{id}/attachments/{attachmentId}`.
 - **Frontend**: `src/Apps/Apps.Shell/src/pages/BusinessPartnersPage.tsx` — the first real business screen
-  (List + create/details), using `Platform.UI`'s `ActionPane`/`FastTabs`. The details view has separate
-  Addresses/Contacts FastTabs, each showing the existing rows plus an inline add form. Not using a shared
-  "List+Details form template" yet — that's deferred until a second business object needs the same shape
-  (see `Platform.UI/README.md`), so the common pattern gets extracted from real usage, not guessed at.
+  (List + create/details), using `Platform.UI`'s `ActionPane`/`FastTabs`. The details view has
+  Addresses/Contacts/Attachments FastTabs, each showing the existing rows plus an inline add form (a file
+  picker + Upload button for Attachments); a Reject button now sits alongside Approve on a Submitted
+  partner (the backend endpoint existed since the Workflow slice but was never exposed in the UI until
+  now). Not using a shared "List+Details form template" yet — that's deferred until a second business
+  object needs the same shape (see `Platform.UI/README.md`), so the common pattern gets extracted from
+  real usage, not guessed at.
 
 ## Real bugs found and fixed while building this (disclosed, not hidden)
 
@@ -136,12 +156,16 @@ Nothing new broke while wiring `Platform.Security` — no bug found in that pass
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.
-- `Platform.Audit`, `Platform.Workflow`, and `Platform.Security` are now all wired into this module (see
-  above) — the gap the user originally caught (kernel services built and tested in isolation, never
-  actually consumed by the first real business module) is closed for Business Partner. Row-level and
-  field-level security (`Platform.Security.RowLevel`/`FieldLevel`) are NOT wired — no row is scoped by
+- `Platform.Audit`, `Platform.Workflow`, `Platform.Security`, and `Platform.Attachments` are now all wired
+  into this module (see above) — the gap the user originally caught (kernel services built and tested in
+  isolation, never actually consumed by the first real business module) is closed for Business Partner.
+  `Platform.Core`'s Notes guarantee still doesn't exist at all — the next slice. Row-level and field-level
+  security (`Platform.Security.RowLevel`/`FieldLevel`) are NOT wired — no row is scoped by
   company/branch/project yet, and no field (there's nothing salary/IBAN-sensitive on Business Partner
   today) is masked. Revisit when a module has data that actually needs either.
+- Editing or removing an existing attachment's metadata (renaming a file) isn't exposed — only
+  add/list/download/delete exist. Real blob storage (not Postgres `bytea`) and virus scanning are
+  `Platform.Attachments`'s own deferred items — see its README.
 - Segregation of Duties (`BusinessPartnerSecurity.MaintainerApproverConflict`) is registered and tested
   against the real `SodEngine`, but not checked anywhere in the live request path — `ISodEngine.FindConflicts`
   is meant to run when a role *assignment* is being made ("would giving this user both Duties create a
