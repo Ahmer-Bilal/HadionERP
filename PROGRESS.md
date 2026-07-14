@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts, real Platform.Audit + Platform.Workflow wiring; Platform.Security wiring, Attachments/Notes, bilingual names, and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts and real Platform.Audit + Platform.Workflow + Platform.Security wiring (the full Audit/Workflow/Security gap-fix pass is complete); Attachments/Notes, bilingual names, and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,58 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — Business Partner: Platform.Security wired in (third and last of the Audit/Workflow/Security gap-fix pass)
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed — closes out the full Audit → Workflow → Security gap-fix pass the user requested
+- What changed:
+  - **Wired `Platform.Security` into `BusinessPartnerService`/`BusinessPartnersController`** — the last of
+    the three kernel services (Audit, Workflow, Security) that existed and were tested in isolation since
+    Phase 0 but were never actually consumed by the first real business module. `BusinessPartnerSecurity`
+    (new, in `Modules.MasterData.Application`) registers a deliberately split Duty pair — Maintainer
+    (create/add address/add contact/submit) and Approver (approve/reject) — plus a real SoD conflict rule
+    between them: the exact "Create Vendor vs. Approve Vendor Payment" example this module's own domain
+    comments already referenced without ever enforcing it. Every public `BusinessPartnerService` method now
+    calls `IAuthorizationService.Authorize(...)` first and throws `UnauthorizedAccessException` on denial.
+  - Added `PlatformApiController.ForbiddenError()` + `ApiErrorEnvelope.Forbidden()` (403) — the first
+    module needed this response shape, so it's added to the shared base rather than reinvented locally.
+  - `BusinessPartnersController` now uses two distinct hardcoded actors — `"system/ui"` (Maintainer) for
+    create/edit/submit, `"system/approver"` (Approver) for approve/reject — instead of one `"system/ui"`
+    for everything. Not cosmetic: this is what makes the SoD split real even without per-user login (the
+    same actor can never both create and approve).
+  - Added `Platform.Security.IActorRoleAssignmentStore` (+ `InMemoryActorRoleAssignmentStore`) — a real,
+    if temporary, actor-to-Role resolver, replacing the prior workflow-eligibility shim that granted the
+    approver Role to whichever actor string was passed unconditionally. An actor with no assignment now
+    resolves to zero Roles (denied by default, not granted by default) — the same Role
+    (`MasterData.ApproveBusinessPartner`) still serves double duty for both Workflow eligibility and
+    Security's privilege-grant resolution, so one Role means "can approve" everywhere.
+  - Registered `Platform.Security.Sod`'s `ISodEngine`/`ISodExceptionLog` in `Gateway.Api`'s DI container for
+    the first time (previously built and tested in `Platform.Security.Tests` but never actually wired into
+    the running application). Proved the registered conflict rule is caught by the real `SodEngine` via a
+    unit test — disclosed that it isn't checked anywhere in the live request path yet, since there is no
+    role-*assignment* admin surface in the application to check it against (only role *definitions* exist).
+  - **Verified live**: full solution builds with 0 errors, every test project passes (32 unit tests in
+    Modules.MasterData.Tests including 4 new Security-specific ones, plus a new `Forbidden` envelope test
+    in Platform.Api.Tests, 8 integration tests against real PostgreSQL — 115 tests total across the
+    solution), then exercised the real running API end-to-end (create → submit → approve, both now
+    passing through real authorization checks) and confirmed via `/api/v1/system/status` that the audit
+    chain remained valid. Also verified the existing frontend Submit/Approve buttons live in a real browser
+    with no console errors — no frontend changes were needed, the API contract didn't change shape.
+- Files touched: `src/Platform/Platform.Security/{IActorRoleAssignmentStore,InMemoryActorRoleAssignmentStore,
+  README}`, `src/Platform/Platform.Api/{ApiErrorEnvelope,PlatformApiController,README}`,
+  `src/Modules/Modules.MasterData/Application/{BusinessPartnerSecurity,BusinessPartnerService,
+  Modules.MasterData.Application.csproj}`, `src/Modules/Modules.MasterData/Api/BusinessPartnersController.cs`,
+  `src/Gateway/Gateway.Api/Program.cs`, `tests/UnitTests/Modules.MasterData.Tests/BusinessPartnerServiceTests.cs`,
+  `tests/UnitTests/Platform.Api.Tests/ApiErrorEnvelopeTests.cs`, `src/Modules/Modules.MasterData/README.md`
+- Next: This closes the Audit/Workflow/Security gap-fix pass the user explicitly requested after catching
+  that `BusinessObject`'s full guarantee set (Identity/Status/Lifecycle/Audit/Attachments/Notes/Workflow/
+  Localization/ExtensionData/Concurrency/Permissions) wasn't actually all wired into Business Partner. Per
+  the user's chosen sequencing, remaining: build Attachments into `Platform.Core` (never built at all —
+  next up, with Vendor Prequalification's future supporting documents as a natural real use case, see
+  `docs/architecture/06-roadmap.md` Phase 2), then Notes, then bilingual (Arabic + English) name fields on
+  `BusinessPartner`. Only after those does Phase 1 continue to Chart of Accounts/Items/Cost Centers/Tax
+  codes and Finance.
 
 ### 2026-07-14 — Branding: the application is named HadionERP, by hAdisHere, created by aHmAr
 - Agent: Claude Sonnet 5

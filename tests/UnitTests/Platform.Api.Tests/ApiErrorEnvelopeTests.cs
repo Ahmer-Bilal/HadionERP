@@ -48,6 +48,17 @@ public class ApiErrorEnvelopeTests
     }
 
     [Fact]
+    public void Forbidden_has_403_status_and_no_field_errors()
+    {
+        var envelope = ApiErrorEnvelope.Forbidden("Principal 'ahmer.bilal' holds no Duty granting 'MasterData.BusinessPartner.Approve'.");
+
+        Assert.Equal(403, envelope.Status);
+        Assert.Equal("Forbidden", envelope.Title);
+        Assert.Contains("MasterData.BusinessPartner.Approve", envelope.Detail!);
+        Assert.Empty(envelope.Errors);
+    }
+
+    [Fact]
     public void Conflict_has_a_distinct_type_uri_from_client_errors()
     {
         // Validation and BadRequest are both 400-class errors, so they share a type URI — that's correct,

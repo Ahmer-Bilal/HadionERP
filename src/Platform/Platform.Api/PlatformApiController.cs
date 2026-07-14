@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Platform.Api;
@@ -32,4 +33,9 @@ public abstract class PlatformApiController : ControllerBase
     /// <summary>Returns a 409 conflict error (e.g. optimistic concurrency mismatch, duplicate doc number).</summary>
     protected static IActionResult ConflictError(string detail) =>
         new ConflictObjectResult(ApiErrorEnvelope.Conflict(detail));
+
+    /// <summary>Returns a 403 forbidden error (an actor lacking the required Privilege), using the
+    /// standard error envelope.</summary>
+    protected static IActionResult ForbiddenError(string detail) =>
+        new ObjectResult(ApiErrorEnvelope.Forbidden(detail)) { StatusCode = StatusCodes.Status403Forbidden };
 }

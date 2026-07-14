@@ -16,3 +16,21 @@ environment to mean anything):
 All in-memory reference implementations here (`InMemorySecurityCatalog`, `InMemorySodExceptionLog`) are
 swappable for database-backed ones later without any module code changing, the same pattern used in
 `Platform.Core`'s `InMemoryNumberRangeService`.
+
+## First real consumer: Modules.MasterData's Business Partner
+
+`BusinessPartnerSecurity` (in `Modules.MasterData.Application`) is the first real Roles/Duties/Privileges
+registration and the first real SoD conflict rule — a deliberately split Maintainer/Approver Duty pair,
+the exact "Create Vendor vs. Approve Vendor Payment" example from docs/architecture/03-platform-services.md
+#2.2. `BusinessPartnerService` calls `IAuthorizationService.Authorize(...)` before every action and throws
+`UnauthorizedAccessException` on denial. See `Modules.MasterData/README.md` for the full story, including
+what SoD enforcement is still missing (a role-*assignment* admin surface to check the rule against).
+
+### `IActorRoleAssignmentStore` — a temporary stand-in for real SSO
+
+Added alongside Business Partner's wiring: resolves a bare actor-id string (what every module currently
+passes around as "actor") to the Role keys assigned to them, so `SecurityPrincipal` objects built from that
+actor have real data to check against instead of an unconditional grant. `InMemoryActorRoleAssignmentStore`
+is a fixed lookup table seeded at startup — an actor with no entry resolves to zero Roles (denied by
+default, not granted by default). A real deployment replaces this entirely with role assignment resolved
+from the authenticated identity, behind this same interface — no calling code changes.

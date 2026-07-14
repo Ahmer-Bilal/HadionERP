@@ -12,11 +12,12 @@ namespace Modules.MasterData.Application;
 /// Orchestrates Business Partner use cases — validates input, drives the Domain object, and persists
 /// through the repository port. No business rules live here (those belong on
 /// <see cref="BusinessPartner"/> itself, per docs/architecture/01-architecture-foundation.md #1); this
-/// layer only coordinates. Audit and Workflow are likewise platform services, not module logic (CLAUDE.md /
-/// docs/architecture/03-platform-services.md #4-5) — this layer only calls
-/// <see cref="Platform.Audit.IAuditRecorder"/> and <see cref="Platform.Workflow.IWorkflowEngine"/> at the
-/// points a real business process cares about; the actual capture/hash-chaining/approval-routing logic
-/// lives entirely in those platform projects.
+/// layer only coordinates. Audit, Workflow, and Security are likewise platform services, not module logic
+/// (CLAUDE.md / docs/architecture/03-platform-services.md #2, #4-5) — this layer only calls
+/// <see cref="Platform.Audit.IAuditRecorder"/>, <see cref="Platform.Workflow.IWorkflowEngine"/>, and
+/// <see cref="Platform.Security.IAuthorizationService"/> at the points a real business process cares
+/// about; the actual capture/hash-chaining/approval-routing/permission logic lives entirely in those
+/// platform projects.
 /// </summary>
 public sealed class BusinessPartnerService
 {
@@ -32,24 +33,32 @@ public sealed class BusinessPartnerService
     private readonly IAuditRecorder _auditRecorder;
     private readonly IWorkflowEngine _workflowEngine;
     private readonly IWorkflowInstanceRepository _workflowInstanceRepository;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
 
     public BusinessPartnerService(
         IBusinessPartnerRepository repository,
         INumberRangeService numberRangeService,
         IAuditRecorder auditRecorder,
         IWorkflowEngine workflowEngine,
-        IWorkflowInstanceRepository workflowInstanceRepository)
+        IWorkflowInstanceRepository workflowInstanceRepository,
+        IAuthorizationService authorizationService,
+        IActorRoleAssignmentStore actorRoleAssignmentStore)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
         _auditRecorder = auditRecorder;
         _workflowEngine = workflowEngine;
         _workflowInstanceRepository = workflowInstanceRepository;
+        _authorizationService = authorizationService;
+        _actorRoleAssignmentStore = actorRoleAssignmentStore;
     }
 
     public async Task<BusinessPartnerDto> CreateAsync(
         CreateBusinessPartnerRequest request, string actor, string companyId, CancellationToken cancellationToken = default)
     {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
         if (!Enum.TryParse<PartnerType>(request.PartnerType, ignoreCase: true, out var partnerType))
         {
             throw new ArgumentException($"Invalid partner type '{request.PartnerType}'. Expected Customer, Vendor, or Both.");
@@ -90,6 +99,8 @@ public sealed class BusinessPartnerService
     public async Task<BusinessPartnerDto> AddAddressAsync(
         Guid id, AddBusinessPartnerAddressRequest request, string actor, CancellationToken cancellationToken = default)
     {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
         if (!Enum.TryParse<AddressType>(request.AddressType, ignoreCase: true, out var addressType))
         {
             throw new ArgumentException(
@@ -120,6 +131,8 @@ public sealed class BusinessPartnerService
     public async Task<BusinessPartnerDto> AddContactAsync(
         Guid id, AddBusinessPartnerContactRequest request, string actor, CancellationToken cancellationToken = default)
     {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
         var partner = await RequirePartnerAsync(id, cancellationToken);
         var contact = partner.AddContact(request.Name, request.JobTitle, request.Email, request.Phone);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -154,6 +167,8 @@ public sealed class BusinessPartnerService
     /// </summary>
     public async Task<BusinessPartnerDto> SubmitAsync(Guid id, string actor, CancellationToken cancellationToken = default)
     {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
         var partner = await RequirePartnerAsync(id, cancellationToken);
         var fromStatus = partner.Status;
         partner.Submit(actor);
@@ -204,11 +219,13 @@ public sealed class BusinessPartnerService
     private async Task<BusinessPartnerDto> DecideApprovalAsync(
         Guid id, string actor, WorkflowDecision decision, CancellationToken cancellationToken)
     {
+        RequireAuthorization(actor, BusinessPartnerSecurity.ApprovePrivilegeKey);
+
         var partner = await RequirePartnerAsync(id, cancellationToken);
         var instance = await _workflowInstanceRepository.GetActiveAsync(BusinessPartnerWorkflow.BusinessObjectType, partner.Id, cancellationToken)
             ?? throw new InvalidOperationException($"Business partner {id} has no pending approval to decide.");
 
-        _workflowEngine.Decide(instance, ActingPrincipal(actor), decision);
+        _workflowEngine.Decide(instance, BuildPrincipal(actor), decision);
         await _workflowInstanceRepository.SaveChangesAsync(cancellationToken);
 
         switch (instance.Status)
@@ -257,15 +274,32 @@ public sealed class BusinessPartnerService
     }
 
     /// <summary>
-    /// Builds the principal <see cref="IWorkflowEngine.Decide"/> checks eligibility against. A temporary
-    /// shim, disclosed: real SSO/role-assignment doesn't exist yet (see
-    /// `Modules.MasterData/README.md`'s deferred list), so every actor is granted
-    /// <see cref="BusinessPartnerWorkflow.ApproverRoleKey"/> unconditionally rather than looked up from a
-    /// real user-role store. This is exactly what the next slice — wiring `Platform.Security` into this
-    /// module — replaces with the real authenticated principal.
+    /// The real authorization gate — calls <see cref="Platform.Security.IAuthorizationService"/>, the
+    /// same platform service every module is meant to call rather than reimplementing permission checks
+    /// (docs/architecture/03-platform-services.md #2.2). Throws <see cref="UnauthorizedAccessException"/>
+    /// on denial, the same exception type <see cref="IWorkflowEngine.Decide"/> already throws for
+    /// workflow-eligibility denials — <see cref="Api.BusinessPartnersController"/> maps both to a 403.
     /// </summary>
-    private static SecurityPrincipal ActingPrincipal(string actor) =>
-        new(actor, new[] { BusinessPartnerWorkflow.ApproverRoleKey }, new Dictionary<string, IReadOnlySet<string>>());
+    private void RequireAuthorization(string actor, string privilegeKey)
+    {
+        var result = _authorizationService.Authorize(BuildPrincipal(actor), privilegeKey);
+        if (!result.Allowed)
+        {
+            throw new UnauthorizedAccessException(result.Reason);
+        }
+    }
+
+    /// <summary>
+    /// Builds the principal both <see cref="RequireAuthorization"/> and <see cref="IWorkflowEngine.Decide"/>
+    /// check against, resolving real Role keys from <see cref="IActorRoleAssignmentStore"/> — replacing
+    /// what used to be an unconditional grant (see git history for the prior shim). Still a placeholder
+    /// for real authentication (there is no logged-in user yet, only the bare actor-id strings every
+    /// endpoint currently hardcodes — see `Modules.MasterData/README.md`'s deferred list), but it is no
+    /// longer a shim that grants every actor every role: an actor with no assignment resolves to zero
+    /// Roles and is correctly denied.
+    /// </summary>
+    private SecurityPrincipal BuildPrincipal(string actor) =>
+        new(actor, _actorRoleAssignmentStore.ResolveRoleKeys(actor), new Dictionary<string, IReadOnlySet<string>>());
 
     private static BusinessObjectReference AuditReference(Guid partnerId) => new(partnerId, AuditTargetType, "Self");
 

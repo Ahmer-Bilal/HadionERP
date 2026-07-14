@@ -9,7 +9,11 @@ it's base classes + result types that make the conventions uniform and hard to g
 
 ## What's built
 - `PlatformApiController`: the base controller. Route convention `api/v1/[controller]` (URL-segment major
-  version, §2.1). Provides `Paged()`, `ValidationError()`, `BadRequestError()`, `ConflictError()` helpers.
+  version, §2.1). Provides `Paged()`, `ValidationError()`, `BadRequestError()`, `ConflictError()`,
+  `ForbiddenError()` helpers — `ForbiddenError` added alongside Modules.MasterData's Business Partner
+  wiring `Platform.Security` for the first time: a module's Application layer throws
+  `UnauthorizedAccessException` on an authorization denial, and its controller catches that and returns
+  `ForbiddenError(ex.Message)`.
 - `PagedResult<T>`: the standard envelope for list endpoints — `Items`, `TotalCount`, `Skip`, `Top`. A
   consistent shape so the frontend and integrators always know how to page through a list.
 - `ODataQuery`: parses `$top`, `$skip`, `$orderby`, `$filter`, `$select`, `$count` from the query string

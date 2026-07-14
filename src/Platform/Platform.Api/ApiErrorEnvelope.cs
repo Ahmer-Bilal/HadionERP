@@ -26,4 +26,9 @@ public sealed record ApiErrorEnvelope(
     /// <summary>Builds a 400 bad-request error with a single message (no field-level detail).</summary>
     public static ApiErrorEnvelope BadRequest(string detail) =>
         new("https://httpstatuses.io/400", "Bad request", 400, detail, new Dictionary<string, string[]>());
+
+    /// <summary>Builds a 403 forbidden error (an actor lacking the required Privilege — see
+    /// Platform.Security.IAuthorizationService).</summary>
+    public static ApiErrorEnvelope Forbidden(string detail) =>
+        new("https://httpstatuses.io/403", "Forbidden", 403, detail, new Dictionary<string, string[]>());
 }

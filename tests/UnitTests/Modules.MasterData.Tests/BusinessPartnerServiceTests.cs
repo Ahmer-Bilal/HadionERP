@@ -2,6 +2,8 @@ using Modules.MasterData.Application;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
+using Platform.Security;
+using Platform.Security.Sod;
 using Platform.Workflow;
 using Platform.Workflow.Delegation;
 
@@ -11,17 +13,29 @@ public class BusinessPartnerServiceTests
 {
     private static readonly int CurrentYear = DateTimeOffset.UtcNow.Year;
 
+    /// <summary>The two demo actors used throughout these tests — matches
+    /// <see cref="Modules.MasterData.Api.BusinessPartnersController"/>'s real MaintainerActor/ApproverActor
+    /// split: "ahmer.bilal" creates/maintains, "finance.manager" (or "compliance.officer") approves/rejects.
+    /// Never the same actor for both — that's the whole point of the Segregation of Duties split.</summary>
+    private static IActorRoleAssignmentStore BuildActorRoles() => new InMemoryActorRoleAssignmentStore(
+        new Dictionary<string, IReadOnlyCollection<string>>
+        {
+            ["ahmer.bilal"] = new[] { BusinessPartnerSecurity.MaintainerRoleKey },
+            ["finance.manager"] = new[] { BusinessPartnerWorkflow.ApproverRoleKey },
+            ["compliance.officer"] = new[] { BusinessPartnerWorkflow.ApproverRoleKey },
+        });
+
     private static BusinessPartnerService BuildService(out FakeBusinessPartnerRepository repository) =>
         BuildService(out repository, out _, out _);
 
     private static BusinessPartnerService BuildService(out FakeBusinessPartnerRepository repository, out IAuditLog auditLog) =>
         BuildService(out repository, out auditLog, out _);
 
-    /// <summary>Wires the REAL Platform.Workflow engine (only its own in-memory reference
-    /// implementations, already proven by Platform.Workflow.Tests) with
-    /// <see cref="Modules.MasterData.Application.BusinessPartnerWorkflow.SubmitApprovalDefinition"/>
-    /// registered — the same definition Gateway.Api registers at startup — so these tests exercise the
-    /// real routing/eligibility logic, not a stub that always says "approved."</summary>
+    /// <summary>Wires the REAL Platform.Workflow engine and the REAL Platform.Security
+    /// catalog/authorization service (only their own in-memory reference implementations, already proven
+    /// by Platform.Workflow.Tests/Platform.Security.Tests) with Business Partner's own registered
+    /// definitions — the same ones Gateway.Api registers at startup — so these tests exercise the real
+    /// routing/eligibility/authorization logic, not a stub that always says "allowed."</summary>
     private static BusinessPartnerService BuildService(
         out FakeBusinessPartnerRepository repository, out IAuditLog auditLog, out FakeWorkflowInstanceRepository workflowInstances)
     {
@@ -37,7 +51,14 @@ public class BusinessPartnerServiceTests
         var eligibilityService = new RoleBasedWorkflowEligibilityService(new InMemoryDelegationRegistry());
         var workflowEngine = new WorkflowEngine(workflowCatalog, eligibilityService);
 
-        return new BusinessPartnerService(repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances);
+        var securityCatalog = new InMemorySecurityCatalog(
+            new[] { BusinessPartnerSecurity.MaintainerRole, BusinessPartnerSecurity.ApproverRole },
+            new[] { BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty });
+        var authorizationService = new AuthorizationService(securityCatalog);
+
+        return new BusinessPartnerService(
+            repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances,
+            authorizationService, BuildActorRoles());
     }
 
     private static CreateBusinessPartnerRequest ValidRequest(string partnerType = "Vendor") =>
@@ -271,6 +292,56 @@ public class BusinessPartnerServiceTests
         await service.ApproveAsync(created.Id, "finance.manager");
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApproveAsync(created.Id, "finance.manager"));
+    }
+
+    [Fact]
+    public async Task CreateAsync_throws_for_an_actor_with_no_Maintainer_role()
+    {
+        var service = BuildService(out _);
+
+        // "finance.manager" holds the Approver role, not Maintainer — correctly denied.
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.CreateAsync(ValidRequest(), "finance.manager", "C001"));
+    }
+
+    [Fact]
+    public async Task CreateAsync_throws_for_a_completely_unknown_actor()
+    {
+        var service = BuildService(out _);
+
+        // No role assignment at all resolves to zero Roles — denied by default, not granted by default.
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.CreateAsync(ValidRequest(), "nobody", "C001"));
+    }
+
+    [Fact]
+    public async Task ApproveAsync_throws_for_an_actor_with_no_Approver_role()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+
+        // "ahmer.bilal" holds the Maintainer role, not Approver — correctly denied even though they
+        // created the record. This is the Segregation of Duties split actually holding.
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.ApproveAsync(created.Id, "ahmer.bilal"));
+    }
+
+    [Fact]
+    public void MaintainerApproverConflict_is_detected_by_the_real_SoD_engine_for_a_single_actor()
+    {
+        // Proves the registered SoD rule (BusinessPartnerSecurity.MaintainerApproverConflict) actually
+        // catches the exact scenario its own doc comment describes — a single user holding both the
+        // Maintainer and Approver Duties for Business Partner — using the real SodEngine, not a stub.
+        var sodEngine = new SodEngine(
+            new[] { BusinessPartnerSecurity.MaintainerApproverConflict }, new InMemorySodExceptionLog());
+
+        var conflicts = sodEngine.FindConflicts(new[]
+        {
+            BusinessPartnerSecurity.MaintainerDutyKey, BusinessPartnerSecurity.ApproverDutyKey
+        });
+
+        Assert.Single(conflicts);
+        Assert.Empty(sodEngine.FindConflicts(new[] { BusinessPartnerSecurity.MaintainerDutyKey }));
     }
 
     [Fact]

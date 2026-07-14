@@ -40,9 +40,21 @@ for real business records that must survive a restart.
     Added a `RejectAsync`/`POST .../{id}/reject` that didn't exist before this (Reject was reachable on the
     Domain object since Phase 1 but had no service method or endpoint — an existing gap this work also
     closed, not a new feature invented for its own sake, since a workflow's Reject decision needs
-    somewhere to land). **Disclosed shim**: `ActingPrincipal(actor)` grants the acting user the approver
-    role unconditionally, because there is no real user/role-assignment store yet — see `Platform.Security`
-    in Deferred below, the very next slice, which replaces this.
+    somewhere to land).
+  - **`Platform.Security` is wired in too** — `BusinessPartnerSecurity` registers a real, deliberately
+    split pair of Duties: `MasterData.BusinessPartner.Maintainer` (create, add address/contact, submit)
+    and `MasterData.BusinessPartner.Approver` (approve/reject), plus the SoD conflict rule between them —
+    the classic "Create Vendor vs. Approve Vendor Payment" example from
+    docs/architecture/03-platform-services.md #2.2, which this module's own domain comments already
+    referenced without ever actually enforcing. Every public `BusinessPartnerService` method now calls
+    `IAuthorizationService.Authorize(...)` first and throws `UnauthorizedAccessException` on denial
+    (mapped to a 403 by `BusinessPartnersController`) — replacing what used to be an unconditional grant.
+    `BusinessPartnersController` now uses two distinct hardcoded actors, `"system/ui"` (Maintainer) for
+    create/edit/submit and `"system/approver"` (Approver) for approve/reject, instead of one `"system/ui"`
+    for everything — not cosmetic: it's what makes the SoD split real even without per-user login. The
+    Approver Role key (`MasterData.ApproveBusinessPartner`) is deliberately the same one
+    `BusinessPartnerWorkflow`'s step already used, so one Role means "can approve" to both the workflow
+    engine's eligibility check and Security's privilege-grant resolution.
 - **Infrastructure**: `MasterDataDbContext` (EF Core, Postgres, its own `masterdata` schema — physically
   enforcing the module-boundary rule at the database level), `EfBusinessPartnerRepository`,
   `EfCoreNumberRangeService` (a real, atomic `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`
@@ -114,20 +126,33 @@ the intended lesson for this module going forward.
    the one scenario — mutation, not just insert — that could have hidden this bug from a less deliberate
    test).
 
+Nothing new broke while wiring `Platform.Security` — no bug found in that pass beyond the compile-time
+`Microsoft.AspNetCore.Http` missing `using` for `StatusCodes` in the new `ForbiddenError` helper
+(`Platform.Api.PlatformApiController`), caught immediately by the build.
+
 ## Deferred (disclosed, not hidden)
 
 - Chart of Accounts, Items, Cost Centers, Tax codes — the rest of Master Data (next slices of Phase 1).
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.
-- `Platform.Security` is still NOT wired into this module — `BusinessPartnersController` has no permission
-  checks gating any endpoint, and `BusinessPartnerService`'s `ActingPrincipal` shim grants the workflow
-  approver role to whichever actor string is passed rather than checking a real role assignment.
-  `Platform.Audit` and `Platform.Workflow` are both wired (see above); Security is the next slice.
-- Real authentication/company-context: `BusinessPartnersController` currently hardcodes
-  `actor = "system/ui"` and `companyId = "C001"` since no real SSO or company-selection UI exists yet —
-  see `Program.cs`. This also means every audit entry for Business Partner is currently attributed to
-  `"system/ui"`, not a real user — revisit once real auth exists.
+- `Platform.Audit`, `Platform.Workflow`, and `Platform.Security` are now all wired into this module (see
+  above) — the gap the user originally caught (kernel services built and tested in isolation, never
+  actually consumed by the first real business module) is closed for Business Partner. Row-level and
+  field-level security (`Platform.Security.RowLevel`/`FieldLevel`) are NOT wired — no row is scoped by
+  company/branch/project yet, and no field (there's nothing salary/IBAN-sensitive on Business Partner
+  today) is masked. Revisit when a module has data that actually needs either.
+- Segregation of Duties (`BusinessPartnerSecurity.MaintainerApproverConflict`) is registered and tested
+  against the real `SodEngine`, but not checked anywhere in the live request path — `ISodEngine.FindConflicts`
+  is meant to run when a role *assignment* is being made ("would giving this user both Duties create a
+  conflict"), and there is no role-assignment admin surface anywhere in this application yet (only role
+  *definitions* exist). The rule is real and will start mattering the moment role assignment exists;
+  disclosing this rather than faking an assignment-time check with nothing real to check it against.
+- Real authentication/company-context: `BusinessPartnersController` currently hardcodes two demo actors,
+  `"system/ui"` (Maintainer) and `"system/approver"` (Approver), and `companyId = "C001"`, since no real
+  SSO or company-selection UI exists yet — see `Program.cs`. `IActorRoleAssignmentStore`'s in-memory
+  implementation is the stand-in this replaces; every audit entry for Business Partner is currently
+  attributed to one of these two literals, not a real logged-in user — revisit once real auth exists.
 - Docker/Testcontainers for integration tests — not available on this development machine, so
   `tests/IntegrationTests/Modules.MasterData.IntegrationTests` runs against a real, separate
   `erp_platform_test` database instead (connection string via `ERP_MASTERDATA_TEST_CONNECTION` env var,

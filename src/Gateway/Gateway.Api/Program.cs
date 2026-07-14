@@ -12,6 +12,7 @@ using Platform.Events;
 using Platform.Events.Outbox;
 using Platform.Localization.Translation;
 using Platform.Security;
+using Platform.Security.Sod;
 using Platform.Workflow;
 using Platform.Workflow.Delegation;
 
@@ -43,8 +44,9 @@ builder.Services.AddSingleton(_ =>
 });
 builder.Services.AddSingleton<ITranslationService>(sp => sp.GetRequiredService<InMemoryTranslationService>());
 
-// Platform.Security: seeded with the one baseline role every real deployment needs at first login.
-// Business-module roles/duties get registered the same way as those modules are built.
+// Platform.Security: seeded with the one baseline role every real deployment needs at first login, plus
+// Modules.MasterData's own Business Partner Maintainer/Approver roles (BusinessPartnerSecurity) — a
+// business module's roles/duties get registered the same way as those modules are built.
 builder.Services.AddSingleton<ISecurityCatalog>(_ =>
 {
     var manageSecurityDuty = new Duty(
@@ -54,9 +56,32 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
 
     var administratorRole = new Role("PlatformAdministrator", "Platform administrator", new[] { manageSecurityDuty.Key });
 
-    return new InMemorySecurityCatalog(new[] { administratorRole }, new[] { manageSecurityDuty });
+    return new InMemorySecurityCatalog(
+        new[] { administratorRole, BusinessPartnerSecurity.MaintainerRole, BusinessPartnerSecurity.ApproverRole },
+        new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
+
+// Platform.Security's Segregation of Duties engine: one real conflict rule is registered —
+// BusinessPartnerSecurity.MaintainerApproverConflict, the "Create Vendor vs. Approve Vendor Payment"
+// example from docs/architecture/03-platform-services.md #2.2. Not yet checked against a real role
+// *assignment* anywhere (there is no role-assignment admin surface in this application yet — see
+// Modules.MasterData/README.md's deferred list) but the rule and the engine that checks it are both real
+// and tested; a future module registers its own conflict rules into this same list.
+builder.Services.AddSingleton<ISodExceptionLog, InMemorySodExceptionLog>();
+builder.Services.AddSingleton<ISodEngine>(sp =>
+    new SodEngine(new[] { BusinessPartnerSecurity.MaintainerApproverConflict }, sp.GetRequiredService<ISodExceptionLog>()));
+
+// Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
+// Platform.Security/README.md's "Deferred" section) — maps the bare actor-id strings every module
+// currently hardcodes (e.g. BusinessPartnersController's MaintainerActor/ApproverActor) to real Role keys,
+// so authorization/workflow-eligibility checks have real data instead of an unconditional grant.
+builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorRoleAssignmentStore(
+    new Dictionary<string, IReadOnlyCollection<string>>
+    {
+        ["system/ui"] = new[] { BusinessPartnerSecurity.MaintainerRoleKey },
+        ["system/approver"] = new[] { BusinessPartnerWorkflow.ApproverRoleKey },
+    }));
 
 // Platform.Workflow: one real approval workflow is registered — Modules.MasterData's Business Partner
 // onboarding approval (BusinessPartnerWorkflow.SubmitApprovalDefinition). A future module registers its
