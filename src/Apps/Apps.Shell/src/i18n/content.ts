@@ -31,6 +31,12 @@ type TranslationKey =
   | "aria.languageSwitchGroup"
   | "aria.navigationLandmark"
   | "aria.actionToolbar"
+  | "nav.homeModule"
+  | "nav.homeArea"
+  | "nav.home"
+  | "home.heading"
+  | "home.totalLabel"
+  | "home.pendingApprovalLabel"
   | "nav.masterData"
   | "nav.businessPartnersArea"
   | "nav.allBusinessPartners"
@@ -177,6 +183,12 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "aria.languageSwitchGroup": { en: "Language", ar: "اللغة" },
   "aria.navigationLandmark": { en: "Main", ar: "الرئيسية" },
   "aria.actionToolbar": { en: "Actions", ar: "إجراءات" },
+  "nav.homeModule": { en: "Home", ar: "الرئيسية" },
+  "nav.homeArea": { en: "Overview", ar: "نظرة عامة" },
+  "nav.home": { en: "Home", ar: "الرئيسية" },
+  "home.heading": { en: "Home", ar: "الرئيسية" },
+  "home.totalLabel": { en: "Total", ar: "الإجمالي" },
+  "home.pendingApprovalLabel": { en: "pending approval", ar: "بانتظار الاعتماد" },
   "nav.masterData": { en: "Master Data", ar: "البيانات الأساسية" },
   "nav.businessPartnersArea": { en: "Business Partners", ar: "شركاء الأعمال" },
   "nav.allBusinessPartners": { en: "All Business Partners", ar: "جميع شركاء الأعمال" },

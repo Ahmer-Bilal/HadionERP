@@ -54,6 +54,29 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 
 ## Entry Log (newest first)
 
+### 2026-07-14 — Home workspace page replaces plain System Status as the default landing page
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed
+- What changed: Added a `HomePage.tsx` — a workspace-style landing page (SAP Fiori Launchpad / Dynamics
+  365 Workspace pattern: tiles per area, real counts, click-through to the list) — as the default screen
+  instead of the diagnostic System Status page (which stays reachable under Platform Administration →
+  System). Three tiles (Business Partners, Chart of Accounts, Items), each showing a live total and a
+  "N pending approval" line when any records are in Submitted status, sourced by calling the three existing
+  list endpoints directly (no new backend endpoint — reuses `listBusinessPartners`/`listGLAccounts`/
+  `listItems`, same pattern already used by each list page for its own `top=200` fetch). Clicking a tile
+  navigates to that area's list. Purely additive frontend work — no Domain/Application/Infrastructure
+  changes, so it carries no cost to the Finance roadmap.
+- Verified: frontend typecheck + Arabic guardrail both pass, live browser screenshots in English and
+  Arabic (full RTL mirroring, tiles reordered correctly) confirm real counts (14 Business Partners, 1
+  Chart of Accounts, 2 Items at the time), and a live test (submit an Item, reload) confirmed the
+  "N pending approval" sub-line renders correctly.
+- Files touched: `src/Apps/Apps.Shell/src/pages/HomePage.tsx` (new), `src/Apps/Apps.Shell/src/App.tsx`
+  (new Home nav module as the first entry, default landing page changed from System Status to Home),
+  `src/Apps/Apps.Shell/src/i18n/content.ts` (`nav.homeModule`/`nav.homeArea`/`nav.home`/`home.heading`/
+  `home.totalLabel`/`home.pendingApprovalLabel`).
+- Next: continuing in the same session to Cost Centers (next Master Data slice).
+
 ### 2026-07-14 — Navigation: split one mislabeled "Business Partners" area into three
 - Agent: Claude Sonnet 5
 - Phase: Phase 1 — Master Data + Finance Core

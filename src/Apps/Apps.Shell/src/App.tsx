@@ -3,6 +3,7 @@ import "./App.css";
 import { ShellBar, NavigationPane } from "@platform/ui";
 import type { LanguageCode, NavModule } from "@platform/ui";
 import { SystemStatusPage } from "./pages/SystemStatusPage";
+import { HomePage } from "./pages/HomePage";
 import { BusinessPartnersPage } from "./pages/BusinessPartnersPage";
 import { GLAccountsPage } from "./pages/GLAccountsPage";
 import { ItemsPage } from "./pages/ItemsPage";
@@ -13,13 +14,14 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "system-status" | "business-partners" | "gl-accounts" | "items";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items";
 
 function currentPageFromHash(): PageKey {
+  if (window.location.hash === "#system-status") return "system-status";
   if (window.location.hash === "#business-partners") return "business-partners";
   if (window.location.hash === "#gl-accounts") return "gl-accounts";
   if (window.location.hash === "#items") return "items";
-  return "system-status";
+  return "home";
 }
 
 function App() {
@@ -42,6 +44,24 @@ function App() {
   // module adds its own entry here as data — Platform.UI's NavigationPane renders whatever structure it's
   // given. Labels are resolved through t() so they localize with the rest of the shell.
   const navModules: NavModule[] = [
+    {
+      key: "home",
+      label: t("nav.homeModule", language),
+      areas: [
+        {
+          key: "home-overview",
+          label: t("nav.homeArea", language),
+          items: [
+            {
+              key: "home",
+              label: t("nav.home", language),
+              href: "#home",
+              isActive: page === "home",
+            },
+          ],
+        },
+      ],
+    },
     {
       key: "platform-administration",
       label: t("nav.platformAdministration", language),
@@ -131,8 +151,10 @@ function App() {
             <GLAccountsPage language={language} />
           ) : page === "items" ? (
             <ItemsPage language={language} />
-          ) : (
+          ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
+          ) : (
+            <HomePage language={language} />
           )}
         </main>
       </div>
