@@ -65,6 +65,13 @@ export interface Attachment {
   uploadedAt: string;
 }
 
+export interface Note {
+  id: string;
+  text: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 const BASE_PATH = "/api/v1/masterdata/business-partners";
 
 async function handleJson<T>(response: Response): Promise<T> {
@@ -154,6 +161,28 @@ export function businessPartnerAttachmentDownloadUrl(id: string, attachmentId: s
 
 export async function deleteBusinessPartnerAttachment(id: string, attachmentId: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments/${attachmentId}`, { method: "DELETE" });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.detail ?? body?.title ?? `Request failed with status ${response.status}`);
+  }
+}
+
+export async function addBusinessPartnerNote(id: string, text: string): Promise<Note> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  return handleJson(response);
+}
+
+export async function listBusinessPartnerNotes(id: string): Promise<Note[]> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes`);
+  return handleJson(response);
+}
+
+export async function deleteBusinessPartnerNote(id: string, noteId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes/${noteId}`, { method: "DELETE" });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.detail ?? body?.title ?? `Request failed with status ${response.status}`);

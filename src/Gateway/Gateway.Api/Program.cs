@@ -12,6 +12,7 @@ using Platform.Core.NumberRanges;
 using Platform.Events;
 using Platform.Events.Outbox;
 using Platform.Localization.Translation;
+using Platform.Notes;
 using Platform.Security;
 using Platform.Security.Sod;
 using Platform.Workflow;
@@ -150,6 +151,9 @@ builder.Services.AddScoped<IWorkflowInstanceRepository, EfWorkflowInstanceReposi
 // as the DbContext it depends on.
 builder.Services.AddScoped<IAttachmentRepository, EfAttachmentRepository>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
+// Platform.Notes: same "one real datastore now" reasoning as Attachments above.
+builder.Services.AddScoped<INoteRepository, EfNoteRepository>();
+builder.Services.AddScoped<INoteService, NoteService>();
 builder.Services.AddScoped<BusinessPartnerService>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),

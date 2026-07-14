@@ -4,6 +4,7 @@ using Platform.Attachments;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
+using Platform.Notes;
 using Platform.Security;
 using Platform.Workflow;
 
@@ -37,6 +38,7 @@ public sealed class BusinessPartnerService
     private readonly IAuthorizationService _authorizationService;
     private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
     private readonly IAttachmentService _attachmentService;
+    private readonly INoteService _noteService;
 
     public BusinessPartnerService(
         IBusinessPartnerRepository repository,
@@ -46,7 +48,8 @@ public sealed class BusinessPartnerService
         IWorkflowInstanceRepository workflowInstanceRepository,
         IAuthorizationService authorizationService,
         IActorRoleAssignmentStore actorRoleAssignmentStore,
-        IAttachmentService attachmentService)
+        IAttachmentService attachmentService,
+        INoteService noteService)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
@@ -56,6 +59,7 @@ public sealed class BusinessPartnerService
         _authorizationService = authorizationService;
         _actorRoleAssignmentStore = actorRoleAssignmentStore;
         _attachmentService = attachmentService;
+        _noteService = noteService;
     }
 
     public async Task<BusinessPartnerDto> CreateAsync(
@@ -220,6 +224,50 @@ public sealed class BusinessPartnerService
             AuditSource);
     }
 
+    public async Task<NoteDto> AddNoteAsync(
+        Guid id, string text, string actor, CancellationToken cancellationToken = default)
+    {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        var note = await _noteService.AddAsync(AuditTargetType, partner.Id, text, actor, cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id),
+            actor,
+            $"Note added to '{partner.Name}'.",
+            new[] { new FieldValueChange("Notes", OldValueJson: null, NewValueJson: JsonSerializer.Serialize(text)) },
+            AuditSource);
+
+        return ToNoteDto(note);
+    }
+
+    public async Task<IReadOnlyList<NoteDto>> ListNotesAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await RequirePartnerAsync(id, cancellationToken);
+        var notes = await _noteService.ListAsync(AuditTargetType, id, cancellationToken);
+        return notes.Select(ToNoteDto).ToList();
+    }
+
+    public async Task DeleteNoteAsync(Guid id, Guid noteId, string actor, CancellationToken cancellationToken = default)
+    {
+        RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
+
+        var partner = await RequirePartnerAsync(id, cancellationToken);
+        var notes = await _noteService.ListAsync(AuditTargetType, partner.Id, cancellationToken);
+        var note = notes.FirstOrDefault(n => n.Id == noteId)
+            ?? throw new KeyNotFoundException($"Note {noteId} was not found on business partner {id}.");
+
+        await _noteService.DeleteAsync(noteId, cancellationToken);
+
+        _auditRecorder.RecordFieldUpdate(
+            AuditReference(partner.Id),
+            actor,
+            $"Note removed from '{partner.Name}'.",
+            new[] { new FieldValueChange("Notes", OldValueJson: JsonSerializer.Serialize(note.Text), NewValueJson: null) },
+            AuditSource);
+    }
+
     /// <summary>
     /// Moves the partner to Submitted, then starts (or resolves) its onboarding approval workflow —
     /// replacing what used to be a direct, unconditional path to Approved. Three outcomes, matching
@@ -375,6 +423,8 @@ public sealed class BusinessPartnerService
 
     private static AttachmentDto ToAttachmentDto(AttachmentMetadata metadata) => new(
         metadata.Id, metadata.FileName, metadata.ContentType, metadata.SizeBytes, metadata.UploadedBy, metadata.UploadedAt);
+
+    private static NoteDto ToNoteDto(Note note) => new(note.Id, note.Text, note.CreatedBy, note.CreatedAt);
 
     private static BusinessPartnerDto ToDto(BusinessPartner partner) => new(
         partner.Id,

@@ -58,6 +58,12 @@ type TranslationKey =
   | "bp.columnUploadedBy"
   | "bp.columnUploadedAt"
   | "bp.emptyAttachments"
+  | "bp.tabNotes"
+  | "bp.actionAddNote"
+  | "bp.fieldNoteText"
+  | "bp.columnNoteCreatedBy"
+  | "bp.columnNoteCreatedAt"
+  | "bp.emptyNotes"
   | "bp.fieldName"
   | "bp.fieldPartnerType"
   | "bp.fieldTaxRegistrationNumber"
@@ -145,6 +151,12 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.columnUploadedBy": { en: "Uploaded By", ar: "رفعه" },
   "bp.columnUploadedAt": { en: "Uploaded At", ar: "تاريخ الرفع" },
   "bp.emptyAttachments": { en: "No attachments yet.", ar: "لا توجد مرفقات حتى الآن." },
+  "bp.tabNotes": { en: "Notes", ar: "الملاحظات" },
+  "bp.actionAddNote": { en: "Add Note", ar: "إضافة ملاحظة" },
+  "bp.fieldNoteText": { en: "Note", ar: "ملاحظة" },
+  "bp.columnNoteCreatedBy": { en: "By", ar: "بواسطة" },
+  "bp.columnNoteCreatedAt": { en: "Date", ar: "التاريخ" },
+  "bp.emptyNotes": { en: "No notes yet.", ar: "لا توجد ملاحظات حتى الآن." },
   "bp.fieldName": { en: "Name", ar: "الاسم" },
   "bp.fieldPartnerType": { en: "Partner Type", ar: "نوع الشريك" },
   "bp.fieldTaxRegistrationNumber": { en: "Tax Registration Number", ar: "الرقم الضريبي" },

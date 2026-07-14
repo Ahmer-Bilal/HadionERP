@@ -84,7 +84,8 @@
 }
 
 .bp-form input,
-.bp-form select {
+.bp-form select,
+.bp-form textarea {
   font: inherit;
   padding: var(--pi-space-2);
   border: 1px solid var(--pi-border);

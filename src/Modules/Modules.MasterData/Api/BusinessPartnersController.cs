@@ -198,6 +198,58 @@ public sealed class BusinessPartnersController : PlatformApiController
         }
     }
 
+    [HttpPost("{id:guid}/notes")]
+    public async Task<IActionResult> AddNote(Guid id, [FromBody] AddBusinessPartnerNoteRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _service.AddNoteAsync(id, request.Text, MaintainerActor, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequestError(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenError(ex.Message);
+        }
+    }
+
+    [HttpGet("{id:guid}/notes")]
+    public async Task<IActionResult> ListNotes(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await _service.ListNotesAsync(id, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpDelete("{id:guid}/notes/{noteId:guid}")]
+    public async Task<IActionResult> DeleteNote(Guid id, Guid noteId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _service.DeleteNoteAsync(id, noteId, MaintainerActor, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenError(ex.Message);
+        }
+    }
+
     [HttpPost("{id:guid}/submit")]
     public async Task<IActionResult> Submit(Guid id, CancellationToken cancellationToken)
     {

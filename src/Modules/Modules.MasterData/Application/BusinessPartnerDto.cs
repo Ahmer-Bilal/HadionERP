@@ -26,3 +26,7 @@ public sealed record AddBusinessPartnerContactRequest(string Name, string? JobTi
 /// <c>BusinessPartnersController.DownloadAttachment</c>) so listing attachments stays cheap.</summary>
 public sealed record AttachmentDto(
     Guid Id, string FileName, string ContentType, long SizeBytes, string UploadedBy, DateTimeOffset UploadedAt);
+
+public sealed record NoteDto(Guid Id, string Text, string CreatedBy, DateTimeOffset CreatedAt);
+
+public sealed record AddBusinessPartnerNoteRequest(string Text);

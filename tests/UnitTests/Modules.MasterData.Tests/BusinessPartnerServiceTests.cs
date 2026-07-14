@@ -3,6 +3,7 @@ using Platform.Attachments;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
+using Platform.Notes;
 using Platform.Security;
 using Platform.Security.Sod;
 using Platform.Workflow;
@@ -57,10 +58,11 @@ public class BusinessPartnerServiceTests
             new[] { BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty });
         var authorizationService = new AuthorizationService(securityCatalog);
         var attachmentService = new AttachmentService(new FakeAttachmentRepository());
+        var noteService = new NoteService(new FakeNoteRepository());
 
         return new BusinessPartnerService(
             repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances,
-            authorizationService, BuildActorRoles(), attachmentService);
+            authorizationService, BuildActorRoles(), attachmentService, noteService);
     }
 
     private static CreateBusinessPartnerRequest ValidRequest(string partnerType = "Vendor") =>
@@ -170,6 +172,68 @@ public class BusinessPartnerServiceTests
         var contact = Assert.Single(updated.Contacts);
         Assert.Equal("Fahad Al-Otaibi", contact.Name);
         Assert.Equal("Procurement Manager", contact.JobTitle);
+    }
+
+    [Fact]
+    public async Task AddNoteAsync_stores_the_note_and_returns_it()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        var note = await service.AddNoteAsync(created.Id, "Called the vendor, confirmed bank details.", "ahmer.bilal");
+
+        Assert.Equal("Called the vendor, confirmed bank details.", note.Text);
+        Assert.Equal("ahmer.bilal", note.CreatedBy);
+    }
+
+    [Fact]
+    public async Task ListNotesAsync_returns_only_notes_for_that_partner()
+    {
+        var service = BuildService(out _);
+        var first = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var second = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await service.AddNoteAsync(first.Id, "Note on first", "ahmer.bilal");
+        await service.AddNoteAsync(second.Id, "Note on second", "ahmer.bilal");
+
+        var notes = await service.ListNotesAsync(first.Id);
+
+        var only = Assert.Single(notes);
+        Assert.Equal("Note on first", only.Text);
+    }
+
+    [Fact]
+    public async Task DeleteNoteAsync_removes_it_and_records_an_audit_entry()
+    {
+        var service = BuildService(out _, out var auditLog);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var note = await service.AddNoteAsync(created.Id, "Oops, wrong partner.", "ahmer.bilal");
+
+        await service.DeleteNoteAsync(created.Id, note.Id, "ahmer.bilal");
+
+        Assert.Empty(await service.ListNotesAsync(created.Id));
+        var removalEntry = Assert.Single(AuditEntriesFor(auditLog, created.Id), e => e.FieldValueChanges.Any(c => c.FieldName == "Notes" && c.NewValueJson is null));
+        Assert.Equal("Notes", removalEntry.FieldValueChanges.Single().FieldName);
+    }
+
+    [Fact]
+    public async Task DeleteNoteAsync_throws_when_the_note_belongs_to_a_different_partner()
+    {
+        var service = BuildService(out _);
+        var first = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var second = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        var note = await service.AddNoteAsync(first.Id, "Belongs to first", "ahmer.bilal");
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.DeleteNoteAsync(second.Id, note.Id, "ahmer.bilal"));
+    }
+
+    [Fact]
+    public async Task AddNoteAsync_throws_for_an_actor_with_no_Maintainer_role()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.AddNoteAsync(created.Id, "Should be denied", "finance.manager"));
     }
 
     [Fact]

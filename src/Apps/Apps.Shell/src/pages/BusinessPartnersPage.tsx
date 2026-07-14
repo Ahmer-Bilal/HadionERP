@@ -6,11 +6,14 @@ import { t } from "../i18n/content";
 import {
   addBusinessPartnerAddress,
   addBusinessPartnerContact,
+  addBusinessPartnerNote,
   approveBusinessPartner,
   businessPartnerAttachmentDownloadUrl,
   createBusinessPartner,
   deleteBusinessPartnerAttachment,
+  deleteBusinessPartnerNote,
   listBusinessPartnerAttachments,
+  listBusinessPartnerNotes,
   listBusinessPartners,
   rejectBusinessPartner,
   submitBusinessPartner,
@@ -22,6 +25,7 @@ import type {
   Attachment,
   BusinessPartner,
   CreateBusinessPartnerInput,
+  Note,
 } from "../api/businessPartnerApi";
 
 function formatFileSize(bytes: number): string {
@@ -123,6 +127,8 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
   const [contactForm, setContactForm] = useState<AddBusinessPartnerContactInput>(emptyContactForm);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [noteText, setNoteText] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -138,15 +144,19 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
     load();
   }, [load]);
 
-  // Attachments aren't embedded in BusinessPartnerDto (metadata-only list, fetched separately) — reload
-  // whenever the details view's partner changes (opening a partner, or after upload/delete/reload above).
+  // Attachments/Notes aren't embedded in BusinessPartnerDto (metadata-only lists, fetched separately) —
+  // reload whenever the details view's partner changes (opening a partner, or after add/delete above).
   useEffect(() => {
     if (view.kind === "details") {
       listBusinessPartnerAttachments(view.partner.id)
         .then(setAttachments)
         .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+      listBusinessPartnerNotes(view.partner.id)
+        .then(setNotes)
+        .catch((err) => setError(err instanceof Error ? err.message : String(err)));
     } else {
       setAttachments([]);
+      setNotes([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.kind === "details" ? view.partner.id : null]);
@@ -243,6 +253,33 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
     try {
       await deleteBusinessPartnerAttachment(partner.id, attachmentId);
       setAttachments(await listBusinessPartnerAttachments(partner.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAddNote = async (partner: BusinessPartner) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await addBusinessPartnerNote(partner.id, noteText);
+      setNoteText("");
+      setNotes(await listBusinessPartnerNotes(partner.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDeleteNote = async (partner: BusinessPartner, noteId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteBusinessPartnerNote(partner.id, noteId);
+      setNotes(await listBusinessPartnerNotes(partner.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -645,6 +682,58 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
                       onClick: () => handleUploadAttachment(partner),
                       variant: "primary",
                       isDisabled: busy || !pendingFile,
+                    },
+                  ]}
+                  ariaLabel={t("aria.actionToolbar", language)}
+                />
+              </div>
+            ),
+          },
+          {
+            key: "notes",
+            title: t("bp.tabNotes", language),
+            content: (
+              <div className="bp-form">
+                {notes.length === 0 && <p>{t("bp.emptyNotes", language)}</p>}
+                {notes.length > 0 && (
+                  <table className="bp-table">
+                    <thead>
+                      <tr>
+                        <th>{t("bp.fieldNoteText", language)}</th>
+                        <th>{t("bp.columnNoteCreatedBy", language)}</th>
+                        <th>{t("bp.columnNoteCreatedAt", language)}</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {notes.map((note) => (
+                        <tr key={note.id}>
+                          <td>{note.text}</td>
+                          <td>{note.createdBy}</td>
+                          <td><bdi dir="ltr">{new Date(note.createdAt).toLocaleString(language)}</bdi></td>
+                          <td>
+                            <button type="button" onClick={() => handleDeleteNote(partner, note.id)} disabled={busy}>
+                              {t("bp.actionDelete", language)}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+
+                <label>
+                  {t("bp.fieldNoteText", language)}
+                  <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} rows={3} />
+                </label>
+                <ActionPane
+                  actions={[
+                    {
+                      key: "add-note",
+                      label: t("bp.actionAddNote", language),
+                      onClick: () => handleAddNote(partner),
+                      variant: "primary",
+                      isDisabled: busy || noteText.trim().length === 0,
                     },
                   ]}
                   ariaLabel={t("aria.actionToolbar", language)}

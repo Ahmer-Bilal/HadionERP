@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Modules.MasterData.Domain;
 using Platform.Attachments;
 using Platform.Core;
+using Platform.Notes;
 using Platform.Workflow;
 
 namespace Modules.MasterData.Infrastructure;
@@ -27,6 +28,8 @@ public sealed class MasterDataDbContext : DbContext
     // internal on purpose — only EfAttachmentRepository ever queries it directly.
     public DbSet<AttachmentMetadata> Attachments => Set<AttachmentMetadata>();
     internal DbSet<AttachmentContentRow> AttachmentContents => Set<AttachmentContentRow>();
+    // Note is a Platform.Notes kernel type, same reasoning as WorkflowInstance/AttachmentMetadata above.
+    public DbSet<Note> Notes => Set<Note>();
 
     public MasterDataDbContext(DbContextOptions<MasterDataDbContext> options) : base(options)
     {
@@ -205,6 +208,19 @@ public sealed class MasterDataDbContext : DbContext
                 .WithOne()
                 .HasForeignKey<AttachmentContentRow>(e => e.AttachmentId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Note>(entity =>
+        {
+            entity.ToTable("notes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.BusinessObjectType).HasColumnName("business_object_type").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.BusinessObjectId).HasColumnName("business_object_id");
+            entity.Property(e => e.Text).HasColumnName("text").HasMaxLength(2000).IsRequired();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.HasIndex(e => new { e.BusinessObjectType, e.BusinessObjectId });
         });
 
         modelBuilder.Entity<NumberRangeCounterEntity>(entity =>

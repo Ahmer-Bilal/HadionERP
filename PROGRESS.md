@@ -41,7 +41,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts, real Platform.Audit/Workflow/Security wiring, and a new real Platform.Attachments capability; Notes, bilingual names, and all of Finance remain | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | In Progress — Business Partner done with Addresses/Contacts and every BusinessObject guarantee (Audit/Workflow/Security/Attachments/Notes) actually wired in; bilingual names and all of Finance remain | 2026-07-14 |
 | Phase 2 — Procurement | Not Started | — |
 | Phase 3 — Construction & Project Management | Not Started | — |
 | Phase 4 — HR & Payroll | Not Started | — |
@@ -53,6 +53,51 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-14 — New Platform.Notes capability, wired into Business Partner (last BusinessObject guarantee closed)
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core
+- Status: Completed — this closes every gap in the original "what does BusinessObject really embody"
+  challenge (Identity/Status/Lifecycle/Audit/Attachments/Notes/Workflow/Localization/ExtensionData/
+  Concurrency/Permissions): Audit, Workflow, Security, Attachments, and now Notes are all real and wired
+  into Business Partner. See `Platform.Core/README.md`'s guarantee table for the full picture.
+- What changed:
+  - **Built `Platform.Notes` from scratch** — new project, new test project (6 unit tests): `Note` (one
+    free-text note, linked to a Business Object via the same flat `(BusinessObjectType, BusinessObjectId)`
+    pair `Platform.Attachments`/`Platform.Workflow` already use), `INoteRepository` (storage-agnostic
+    port), `INoteService`/`NoteService` (validates non-empty text and a 2000-character ceiling). Notes are
+    deliberately **append-only/delete-only** — no `UpdateText` — matching the platform's existing
+    "correct by reversal, not by silent edit" principle.
+  - Implemented `EfNoteRepository` in `Modules.MasterData.Infrastructure` — a single `notes` table,
+    indexed the same way `attachments` is, new migration applied to both dev and test databases.
+  - Wired into `BusinessPartnerService`: `AddNoteAsync`/`ListNotesAsync`/`DeleteNoteAsync`, gated by the
+    same Maintainer privilege as everything else. `DeleteNoteAsync` verifies the note actually belongs to
+    the requested partner before removing it — the same ownership check Attachments already does. Added
+    matching endpoints to `BusinessPartnersController` and a Notes FastTab to the frontend (a textarea +
+    Add Note button, a table of existing notes with a Delete button on each).
+  - **Verified live**: full solution builds with 0 errors, every test project passes (211 tests across the
+    solution: 6 new in `Platform.Notes.Tests`, 5 new in `Modules.MasterData.Tests`, 2 new integration tests
+    proving a note round-trips through real PostgreSQL via a fresh `DbContext`), then exercised the real
+    running API end-to-end with `curl` (add, list, delete, confirmed empty after delete) and confirmed the
+    full add/list/delete flow live in a real browser with no console errors.
+  - Nothing new broke — both `Platform.Attachments` (previous entry) and `Platform.Notes` followed the
+    exact `WorkflowInstance` persistence pattern already proven correct (flat BusinessObjectType/Id,
+    private-constructor ORM materialization), so this slice was low-risk by construction.
+- Files touched: `src/Platform/Platform.Notes/*` (new project: `Note`, `INoteRepository`, `INoteService`,
+  `NoteService`, `README`), `tests/UnitTests/Platform.Notes.Tests/*` (new project),
+  `src/Modules/Modules.MasterData/Infrastructure/{EfNoteRepository,MasterDataDbContext,
+  Modules.MasterData.Infrastructure.csproj}`, `src/Modules/Modules.MasterData/Infrastructure/
+  Migrations/*AddNotes*` (new), `src/Modules/Modules.MasterData/Application/
+  {BusinessPartnerService,BusinessPartnerDto,Modules.MasterData.Application.csproj}`,
+  `src/Modules/Modules.MasterData/Api/BusinessPartnersController.cs`, `src/Gateway/Gateway.Api/Program.cs`,
+  `src/Apps/Apps.Shell/src/{api/businessPartnerApi.ts,pages/BusinessPartnersPage.tsx,i18n/content.ts,
+  App.css}`, `tests/UnitTests/Modules.MasterData.Tests/{BusinessPartnerServiceTests,FakeNoteRepository,
+  Modules.MasterData.Tests.csproj}`, `tests/IntegrationTests/Modules.MasterData.IntegrationTests/
+  {NotePersistenceTests,TestDatabase}.cs`, `src/Modules/Modules.MasterData/README.md`,
+  `src/Platform/Platform.Core/README.md`, `erp-platform.sln`
+- Next: Add bilingual (Arabic + English) name fields to `BusinessPartner` (ZATCA/KSA legal requirement) —
+  the last item in the user's originally chosen sequencing. Only after that does Phase 1 continue to
+  Chart of Accounts/Items/Cost Centers/Tax codes and Finance.
 
 ### 2026-07-14 — New Platform.Attachments capability, wired into Business Partner
 - Agent: Claude Sonnet 5

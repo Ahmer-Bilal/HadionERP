@@ -17,8 +17,8 @@ current as each gap gets closed:
 | Workflow | `Platform.Workflow.IWorkflowEngine` | Wired — see `Modules.MasterData/README.md` |
 | Permissions | `Platform.Security.IAuthorizationService` | Wired — see `Modules.MasterData/README.md` |
 | Attachments | `Platform.Attachments.IAttachmentService` | Wired — see `Modules.MasterData/README.md` |
-| Notes | *(not built yet)* | Not started — next slice |
-| Localization | `Platform.Localization` | Wired at the platform/UI level (AR/EN, RTL); not yet exercised on Business Partner's own fields (see bilingual name fields, next slice after Notes) |
+| Notes | `Platform.Notes.INoteService` | Wired — see `Modules.MasterData/README.md` |
+| Localization | `Platform.Localization` | Wired at the platform/UI level (AR/EN, RTL); not yet exercised on Business Partner's own fields (see bilingual name fields, next slice) |
 
 A module's Application layer calls each of these services explicitly, at the points a real business
 process cares about (create, a status transition, an attachment upload) — `BusinessObject` itself doesn't
