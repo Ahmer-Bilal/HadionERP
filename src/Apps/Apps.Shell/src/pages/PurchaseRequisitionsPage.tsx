@@ -92,6 +92,10 @@ export function PurchaseRequisitionsPage({ language }: PurchaseRequisitionsPageP
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   };
 
+  const removeLine = (index: number) => {
+    setLines((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleCreate = async () => {
     setBusy(true);
     setError(null);
@@ -168,6 +172,7 @@ export function PurchaseRequisitionsPage({ language }: PurchaseRequisitionsPageP
               <th>{t("pr.fieldQuantity", language)}</th>
               <th>{t("pr.fieldEstimatedUnitPrice", language)}</th>
               <th>{t("pr.fieldLineDescription", language)}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -188,6 +193,11 @@ export function PurchaseRequisitionsPage({ language }: PurchaseRequisitionsPageP
                 <td><input type="number" min="0" step="0.001" value={line.quantity} onChange={(e) => updateLine(index, { quantity: e.target.value })} style={{ inlineSize: "7rem" }} /></td>
                 <td><input type="number" min="0" step="0.01" value={line.estimatedUnitPrice} onChange={(e) => updateLine(index, { estimatedUnitPrice: e.target.value })} style={{ inlineSize: "8rem" }} /></td>
                 <td><input value={line.lineDescription} onChange={(e) => updateLine(index, { lineDescription: e.target.value })} /></td>
+                <td>
+                  <button type="button" onClick={() => removeLine(index)} aria-label={t("pr.actionRemoveLine", language)}>
+                    {t("pr.actionRemoveLine", language)}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

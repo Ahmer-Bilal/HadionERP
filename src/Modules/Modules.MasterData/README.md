@@ -270,15 +270,88 @@ Nothing new broke while wiring `Platform.Security` — no bug found in that pass
 pattern (flat `BusinessObjectType`/`BusinessObjectId`, private-constructor ORM materialization) already
 proven correct, and both were verified against real PostgreSQL from the start.
 
+## What's built (Lookup Data — admin-configurable picklist engine)
+
+- **Domain**: `LookupType` (Code/Name/NameArabic/IsSystemDefined) and `LookupValue`
+  (LookupTypeCode/Code/Name/NameArabic/IsActive/SortOrder) — deliberately NOT `BusinessObject`s (no Draft/
+  Submit/Approve lifecycle): real SAP domain-value maintenance (SM30) and Dynamics 365's Option Set editor
+  are both immediate-effect, gated by a single authorization role, not a two-person maintain/approve
+  workflow — see `LookupType`'s own doc comment. Built in response to the explicit instruction not to
+  hard-code lookup/classification data (CLAUDE.md, and the roadmap's own "customers/vendors — these words"
+  example) — the words "Client"/"Supplier"/"HeadOffice"/etc. used to be C# enums (`BusinessRoleType`,
+  `AddressType`) or unvalidated free text (`Country`, `UnitOfMeasure`); they are now admin-editable data.
+- **`LookupService`**: one `MasterData.Lookup.Administer` privilege (not a Maintainer/Approver split — see
+  above). Full CRUD on both levels: `CreateTypeAsync`/`UpdateTypeAsync`/`DeleteTypeAsync` (an administrator
+  can define a brand-new picklist category from scratch, e.g. a future "Incoterms" list, the same way SAP's
+  generic table maintenance isn't limited to pre-defined tables) and
+  `CreateValueAsync`/`UpdateValueAsync`/`SetActiveAsync`/`DeleteValueAsync` for values within a type.
+  `DeleteValueAsync` refuses to delete a value any real record still references
+  (`ILookupRepository.IsValueInUseAsync` — a small per-type switch over the columns that actually consume
+  it) — the caller is told to deactivate instead, same "correct by reversal, not deletion" principle as
+  everywhere else in this platform, but only where deletion would actually corrupt existing data; an unused
+  value deletes cleanly. `DeleteTypeAsync` refuses to delete a `IsSystemDefined` type (this platform's own
+  code depends on the *category* existing) or a type that still has values.
+- **Seven system-defined types seeded at every startup** (`LookupSeeder`, idempotent — only inserts what's
+  missing, never touches an administrator's own edits): `Country` (~74 real countries, EN+AR, GCC/MENA-
+  complete plus major global trading partners — an admin can add any missing one in seconds), `BusinessRoleType`
+  (the 10 values that used to be the `BusinessRoleType` enum), `AddressType` (the 4 values that used to be
+  the `AddressType` enum), `UnitOfMeasure` (15 construction-relevant units), and Trade split into **three
+  role-scoped types, not one flat list** — `SubcontractorTrade` (15: Electrical/Concrete/Steel Structure/...),
+  `SupplierTrade` (10: Steel/Cement/MEP Materials/...), `ConsultantTrade` (8: Structural/Architectural/MEP
+  Design/...) — matching docs/architecture/06-roadmap.md's own Phase 2 design verbatim, which already
+  described these as three separate real-world taxonomies (a Subcontractor's trades are not a Supplier's or a
+  Consultant's). The first version of this checkpoint shipped one merged `Trade` type instead — corrected the
+  same day after the user caught the mismatch against the roadmap's own already-written design.
+- **Retrofitted onto real fields**: `BusinessRole.RoleType` and `BusinessPartnerAddress.AddressType` changed
+  from C# enums to plain `string` Domain properties (the EF column was already `character varying` via
+  `.HasConversion<string>()`, so this needed no data migration, just a model change) — validated at the
+  `BusinessPartnerService` layer against the Lookup engine instead of `Enum.TryParse`.
+  `BusinessPartnerService.AddAddressAsync`'s `Country` (previously free text with zero validation) and
+  `ItemService`'s `UnitOfMeasure` (previously free text, disclosed as a Phase 1 gap) are now validated the
+  same way. `BusinessRole.Trade` stays deliberately unenforced server-side (the roadmap's own explicit
+  design — see the Deferred item below); the frontend's Trade field (`BusinessPartnersPage.tsx`) is a plain
+  HTML `<input>` backed by an HTML `<datalist>` of role-scoped suggestions (switching between the
+  `SubcontractorTrade`/`SupplierTrade`/`ConsultantTrade` list based on the currently-selected role) — real
+  suggestions, still freely overridable text underneath.
+- **Api**: `LookupsController` at `api/v1/masterdata/lookup-types` — type CRUD plus a nested
+  `/lookup-types/{typeCode}/values` resource for value CRUD + activate/deactivate.
+- **Frontend — a real Admin Panel, not a single page**: `LookupDataPage.tsx`, one reusable component given
+  its own distinct nav entry per type (Countries/Business Role Types/Address Types/Units of
+  Measure/Trades — each its own heading and URL, same "shared shape, separate nav items" precedent as
+  GLAccounts/Items/CostCenters/TaxCodes) plus an "All Lookup Types" hub (value counts, System/Custom kind,
+  a form to create an entirely new lookup type). Each type's page is a real inline-editable table-maintenance
+  grid (SAP-style): every row shows Code/Name/Name (Arabic)/Sort Order/Status side by side with Edit/
+  Deactivate-Activate/Delete buttons, plus an always-visible add-row at the bottom — Name and Name (Arabic)
+  are always both present on screen together so a bilingual entry never has to guess at the other language.
+  `BusinessPartnersPage.tsx`'s Business Role Type/Address Type/Country dropdowns and `ItemsPage.tsx`'s Unit
+  of Measure dropdown all now fetch their options live from this engine instead of a hardcoded array/switch
+  statement — an administrator's own addition through the admin panel is immediately selectable on the next
+  page load, with no code change.
+- Verified end-to-end: 12 new unit tests (`LookupServiceTests` — value/type CRUD, duplicate-code rejection,
+  unknown-type rejection, authorization denial, deactivate-without-delete, in-use delete protection,
+  system-defined-type delete protection, custom-type creation and deletion) + 3 new integration tests
+  against real PostgreSQL (type+values round-trip identically including Arabic names, per-type code
+  uniqueness enforced at the DB level, deactivation persists and is reversible). 138 unit + 26 integration
+  tests pass in this module alone, zero regressions solution-wide. Live `curl` exercise: created/renamed/
+  deactivated/reactivated/deleted a custom Country value; confirmed deleting an in-use `BusinessRoleType`
+  value 409s and deleting the system-defined `Country` type itself 409s; confirmed creating a Business
+  Partner with a bogus role, an address with a bogus country, and an Item with a bogus unit of measure all
+  400 with a clear message, while real seeded values succeed. Live Playwright pass (screenshots, zero
+  console errors) on the hub, the Countries grid (including a live inline add), and Business Role Types, in
+  both English and Arabic — full RTL mirroring confirmed, including the page heading itself switching to
+  the lookup type's own `NameArabic` (a real bug caught by this pass: the heading originally only ever read
+  `type.name`, and a direct nav entry into one type's grid never populated the `types` list the heading
+  needed at all — both fixed, re-verified live).
+
 ## Deferred (disclosed, not hidden)
 
 - Phase 1 Master Data is now complete (Business Partner, Chart of Accounts, Items, Cost Centers, Tax
   Codes) — `Modules.Finance` (GL/AP/AR/Cash-Bank) is next.
 - G/L Account and Cost Center both have no parent-hierarchy validation against cycles (`AssignParent`
-  accepts any GUID for either); Item has no UoM master — `UnitOfMeasure` is free text with no conversion
-  factors, and no Item Group/category hierarchy — all revisit once a real second-unit, roll-up-reporting,
-  or cycle-prone-editing need shows up, same "wait for a real need" reasoning as everywhere else in this
-  module.
+  accepts any GUID for either); Item's `UnitOfMeasure` is now validated against the Lookup Data engine (see
+  above) but still has no conversion factors between units (e.g. bags → tons) and no Item Group/category
+  hierarchy — revisit once a real second-unit or roll-up-reporting need shows up, same "wait for a real
+  need" reasoning as everywhere else in this module.
 - Removing or editing an existing Address/Contact from the API/UI — only add exists today (`AddAddress`/
   `AddContact` on the Domain object and their matching endpoints); `RemoveAddress`/`RemoveContact` exist on
   `BusinessPartner` but aren't wired to the Application/Api/UI layers yet.
@@ -317,12 +390,21 @@ proven correct, and both were verified against real PostgreSQL from the start.
 - A shared "List+Details form" Platform.UI template, a real npm package for Platform.UI, and a proper
   client-side router are all still deferred for the same reason as before: wait for a second real
   consumer before extracting/generalizing.
-- Trade/Specialty (on `BusinessRole`) is free text with no server-side validation against the
-  role-specific taxonomies docs/architecture/06-roadmap.md's Phase 2 design names (Subcontractor →
-  Electrical/Concrete/Mechanical/..., Supplier → Steel/Cement/MEP Materials/...) — the roadmap is explicit
-  these belong in configuration, not a hardcoded enum, but there's no admin screen yet to manage a
-  per-role suggested-values list. Revisit once one exists; until then this is a real but soft gap, not
-  hidden.
+- Trade/Specialty (on `BusinessRole`) now has three real, admin-managed, role-scoped lookup types
+  (`SubcontractorTrade`/`SupplierTrade`/`ConsultantTrade`, manageable through the Lookup Data admin panel,
+  with the frontend already showing only the relevant list for the currently-selected role) — but per the
+  roadmap's own explicit design it deliberately stays a *suggestion*, not a server-side-enforced value:
+  `BusinessPartnerService` still accepts any string for `Trade` regardless of which list it came from or
+  whether it came from the list at all. Revisit if a real need for hard enforcement shows up.
+- The Lookup Data admin panel has no rename-type UI (`LookupService.UpdateTypeAsync` exists and is tested,
+  but `LookupDataPage.tsx` only exposes create/delete for types, not edit) — a minor, mechanical gap, not a
+  design gap. No bulk import/export (e.g. paste a CSV of 50 countries at once) — every value is added one
+  row at a time through the inline grid. No cross-module `Contracts` publication of lookup values yet (only
+  `Modules.MasterData.Application`/`Api` consume `ILookupRepository` directly) — add
+  `Modules.MasterData.Contracts.ILookupCatalog` the same way `IBusinessPartnerLookup`/`IItemLookup` exist
+  once a module outside MasterData actually needs to read a lookup type (e.g. Procurement wanting the same
+  `Trade` list) — not built speculatively ahead of a real consumer, per this project's own stated
+  engineering preference.
 - Vendor Prequalification itself (`VendorPrequalification` or similar BO, role-specific review steps,
   configurable validity period) is not built yet — `BusinessRoles` was step one of Phase 2's design
   (docs/architecture/06-roadmap.md), deliberately built first since Prequalification needs it to exist.

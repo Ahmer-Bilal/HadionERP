@@ -38,6 +38,13 @@ public class NoHardcodedTranslatableTextTests
         ["Gateway/Gateway.Api/Localization/GatewayApiLocalizationDefaults.cs"] =
             "Gateway.Api's own shipped default translated content, same pattern/justification as " +
             "Platform.Localization/LocalizationDefaults.cs above.",
+
+        ["Modules/Modules.MasterData/Infrastructure/LookupSeeder.cs"] =
+            "Seed BUSINESS DATA for the admin-configurable Lookup Data engine (real country/business-role/" +
+            "address-type/unit-of-measure/trade names, e.g. 'Saudi Arabia' / 'المملكة العربية السعودية') — " +
+            "not translatable UI copy. Same category as LocalizationDefaults.cs's own default-content " +
+            "justification above, but for reference data an administrator can freely rename or delete " +
+            "through the Lookup Data admin panel afterward, rather than fixed application text.",
     };
 
     [Fact]

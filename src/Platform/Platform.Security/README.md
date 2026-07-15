@@ -17,6 +17,13 @@ All in-memory reference implementations here (`InMemorySecurityCatalog`, `InMemo
 swappable for database-backed ones later without any module code changing, the same pattern used in
 `Platform.Core`'s `InMemoryNumberRangeService`.
 
+**`FieldLevel/`/`RowLevel/` are built but not yet consumed anywhere** (found by `ARCHITECTURE-AUDIT.md`'s
+2026-07-15 audit §4 — noted here so the intro paragraph above doesn't read as more complete than it is): the
+types exist and are real, but no module calls into them today — no record is currently scoped by company/
+branch/project (there's only ever one implicit company so far, see `ARCHITECTURE-AUDIT.md` §2), and no
+field is masked (nothing salary/IBAN-sensitive is built yet — that's Phase 4's HR/Payroll). This is expected
+sequencing, not a defect: both become real the moment a module has data that actually needs either.
+
 ## First real consumer: Modules.MasterData's Business Partner
 
 `BusinessPartnerSecurity` (in `Modules.MasterData.Application`) is the first real Roles/Duties/Privileges

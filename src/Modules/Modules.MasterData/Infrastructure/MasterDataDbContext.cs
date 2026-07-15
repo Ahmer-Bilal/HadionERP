@@ -34,6 +34,8 @@ public sealed class MasterDataDbContext : DbContext
     public DbSet<Item> Items => Set<Item>();
     public DbSet<CostCenter> CostCenters => Set<CostCenter>();
     public DbSet<TaxCode> TaxCodes => Set<TaxCode>();
+    public DbSet<LookupType> LookupTypes => Set<LookupType>();
+    public DbSet<LookupValue> LookupValues => Set<LookupValue>();
 
     public MasterDataDbContext(DbContextOptions<MasterDataDbContext> options) : base(options)
     {
@@ -117,7 +119,7 @@ public sealed class MasterDataDbContext : DbContext
             entity.ToTable("business_partner_addresses");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.AddressType).HasColumnName("address_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.AddressType).HasColumnName("address_type").HasMaxLength(20);
             entity.Property(e => e.Country).HasColumnName("country").HasMaxLength(100);
             entity.Property(e => e.City).HasColumnName("city").HasMaxLength(100);
             entity.Property(e => e.AddressLine).HasColumnName("address_line").HasMaxLength(300);
@@ -141,7 +143,7 @@ public sealed class MasterDataDbContext : DbContext
             entity.ToTable("business_partner_roles");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.RoleType).HasColumnName("role_type").HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.RoleType).HasColumnName("role_type").HasMaxLength(30);
             entity.Property(e => e.Trade).HasColumnName("trade").HasMaxLength(100);
             entity.Property<Guid>("BusinessPartnerId").HasColumnName("business_partner_id");
         });
@@ -407,6 +409,40 @@ public sealed class MasterDataDbContext : DbContext
             entity.Ignore(e => e.DomainEvents);
             entity.Ignore(e => e.Relations);
             entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<LookupType>(entity =>
+        {
+            entity.ToTable("lookup_types");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.NameArabic).HasColumnName("name_arabic").HasMaxLength(200);
+            entity.Property(e => e.IsSystemDefined).HasColumnName("is_system_defined");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+        });
+
+        modelBuilder.Entity<LookupValue>(entity =>
+        {
+            entity.ToTable("lookup_values");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.LookupTypeCode).HasColumnName("lookup_type_code").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(50).IsRequired();
+            entity.HasIndex(e => new { e.LookupTypeCode, e.Code }).IsUnique();
+            entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+            entity.Property(e => e.NameArabic).HasColumnName("name_arabic").HasMaxLength(200);
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+            entity.Property(e => e.SortOrder).HasColumnName("sort_order");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
         });
     }
 

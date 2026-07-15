@@ -43,6 +43,14 @@ temporary shim (every actor is granted the approver role unconditionally, since 
 assignment isn't wired yet — the very next slice).
 
 ## Deferred
+- **Delegation is structurally wired but operationally empty** (found by `ARCHITECTURE-AUDIT.md`'s 2026-07-15
+  audit §6 — noted here so the bullet above doesn't read as more complete than it is):
+  `RoleBasedWorkflowEligibilityService` genuinely does check `IDelegationRegistry.HasActiveDelegation` in the
+  live eligibility path, but `Gateway.Api/Program.cs` registers it as `new InMemoryDelegationRegistry()` with
+  nothing ever added — there is no API or UI anywhere that lets an approver actually register a delegation.
+  The mechanism is real and tested; it has simply never had a real delegation to check because there's no way
+  to create one yet. Needs a small API/UI surface, naturally bundled with real user authentication (see
+  `ARCHITECTURE-AUDIT.md` §1) since delegation between two hardcoded actor literals is meaningless.
 - **The actual scheduler** that calls `EscalationScan` periodically and notifies the escalation target —
   needs a hosted background service in Gateway.Api, not built yet (the logic it will call is built and
   tested now).

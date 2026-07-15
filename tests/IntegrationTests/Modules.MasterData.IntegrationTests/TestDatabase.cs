@@ -50,5 +50,7 @@ internal static class TestDatabase
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.items");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.cost_centers");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.tax_codes");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.lookup_values");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE masterdata.lookup_types");
     }
 }

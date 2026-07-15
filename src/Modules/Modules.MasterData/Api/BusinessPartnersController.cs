@@ -12,21 +12,19 @@ namespace Modules.MasterData.Api;
 /// (docs/architecture/05-engineering-standards.md #2: "API route: kebab-case, plural resource") since the
 /// base's default `[controller]` token can't produce a hyphen for a compound resource name.
 ///
-/// Two distinct hardcoded actor literals are used below — <c>MaintainerActor</c> for
-/// create/edit/submit endpoints and <c>ApproverActor</c> for approve/reject — rather than one "system/ui"
-/// for everything. This isn't cosmetic: it's what makes the Segregation of Duties split registered in
-/// <see cref="Modules.MasterData.Application.BusinessPartnerSecurity"/> (a real fraud/compliance control,
-/// per <see cref="Modules.MasterData.Domain.BusinessPartner"/>'s own doc comment) actually mean something
-/// even without real per-user login — the same maintainer can never also be the approver. Real SSO
-/// replacing both literals with the authenticated principal's own id is still deferred — see
-/// `Modules.MasterData/README.md`.
+/// Every action below uses <see cref="PlatformApiController.CurrentActor"/> — the real logged-in user's
+/// username, resolved from the validated JWT (`ARCHITECTURE-AUDIT.md` Part 1 §1, closed by
+/// `Modules.Identity`). What used to be two hardcoded actor literals impersonating "the maintainer" and
+/// "the approver" is now whichever real user is actually logged in; the Segregation of Duties split
+/// registered in <see cref="Modules.MasterData.Application.BusinessPartnerSecurity"/> (a real fraud/
+/// compliance control, per <see cref="Modules.MasterData.Domain.BusinessPartner"/>'s own doc comment) is
+/// enforced by real role assignment (a user simply can't hold both the Maintainer and Approver role, or
+/// `Modules.Identity.Application.UserService.AssignRoleAsync` blocks it), not by which literal a request
+/// happened to use.
 /// </summary>
 [Route("api/v1/masterdata/business-partners")]
 public sealed class BusinessPartnersController : PlatformApiController
 {
-    private const string MaintainerActor = "system/ui";
-    private const string ApproverActor = "system/approver";
-
     private readonly BusinessPartnerService _service;
 
     public BusinessPartnersController(BusinessPartnerService service)
@@ -67,7 +65,7 @@ public sealed class BusinessPartnersController : PlatformApiController
 
         try
         {
-            var created = await _service.CreateAsync(request, MaintainerActor, companyId, cancellationToken);
+            var created = await _service.CreateAsync(request, CurrentActor, companyId, cancellationToken);
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
         catch (ArgumentException ex)
@@ -85,7 +83,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.AddAddressAsync(id, request, MaintainerActor, cancellationToken));
+            return Ok(await _service.AddAddressAsync(id, request, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -106,7 +104,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.AddContactAsync(id, request, MaintainerActor, cancellationToken));
+            return Ok(await _service.AddContactAsync(id, request, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -127,7 +125,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.AddBusinessRoleAsync(id, request, MaintainerActor, cancellationToken));
+            return Ok(await _service.AddBusinessRoleAsync(id, request, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -152,7 +150,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.RemoveBusinessRoleAsync(id, roleId, MaintainerActor, cancellationToken));
+            return Ok(await _service.RemoveBusinessRoleAsync(id, roleId, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -180,7 +178,7 @@ public sealed class BusinessPartnersController : PlatformApiController
         try
         {
             var attachment = await _service.AddAttachmentAsync(
-                id, file.FileName, file.ContentType, memoryStream.ToArray(), MaintainerActor, cancellationToken);
+                id, file.FileName, file.ContentType, memoryStream.ToArray(), CurrentActor, cancellationToken);
             return Ok(attachment);
         }
         catch (KeyNotFoundException)
@@ -227,7 +225,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            await _service.DeleteAttachmentAsync(id, attachmentId, MaintainerActor, cancellationToken);
+            await _service.DeleteAttachmentAsync(id, attachmentId, CurrentActor, cancellationToken);
             return NoContent();
         }
         catch (KeyNotFoundException)
@@ -245,7 +243,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.AddNoteAsync(id, request.Text, MaintainerActor, cancellationToken));
+            return Ok(await _service.AddNoteAsync(id, request.Text, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -279,7 +277,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            await _service.DeleteNoteAsync(id, noteId, MaintainerActor, cancellationToken);
+            await _service.DeleteNoteAsync(id, noteId, CurrentActor, cancellationToken);
             return NoContent();
         }
         catch (KeyNotFoundException)
@@ -297,7 +295,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.SubmitAsync(id, MaintainerActor, cancellationToken));
+            return Ok(await _service.SubmitAsync(id, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -318,7 +316,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.ApproveAsync(id, ApproverActor, cancellationToken));
+            return Ok(await _service.ApproveAsync(id, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {
@@ -339,7 +337,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     {
         try
         {
-            return Ok(await _service.RejectAsync(id, ApproverActor, cancellationToken));
+            return Ok(await _service.RejectAsync(id, CurrentActor, cancellationToken));
         }
         catch (KeyNotFoundException)
         {

@@ -16,9 +16,6 @@ namespace Modules.Procurement.Api;
 [Route("api/v1/procurement/vendor-prequalifications")]
 public sealed class VendorPrequalificationsController : PlatformApiController
 {
-    private const string MaintainerActor = "system/ui";
-    private const string ReviewerActor = "system/approver";
-
     private readonly VendorPrequalificationService _service;
 
     public VendorPrequalificationsController(VendorPrequalificationService service) => _service = service;
@@ -47,7 +44,7 @@ public sealed class VendorPrequalificationsController : PlatformApiController
         const string companyId = "C001";
         try
         {
-            var created = await _service.CreateAsync(request, MaintainerActor, companyId, cancellationToken);
+            var created = await _service.CreateAsync(request, CurrentActor, companyId, cancellationToken);
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
@@ -57,7 +54,7 @@ public sealed class VendorPrequalificationsController : PlatformApiController
     [HttpPost("{id:guid}/submit")]
     public async Task<IActionResult> Submit(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.SubmitAsync(id, MaintainerActor, cancellationToken)); }
+        try { return Ok(await _service.SubmitAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
@@ -67,7 +64,7 @@ public sealed class VendorPrequalificationsController : PlatformApiController
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.ApproveAsync(id, ReviewerActor, cancellationToken)); }
+        try { return Ok(await _service.ApproveAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -76,7 +73,7 @@ public sealed class VendorPrequalificationsController : PlatformApiController
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> Reject(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.RejectAsync(id, ReviewerActor, cancellationToken)); }
+        try { return Ok(await _service.RejectAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -95,7 +92,7 @@ public sealed class VendorPrequalificationsController : PlatformApiController
         try
         {
             var attachment = await _service.AddAttachmentAsync(
-                id, file.FileName, file.ContentType, memoryStream.ToArray(), MaintainerActor, cancellationToken);
+                id, file.FileName, file.ContentType, memoryStream.ToArray(), CurrentActor, cancellationToken);
             return Ok(attachment);
         }
         catch (KeyNotFoundException) { return NotFound(); }
@@ -124,7 +121,7 @@ public sealed class VendorPrequalificationsController : PlatformApiController
     {
         try
         {
-            await _service.DeleteAttachmentAsync(id, attachmentId, MaintainerActor, cancellationToken);
+            await _service.DeleteAttachmentAsync(id, attachmentId, CurrentActor, cancellationToken);
             return NoContent();
         }
         catch (KeyNotFoundException) { return NotFound(); }

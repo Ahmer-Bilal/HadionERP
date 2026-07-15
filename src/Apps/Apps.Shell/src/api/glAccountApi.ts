@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { authHeaders } from "./authApi";
 
 export interface GLAccount {
   id: string;
@@ -51,19 +52,19 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function listGLAccounts(top = 50, skip = 0): Promise<PagedResult<GLAccount>> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function getGLAccount(id: string): Promise<GLAccount> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function createGLAccount(input: CreateGLAccountInput): Promise<GLAccount> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
@@ -72,23 +73,23 @@ export async function createGLAccount(input: CreateGLAccountInput): Promise<GLAc
 export async function updateGLAccount(id: string, input: UpdateGLAccountInput): Promise<GLAccount> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
 }
 
 export async function submitGLAccount(id: string): Promise<GLAccount> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function approveGLAccount(id: string): Promise<GLAccount> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function rejectGLAccount(id: string): Promise<GLAccount> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }

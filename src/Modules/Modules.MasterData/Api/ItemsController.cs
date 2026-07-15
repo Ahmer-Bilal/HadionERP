@@ -6,15 +6,13 @@ namespace Modules.MasterData.Api;
 
 /// <summary>
 /// Item controller — inherits <see cref="PlatformApiController"/> for shared conventions (paging, error
-/// envelope), same route/actor/exception-mapping pattern as <see cref="GLAccountsController"/>. Two
-/// distinct actor literals enforce the Segregation of Duties split (maintainer can't be approver).
+/// envelope), same route/actor/exception-mapping pattern as <see cref="GLAccountsController"/>. Real authenticated identity ("CurrentActor" from Platform.Api.PlatformApiController) is the acting user;
+/// Segregation of Duties is enforced at role-assignment time (see Modules.Identity.Application.UserService
+/// .AssignRoleAsync), not by separate hardcoded actors here.
 /// </summary>
 [Route("api/v1/masterdata/items")]
 public sealed class ItemsController : PlatformApiController
 {
-    private const string MaintainerActor = "system/ui";
-    private const string ApproverActor = "system/approver";
-
     private readonly ItemService _service;
 
     public ItemsController(ItemService service) => _service = service;
@@ -43,7 +41,7 @@ public sealed class ItemsController : PlatformApiController
         const string companyId = "C001";
         try
         {
-            var created = await _service.CreateAsync(request, MaintainerActor, companyId, cancellationToken);
+            var created = await _service.CreateAsync(request, CurrentActor, companyId, cancellationToken);
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
@@ -55,7 +53,7 @@ public sealed class ItemsController : PlatformApiController
     {
         try
         {
-            var updated = await _service.UpdateAsync(id, request, MaintainerActor, cancellationToken);
+            var updated = await _service.UpdateAsync(id, request, CurrentActor, cancellationToken);
             return Ok(updated);
         }
         catch (KeyNotFoundException) { return NotFound(); }
@@ -66,7 +64,7 @@ public sealed class ItemsController : PlatformApiController
     [HttpPost("{id:guid}/submit")]
     public async Task<IActionResult> Submit(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.SubmitAsync(id, MaintainerActor, cancellationToken)); }
+        try { return Ok(await _service.SubmitAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -75,7 +73,7 @@ public sealed class ItemsController : PlatformApiController
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.ApproveAsync(id, ApproverActor, cancellationToken)); }
+        try { return Ok(await _service.ApproveAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -84,7 +82,7 @@ public sealed class ItemsController : PlatformApiController
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> Reject(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.RejectAsync(id, ApproverActor, cancellationToken)); }
+        try { return Ok(await _service.RejectAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }

@@ -85,6 +85,101 @@ replaced later. See AGENTS.md.
     qualification from ongoing performance scoring.
 - **Exit criteria**: full procure-to-pay cycle with configurable approval matrix.
 
+## Checkpoint — UI/Visual Density Pass (before Phase 3, decision 2026-07-14)
+Doc 02 §2/§3 already specifies the *target* pattern — merged List+Details form, dense sortable/filterable
+grid (compact rows, saved views, like Dynamics 365's vendor list), FastTabs, an Action Pane command bar
+driven by BO state/security, and drill-down where a key/ID field renders as a hyperlink (e.g. blue vendor
+ID) that navigates to that record's own full List+Details form. What's actually been hand-built through
+Phase 0–2 (Business Partner, GL Account, Items, Cost Centers, Tax Codes, Journal Entry, AP Invoice, Vendor
+Prequalification, Purchase Requisition, RFQ) is functionally correct but visually simpler — each page was
+hand-rolled per slice, `tools/object-page-gen` was never finished into a real generator, and there's no
+shared `Platform.UI` List+Details component yet.
+
+- **Do the pass once Phase 2's procure-to-pay cycle (PO/GRN/3-way match) is done, not before.** By then
+  every recurring page shape has appeared at least once (flat list, hierarchical list, multi-step workflow,
+  line-item grid, cross-document drill-down like PR→RFQ→PO), so one shared component retrofits every
+  existing page in one go and every Phase 3+ page gets the dense look for free — cheaper than reworking each
+  module's pages twice.
+- **Until then, keep building new pages the same functional way already established** — don't hand-roll
+  partial density per page. This note exists so nobody re-styles piecemeal before the shared component
+  exists; that would be the exact rework this checkpoint is meant to avoid.
+- Concretely, the pass should build a real `Platform.UI` List+Details template (or finish
+  `tools/object-page-gen`) implementing: dense grids, ID/key fields as hyperlinks opening the target
+  record's own page (not a modal), FastTabs replacing today's flatter detail sections, and a state-driven
+  Action Pane — then apply it to every existing page, not just new ones.
+
+## Checkpoint — Architecture Gap Audit & Platform Hardening (added 2026-07-15)
+
+A full SAP S/4HANA/Dynamics 365-vs-HadionERP gap audit was performed 2026-07-15, per explicit user
+instruction to "act as real architecture of SAP" and identify what a real deployment of either reference
+product has that this system doesn't. The full findings, with file-level evidence and severity per gap, live
+in **`ARCHITECTURE-AUDIT.md`** at the repo root — read that file before starting any of the items below; this
+section only lists them with their assigned phase, it doesn't repeat the evidence.
+
+- ✅ **Resolved 2026-07-15**: real Authentication & Identity (§1 of the audit) — `Modules.Identity` now
+  provides real username/password login (JWT bearer tokens), a persisted Users admin surface, and a global
+  default-deny authorization policy; every controller resolves the real logged-in user instead of a
+  hardcoded literal. This also resolved Segregation of Duties conflict checking (§3) for free — role
+  assignment now runs `ISodEngine.FindUnresolvedConflicts` for the first time ever, live-verified blocking a
+  conflicting assignment and accepting an explicit override. See `Modules.Identity/README.md` and
+  `PROGRESS.md`'s "Real Authentication & Identity" entry. Delegation (§6) is now *buildable* (real users
+  exist) but its UI itself is still separate, not-yet-started work — not resolved by this pass.
+- **Phase 1 depth, should precede real Finance production use**: Fiscal Year/Period management (§11 — no
+  period-close/lock exists at all today) and actually wiring the already-built-but-unused ZATCA QR invoice
+  code (§8) into `APInvoice` — Phase 1's own original scope named this, it was never finished.
+- **Next Procurement/Finance approval work**: amount-conditioned approval matrices (§5) — Phase 2's exit
+  criteria named "configurable approval matrix" but what shipped is role-based, not amount-conditioned; the
+  workflow engine's `AttributeConstraints` condition-gating primitive already exists and is proven (Vendor
+  Prequalification's 5-step chain), it has just never been pointed at a document amount. Purchase Order is
+  the natural first module to prove this on.
+- **Next UI pass**: wire the already-built-but-unused Hijri calendar service (§9) into date fields.
+- **Phase 4+ (multi-entity depth)**: Multi-Company/Legal Entity structure (§2), Row-Level Security scoped to
+  it (§4), Multi-Currency (§10).
+- **Phase 4 (HR & Payroll)**: Field-Level Security for its first genuinely sensitive fields (§4 — salary,
+  IBAN, national ID).
+- **Phase 5 (Reporting, Analytics & Mobile)**: Notifications & Output Management (§7 — currently zero code,
+  not even a stub) should land before the statutory-report generation work already scoped for this phase,
+  since it's the more foundational of the two; Escalation (§6 — currently fully orphaned code) fits here too
+  since it implies the same kind of scheduled background processing as report generation.
+- **Phase 6 (Extensibility)**: `Platform.Extensibility`/`Platform.Integration` are currently README-only
+  placeholders (§13) — confirms rather than changes this phase's already-stated scope.
+- **As-needed, not urgent**: real object storage for Attachments (§14); virus scanning should land before any
+  external-facing deployment specifically, independent of the storage-backend question.
+
+**Part 2 (added same day, same file)**: a second pass audited *data-model and module completeness*
+specifically, per explicit user follow-up ("i also want other things which are missing like modules and core
+data... that sap/dynamic have in module 1 but we are missing"), separate from the cross-cutting platform
+findings above.
+
+- **Phase 1 depth, the highest-priority data-model gap in the whole audit**: AP Payment Recording & Cash/Bank
+  Management (§16) — there is currently no way anywhere in this system to record that an AP invoice was
+  actually paid (`APInvoice.Post()` only ever posts Debit Expense/Credit Payable; nothing ever debits Payable/
+  credits a bank account). Business Partner master data (§15 — no Payment Terms, Bank/IBAN, Credit Limit,
+  Reconciliation Account, Withholding Tax) is the same real-world capability's master-data half and should
+  land alongside it, not separately.
+- **Phase 1/4 depth, lower urgency**: Withholding Tax as a distinct concept from VAT (§19, after §16 exists to
+  withhold against); GL Document Type grouping (§17, not urgent until document-shape count grows); Profit
+  Center (§18, Phase 4+).
+- **Confirm against Phase 3's own WBS depth, don't build twice**: Internal Order (§18) — SAP's temporary,
+  project-scoped cost collector is structurally the same job a WBS Element's `IsAccountAssignmentElement`
+  already does; when Phase 3 builds real cost-posting against WBS elements, confirm intentionally whether a
+  separate Internal Order concept is still needed or whether WBS already covers it.
+- **New roadmap items, not previously named anywhere**: **Fixed Assets** (§20 — construction-specific
+  relevance: cranes/trucks/generators/formwork as real capital assets) and **Plant/Equipment Maintenance**
+  (§22 — maintenance scheduling for the same equipment, a distinct concern from Fixed Assets' depreciation
+  accounting) pair naturally and are recommended as a new checkpoint between Phase 3 and Phase 4, or folded
+  into Phase 4. **Inventory/Warehouse Management** (§21 — `Item.cs`'s own doc comment already presupposes an
+  Inventory module that doesn't exist; Procurement's GRN records receipt but never increments any stock
+  balance) is a new roadmap item best sequenced after Phase 3's Construction module exists, since site
+  material consumption is the real driver of on-hand tracking for this business.
+- **Open question, not a confirmed gap**: Real Estate/Site-Land Management (§23) — whether this is needed
+  depends on the user's own land/site-ownership model; ask before scoping rather than guessing it into the
+  roadmap.
+
+None of the above (Part 1 or Part 2) blocks Phase 3 (Construction & Project Management, in progress) from
+continuing — these are platform-hardening and new-module items layered onto or added alongside phases already
+in the roadmap, not new phases inserted ahead of Phase 3.
+
 ## Phase 3 — Construction & Project Management
 - `Modules.Construction`: Contracts, BOQ/WBS, Subcontracts, Site Progress/Measurement, Variation Orders,
   Retention

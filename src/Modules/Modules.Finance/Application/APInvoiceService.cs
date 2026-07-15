@@ -38,6 +38,7 @@ public sealed class APInvoiceService
     private readonly ICostCenterLookup _costCenterLookup;
     private readonly ITaxCodeLookup _taxCodeLookup;
     private readonly JournalEntryService _journalEntryService;
+    private readonly IPaymentRepository _paymentRepository;
 
     public APInvoiceService(
         IAPInvoiceRepository repository,
@@ -51,7 +52,8 @@ public sealed class APInvoiceService
         IGLAccountLookup glAccountLookup,
         ICostCenterLookup costCenterLookup,
         ITaxCodeLookup taxCodeLookup,
-        JournalEntryService journalEntryService)
+        JournalEntryService journalEntryService,
+        IPaymentRepository paymentRepository)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
@@ -65,6 +67,7 @@ public sealed class APInvoiceService
         _costCenterLookup = costCenterLookup;
         _taxCodeLookup = taxCodeLookup;
         _journalEntryService = journalEntryService;
+        _paymentRepository = paymentRepository;
     }
 
     public async Task<APInvoiceDto> CreateAsync(
@@ -112,13 +115,13 @@ public sealed class APInvoiceService
         _auditRecorder.RecordCreate(AuditReference(invoice.Id), actor,
             $"AP invoice '{invoice.DocumentNumber}' ({invoice.VendorInvoiceNumber}) created, gross {invoice.GrossAmount}.", AuditSource);
 
-        return ToDto(invoice);
+        return await ToDtoAsync(invoice, cancellationToken);
     }
 
     public async Task<APInvoiceDto?> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var invoice = await _repository.GetAsync(id, cancellationToken);
-        return invoice is null ? null : ToDto(invoice);
+        return invoice is null ? null : await ToDtoAsync(invoice, cancellationToken);
     }
 
     public async Task<(IReadOnlyList<APInvoiceDto> Items, int TotalCount)> ListAsync(
@@ -126,7 +129,34 @@ public sealed class APInvoiceService
     {
         var items = await _repository.ListAsync(skip, top, cancellationToken);
         var total = await _repository.CountAsync(cancellationToken);
-        return (items.Select(ToDto).ToList(), total);
+        var dtos = new List<APInvoiceDto>(items.Count);
+        foreach (var item in items) dtos.Add(await ToDtoAsync(item, cancellationToken));
+        return (dtos, total);
+    }
+
+    /// <summary>How much of this invoice's Gross Amount is still unpaid — closes `ARCHITECTURE-AUDIT.md`
+    /// Part 2 §16 (before <c>Payment</c> existed, this question was simply unanswerable anywhere in the
+    /// system). Gross Amount minus every *Posted, unreversed* Payment's allocation against it — a Draft/
+    /// Submitted/Approved payment's allocations don't count yet (proposals, not real ledger effects), and a
+    /// Reversed payment's allocations don't count either (its ledger effect was undone). Duplicated, not
+    /// shared, with <c>PaymentService</c>'s own identical private computation — the same small-helper-per-
+    /// service tolerance this codebase already accepts for e.g. <c>RequireAuthorization</c>/
+    /// <c>BuildPrincipal</c>.</summary>
+    public async Task<decimal> GetOutstandingBalanceAsync(Guid invoiceId, CancellationToken cancellationToken = default)
+    {
+        var invoice = await RequireInvoiceAsync(invoiceId, cancellationToken);
+        return await ComputeOutstandingBalanceAsync(invoice, cancellationToken);
+    }
+
+    private async Task<decimal> ComputeOutstandingBalanceAsync(APInvoice invoice, CancellationToken cancellationToken)
+    {
+        var payments = await _paymentRepository.ListByInvoiceAsync(invoice.Id, cancellationToken);
+        var paidSoFar = payments
+            .Where(p => p.Status == BusinessObjectStatus.Posted)
+            .SelectMany(p => p.Allocations)
+            .Where(a => a.APInvoiceId == invoice.Id)
+            .Sum(a => a.AllocatedAmount);
+        return invoice.GrossAmount - paidSoFar;
     }
 
     public async Task<APInvoiceDto> SubmitAsync(Guid id, string actor, CancellationToken cancellationToken = default)
@@ -150,7 +180,7 @@ public sealed class APInvoiceService
                 await ApproveInternalAsync(invoice, actor, cancellationToken);
         }
 
-        return ToDto(invoice);
+        return await ToDtoAsync(invoice, cancellationToken);
     }
 
     public Task<APInvoiceDto> ApproveAsync(Guid id, string actor, CancellationToken cancellationToken = default) =>
@@ -175,7 +205,7 @@ public sealed class APInvoiceService
         else if (instance.Status == Platform.Workflow.WorkflowInstanceStatus.Rejected)
             await RejectInternalAsync(invoice, actor, cancellationToken);
 
-        return ToDto(invoice);
+        return await ToDtoAsync(invoice, cancellationToken);
     }
 
     /// <summary>Posts the invoice: generates a real linked G/L Journal Entry (Dr Expense, Dr VAT if any,
@@ -210,7 +240,7 @@ public sealed class APInvoiceService
             $"AP invoice '{invoice.DocumentNumber}' posted via journal entry '{journalEntry.DocumentNumber}'.",
             JsonSerializer.Serialize(fromStatus.ToString()), JsonSerializer.Serialize(invoice.Status.ToString()), AuditSource);
 
-        return ToDto(invoice);
+        return await ToDtoAsync(invoice, cancellationToken);
     }
 
     /// <summary>Reverses a Posted invoice: reverses its linked Journal Entry (undoing the actual ledger
@@ -233,7 +263,7 @@ public sealed class APInvoiceService
             $"AP invoice '{invoice.DocumentNumber}' reversed.",
             JsonSerializer.Serialize(fromStatus.ToString()), JsonSerializer.Serialize(invoice.Status.ToString()), AuditSource);
 
-        return ToDto(invoice);
+        return await ToDtoAsync(invoice, cancellationToken);
     }
 
     private async Task ApproveInternalAsync(APInvoice invoice, string actor, CancellationToken cancellationToken)
@@ -287,8 +317,15 @@ public sealed class APInvoiceService
         await _repository.GetAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"AP invoice {id} was not found.");
 
-    private static APInvoiceDto ToDto(APInvoice i) => new(
-        i.Id, i.DocumentNumber, i.Status.ToString(), i.VendorId, i.VendorInvoiceNumber, i.InvoiceDate, i.Description,
-        i.ExpenseAccountId, i.PayableAccountId, i.CostCenterId, i.TaxCodeId, i.TaxRate, i.VatAccountId,
-        i.NetAmount, i.TaxAmount, i.GrossAmount, i.LinkedJournalEntryId, i.CreatedAt, i.CreatedBy);
+    private async Task<APInvoiceDto> ToDtoAsync(APInvoice i, CancellationToken cancellationToken)
+    {
+        var outstandingBalance = i.Status == BusinessObjectStatus.Posted
+            ? await ComputeOutstandingBalanceAsync(i, cancellationToken)
+            : 0m;
+
+        return new(
+            i.Id, i.DocumentNumber, i.Status.ToString(), i.VendorId, i.VendorInvoiceNumber, i.InvoiceDate, i.Description,
+            i.ExpenseAccountId, i.PayableAccountId, i.CostCenterId, i.TaxCodeId, i.TaxRate, i.VatAccountId,
+            i.NetAmount, i.TaxAmount, i.GrossAmount, outstandingBalance, i.LinkedJournalEntryId, i.CreatedAt, i.CreatedBy);
+    }
 }

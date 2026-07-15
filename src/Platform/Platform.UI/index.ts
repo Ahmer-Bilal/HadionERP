@@ -8,6 +8,7 @@ export { ShellBar } from "./components/ShellBar";
 export { NavigationPane } from "./components/NavigationPane";
 export { ActionPane } from "./components/ActionPane";
 export { FastTabs } from "./components/FastTabs";
+export { SplitView } from "./components/SplitView";
 
 export type {
   LanguageCode,

@@ -1,11 +1,20 @@
+using System.Text;
 using Gateway.Api.Events;
 using Gateway.Api.Localization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Modules.Finance.Application;
+using Modules.Finance.Contracts;
+using Modules.Identity.Application;
+using Modules.Identity.Infrastructure;
 using Modules.MasterData.Application;
 using Modules.MasterData.Contracts;
 using Modules.MasterData.Infrastructure;
 using Modules.Procurement.Application;
+using Modules.ProjectManagement.Application;
 using Platform.Attachments;
 using Platform.Audit;
 using Platform.Configuration;
@@ -23,9 +32,64 @@ using Platform.Workflow.Delegation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// Real authentication (`ARCHITECTURE-AUDIT.md` Part 1 §1) — every request needs a valid bearer token by
+// default (the global AuthorizeFilter below) except AuthController.Login, the one endpoint that produces a
+// token in the first place. Signing key comes from .NET User Secrets in Development (never a committed
+// file — see HOW-TO-RUN.md), same handling as ConnectionStrings:Default.
+var jwtSigningKey = builder.Configuration["Identity:JwtSigningKey"]
+    ?? throw new InvalidOperationException(
+        "Missing Identity:JwtSigningKey. Run `dotnet user-secrets set \"Identity:JwtSigningKey\" " +
+        "\"<a random string at least 32 characters long>\"` in src/Gateway/Gateway.Api — see HOW-TO-RUN.md.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = JwtTokenService.Issuer,
+            ValidAudience = JwtTokenService.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+
+// Global default-deny: every controller action requires a valid, authenticated principal unless it opts
+// out with [AllowAnonymous] (only AuthController.Login does) — avoids the class of bug where a new
+// controller simply forgets to add [Authorize].
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+builder.Services.AddControllers(options => options.Filters.Add(new AuthorizeFilter()));
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // Lets Swagger UI actually call protected endpoints during manual testing — "Authorize" button accepts
+    // a raw bearer token, same convention every JWT-protected API's Swagger doc uses.
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Paste the token returned by POST /api/v1/identity/auth/login (no \"Bearer \" prefix needed).",
+    });
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                { Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" } },
+            Array.Empty<string>()
+        }
+    });
+});
 builder.Services.AddHealthChecks();
 
 // Apps.Shell (the frontend, Vite dev server) runs on a different origin during development.
@@ -74,7 +138,13 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 VendorPrequalificationSecurity.TechnicalReviewerRole, VendorPrequalificationSecurity.HseReviewerRole,
                 VendorPrequalificationSecurity.QualityReviewerRole,
                 PurchaseRequisitionSecurity.MaintainerRole, PurchaseRequisitionSecurity.ApproverRole,
-                RequestForQuotationSecurity.MaintainerRole, RequestForQuotationSecurity.ApproverRole },
+                RequestForQuotationSecurity.MaintainerRole, RequestForQuotationSecurity.ApproverRole,
+                PurchaseOrderSecurity.MaintainerRole, PurchaseOrderSecurity.ApproverRole,
+                GoodsReceiptNoteSecurity.MaintainerRole, GoodsReceiptNoteSecurity.ApproverRole,
+                ProjectSecurity.MaintainerRole, ProjectSecurity.ApproverRole,
+                LookupSecurity.AdministratorRole, IdentitySecurity.AdministratorRole,
+                BankAccountSecurity.MaintainerRole, BankAccountSecurity.ApproverRole,
+                PaymentSecurity.MaintainerRole, PaymentSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -87,7 +157,13 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 VendorPrequalificationSecurity.TechnicalReviewerDuty, VendorPrequalificationSecurity.HseReviewerDuty,
                 VendorPrequalificationSecurity.QualityReviewerDuty,
                 PurchaseRequisitionSecurity.MaintainerDuty, PurchaseRequisitionSecurity.ApproverDuty,
-                RequestForQuotationSecurity.MaintainerDuty, RequestForQuotationSecurity.ApproverDuty });
+                RequestForQuotationSecurity.MaintainerDuty, RequestForQuotationSecurity.ApproverDuty,
+                PurchaseOrderSecurity.MaintainerDuty, PurchaseOrderSecurity.ApproverDuty,
+                GoodsReceiptNoteSecurity.MaintainerDuty, GoodsReceiptNoteSecurity.ApproverDuty,
+                ProjectSecurity.MaintainerDuty, ProjectSecurity.ApproverDuty,
+                LookupSecurity.AdministratorDuty, IdentitySecurity.AdministratorDuty,
+                BankAccountSecurity.MaintainerDuty, BankAccountSecurity.ApproverDuty,
+                PaymentSecurity.MaintainerDuty, PaymentSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -115,35 +191,46 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         VendorPrequalificationSecurity.MaintainerQualityReviewerConflict,
         PurchaseRequisitionSecurity.MaintainerApproverConflict,
         RequestForQuotationSecurity.MaintainerApproverConflict,
+        PurchaseOrderSecurity.MaintainerApproverConflict,
+        GoodsReceiptNoteSecurity.MaintainerApproverConflict,
+        ProjectSecurity.MaintainerApproverConflict,
+        BankAccountSecurity.MaintainerApproverConflict,
+        PaymentSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
-// Platform.Security's actor-to-role resolution: a temporary stand-in for real SSO/OIDC (see
-// Platform.Security/README.md's "Deferred" section) — maps the bare actor-id strings every module
-// currently hardcodes (e.g. BusinessPartnersController's MaintainerActor/ApproverActor) to real Role keys,
-// so authorization/workflow-eligibility checks have real data instead of an unconditional grant.
-builder.Services.AddSingleton<IActorRoleAssignmentStore>(_ => new InMemoryActorRoleAssignmentStore(
-    new Dictionary<string, IReadOnlyCollection<string>>
-    {
-        ["system/ui"] = new[]
-        {
-            BusinessPartnerSecurity.MaintainerRoleKey, GLAccountSecurity.MaintainerRoleKey,
-            ItemSecurity.MaintainerRoleKey, CostCenterSecurity.MaintainerRoleKey,
-            TaxCodeSecurity.MaintainerRoleKey, JournalEntrySecurity.MaintainerRoleKey,
-            APInvoiceSecurity.MaintainerRoleKey, VendorPrequalificationSecurity.MaintainerRoleKey,
-            PurchaseRequisitionSecurity.MaintainerRoleKey, RequestForQuotationSecurity.MaintainerRoleKey,
-        },
-        ["system/approver"] = new[]
-        {
-            BusinessPartnerWorkflow.ApproverRoleKey, GLAccountWorkflow.ApproverRoleKey,
-            ItemWorkflow.ApproverRoleKey, CostCenterWorkflow.ApproverRoleKey,
-            TaxCodeWorkflow.ApproverRoleKey, JournalEntryWorkflow.ApproverRoleKey,
-            APInvoiceWorkflow.ApproverRoleKey,
-            VendorPrequalificationWorkflow.CommercialReviewerRoleKey, VendorPrequalificationWorkflow.LegalReviewerRoleKey,
-            VendorPrequalificationWorkflow.TechnicalReviewerRoleKey, VendorPrequalificationWorkflow.HseReviewerRoleKey,
-            VendorPrequalificationWorkflow.QualityReviewerRoleKey,
-            PurchaseRequisitionWorkflow.ApproverRoleKey, RequestForQuotationWorkflow.ApproverRoleKey,
-        },
-    }));
+// Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
+// "system/ui"/"system/approver" to fixed role sets (a temporary stand-in disclosed in
+// `ARCHITECTURE-AUDIT.md` Part 1 §1). Real authentication now exists (see the JWT/AddAuthentication setup
+// above and Modules.Identity below) — this resolves a REAL logged-in username's assigned roles from the
+// database instead. Scoped, not Singleton, since it now depends on a scoped DbContext.
+builder.Services.AddScoped<IActorRoleAssignmentStore, EfActorRoleAssignmentStore>();
+
+// Every role key any module currently registers — used only to grant the bootstrap admin (see
+// IdentitySeeder below) full access on first run, so the system is immediately usable after a fresh
+// deploy with no separate manual setup step. Not a security boundary in itself; real per-user role
+// assignment happens through the Users admin UI (Modules.Identity) from this point on.
+var allRegisteredRoleKeys = new[]
+{
+    BusinessPartnerSecurity.MaintainerRoleKey, BusinessPartnerWorkflow.ApproverRoleKey,
+    GLAccountSecurity.MaintainerRoleKey, GLAccountWorkflow.ApproverRoleKey,
+    ItemSecurity.MaintainerRoleKey, ItemWorkflow.ApproverRoleKey,
+    CostCenterSecurity.MaintainerRoleKey, CostCenterWorkflow.ApproverRoleKey,
+    TaxCodeSecurity.MaintainerRoleKey, TaxCodeWorkflow.ApproverRoleKey,
+    JournalEntrySecurity.MaintainerRoleKey, JournalEntryWorkflow.ApproverRoleKey,
+    APInvoiceSecurity.MaintainerRoleKey, APInvoiceWorkflow.ApproverRoleKey,
+    VendorPrequalificationSecurity.MaintainerRoleKey,
+    VendorPrequalificationWorkflow.CommercialReviewerRoleKey, VendorPrequalificationWorkflow.LegalReviewerRoleKey,
+    VendorPrequalificationWorkflow.TechnicalReviewerRoleKey, VendorPrequalificationWorkflow.HseReviewerRoleKey,
+    VendorPrequalificationWorkflow.QualityReviewerRoleKey,
+    PurchaseRequisitionSecurity.MaintainerRoleKey, PurchaseRequisitionWorkflow.ApproverRoleKey,
+    RequestForQuotationSecurity.MaintainerRoleKey, RequestForQuotationWorkflow.ApproverRoleKey,
+    PurchaseOrderSecurity.MaintainerRoleKey, PurchaseOrderWorkflow.ApproverRoleKey,
+    GoodsReceiptNoteSecurity.MaintainerRoleKey, GoodsReceiptNoteWorkflow.ApproverRoleKey,
+    ProjectSecurity.MaintainerRoleKey, ProjectWorkflow.ApproverRoleKey,
+    LookupSecurity.AdministratorRoleKey, IdentitySecurity.AdministratorRoleKey,
+    BankAccountSecurity.MaintainerRoleKey, BankAccountWorkflow.ApproverRoleKey,
+    PaymentSecurity.MaintainerRoleKey, PaymentWorkflow.ApproverRoleKey,
+};
 
 // Platform.Workflow: one real approval workflow is registered — Modules.MasterData's Business Partner
 // onboarding approval (BusinessPartnerWorkflow.SubmitApprovalDefinition). A future module registers its
@@ -161,6 +248,11 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         VendorPrequalificationWorkflow.SubmitApprovalDefinition,
         PurchaseRequisitionWorkflow.SubmitApprovalDefinition,
         RequestForQuotationWorkflow.SubmitApprovalDefinition,
+        PurchaseOrderWorkflow.SubmitApprovalDefinition,
+        GoodsReceiptNoteWorkflow.SubmitApprovalDefinition,
+        ProjectWorkflow.SubmitApprovalDefinition,
+        BankAccountWorkflow.SubmitApprovalDefinition,
+        PaymentWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -220,6 +312,11 @@ var masterDataConnectionString = builder.Configuration.GetConnectionString("Defa
         "in src/Gateway/Gateway.Api — see HOW-TO-RUN.md.");
 
 builder.Services.AddDbContext<MasterDataDbContext>(options => options.UseNpgsql(masterDataConnectionString));
+// The admin-configurable lookup engine (Countries/Business Role Types/Address Types/Units of Measure/
+// Trades and any future admin-created type) — registered before BusinessPartnerService/ItemService below
+// since both now validate references against it via constructor injection.
+builder.Services.AddScoped<ILookupRepository, EfLookupRepository>();
+builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<IBusinessPartnerRepository, EfBusinessPartnerRepository>();
 builder.Services.AddScoped<IWorkflowInstanceRepository, EfWorkflowInstanceRepository>();
 // Platform.Attachments: file bytes are stored in Postgres via Modules.MasterData's own DbContext for now
@@ -247,6 +344,7 @@ builder.Services.AddScoped<IBusinessPartnerLookup, EfBusinessPartnerLookup>();
 builder.Services.AddScoped<ITaxCodeLookup, EfTaxCodeLookup>();
 builder.Services.AddScoped<ICostCenterLookup, EfCostCenterLookup>();
 builder.Services.AddScoped<IItemLookup, EfItemLookup>();
+builder.Services.AddScoped<ILookupCatalog, EfLookupCatalog>();
 builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeService(
     sp.GetRequiredService<MasterDataDbContext>(),
     new[]
@@ -301,7 +399,54 @@ builder.Services.AddScoped<Modules.Finance.Application.APInvoiceService>(sp => n
     sp.GetRequiredService<IGLAccountLookup>(),
     sp.GetRequiredService<ICostCenterLookup>(),
     sp.GetRequiredService<ITaxCodeLookup>(),
+    sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>(),
+    sp.GetRequiredService<Modules.Finance.Application.IPaymentRepository>()));
+
+// Bank Accounts & Payments — closes ARCHITECTURE-AUDIT.md Part 2 §16 ("no way anywhere in this system to
+// record that an AP invoice was actually paid"). Both live in Modules.Finance (same reasoning as JournalEntry/
+// APInvoice — real SAP/Dynamics keep House Bank/Payment documents in Finance, not a separate module).
+builder.Services.AddScoped<Modules.Finance.Application.IBankAccountRepository, Modules.Finance.Infrastructure.EfBankAccountRepository>();
+builder.Services.AddScoped<Modules.Finance.Application.BankAccountService>(sp => new Modules.Finance.Application.BankAccountService(
+    sp.GetRequiredService<Modules.Finance.Application.IBankAccountRepository>(),
+    new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
+        new[] { new NumberRangeDefinition(Modules.Finance.Application.BankAccountService.NumberRangeKey, "FIN", "BANK") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IGLAccountLookup>()));
+
+builder.Services.AddScoped<Modules.Finance.Application.IPaymentRepository, Modules.Finance.Infrastructure.EfPaymentRepository>();
+// Depends on IAPInvoiceRepository/IBankAccountRepository directly (both intra-module, same reasoning as
+// APInvoiceService reusing JournalEntryService directly) plus MasterData.Contracts' ILookupCatalog for the
+// one real cross-module contract call this slice adds (PaymentMethod validation).
+builder.Services.AddScoped<Modules.Finance.Application.PaymentService>(sp => new Modules.Finance.Application.PaymentService(
+    sp.GetRequiredService<Modules.Finance.Application.IPaymentRepository>(),
+    sp.GetRequiredService<Modules.Finance.Application.IAPInvoiceRepository>(),
+    sp.GetRequiredService<Modules.Finance.Application.IBankAccountRepository>(),
+    new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
+        new[] { new NumberRangeDefinition(Modules.Finance.Application.PaymentService.NumberRangeKey, "FIN", "PAY") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>(),
+    sp.GetRequiredService<ILookupCatalog>(),
     sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
+
+// Modules.Finance.Contracts: the published, synchronous cross-module contract call
+// docs/architecture/01-architecture-foundation.md §3.2 names as its own worked example ("Procurement asks
+// Finance's IBudgetCheckService before releasing a PO"). PassThroughBudgetCheckService always allows for now
+// — Budget Control itself is deferred Finance depth (PROGRESS.md), not built yet — see that class's own doc
+// comment for why this is disclosed rather than faking enforcement against numbers that don't exist.
+builder.Services.AddScoped<IBudgetCheckService, Modules.Finance.Infrastructure.PassThroughBudgetCheckService>();
+// Modules.Finance.Contracts' other publication: the 3-way match's read-only view into an AP Invoice's
+// vendor/amount, same dependency direction as IBudgetCheckService above.
+builder.Services.AddScoped<Modules.Finance.Contracts.IAPInvoiceLookup, Modules.Finance.Infrastructure.EfAPInvoiceLookup>();
 
 // Modules.Procurement: the third real, persisted business module, starting Phase 2. Own "procurement"
 // Postgres schema in the same physical database as MasterData's/Finance's. Depends on
@@ -358,6 +503,78 @@ builder.Services.AddScoped<RequestForQuotationService>(sp => new RequestForQuota
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IBusinessPartnerLookup>()));
 
+builder.Services.AddScoped<IPurchaseOrderRepository, Modules.Procurement.Infrastructure.EfPurchaseOrderRepository>();
+// Depends on IRequestForQuotationRepository/IPurchaseRequisitionRepository directly (both intra-module, same
+// reasoning as RequestForQuotationService reusing IPurchaseRequisitionRepository) plus Modules.Finance's
+// published IBudgetCheckService for the one real cross-module contract call this slice adds.
+builder.Services.AddScoped<PurchaseOrderService>(sp => new PurchaseOrderService(
+    sp.GetRequiredService<IPurchaseOrderRepository>(),
+    sp.GetRequiredService<IRequestForQuotationRepository>(),
+    sp.GetRequiredService<IPurchaseRequisitionRepository>(),
+    new Modules.Procurement.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>(),
+        new[] { new NumberRangeDefinition(PurchaseOrderService.NumberRangeKey, "PROC", "PO") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Procurement.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>(),
+    sp.GetRequiredService<IItemLookup>(),
+    sp.GetRequiredService<ICostCenterLookup>(),
+    sp.GetRequiredService<IBudgetCheckService>()));
+
+builder.Services.AddScoped<IGoodsReceiptNoteRepository, Modules.Procurement.Infrastructure.EfGoodsReceiptNoteRepository>();
+// Depends on IPurchaseOrderRepository directly (intra-module, same reasoning as PurchaseOrderService
+// reusing IRequestForQuotationRepository/IPurchaseRequisitionRepository).
+builder.Services.AddScoped<GoodsReceiptNoteService>(sp => new GoodsReceiptNoteService(
+    sp.GetRequiredService<IGoodsReceiptNoteRepository>(),
+    sp.GetRequiredService<IPurchaseOrderRepository>(),
+    new Modules.Procurement.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>(),
+        new[] { new NumberRangeDefinition(GoodsReceiptNoteService.NumberRangeKey, "PROC", "GRN") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Procurement.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Procurement.Infrastructure.ProcurementDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>()));
+
+// Reads PO/GRN data this module already owns directly, plus Finance's published IAPInvoiceLookup for the
+// invoiced-amount side of the check — see ThreeWayMatchService's own doc comment for the dependency-direction
+// reasoning.
+builder.Services.AddScoped<ThreeWayMatchService>(sp => new ThreeWayMatchService(
+    sp.GetRequiredService<IPurchaseOrderRepository>(),
+    sp.GetRequiredService<IGoodsReceiptNoteRepository>(),
+    sp.GetRequiredService<Modules.Finance.Contracts.IAPInvoiceLookup>()));
+
+// Modules.ProjectManagement: the fourth real, persisted business module, starting Phase 3. Own
+// "projectmanagement" Postgres schema in the same physical database as every other module's. Depends on
+// Modules.MasterData.Contracts only (IBusinessPartnerLookup, for the optional Customer reference), never on
+// MasterData's own Domain/Infrastructure/Application directly.
+builder.Services.AddDbContext<Modules.ProjectManagement.Infrastructure.ProjectManagementDbContext>(options => options.UseNpgsql(masterDataConnectionString));
+builder.Services.AddScoped<IProjectRepository, Modules.ProjectManagement.Infrastructure.EfProjectRepository>();
+builder.Services.AddScoped<ProjectService>(sp => new ProjectService(
+    sp.GetRequiredService<IProjectRepository>(),
+    new Modules.ProjectManagement.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.ProjectManagement.Infrastructure.ProjectManagementDbContext>(),
+        new[] { new NumberRangeDefinition(ProjectService.NumberRangeKey, "PM", "PRJ") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.ProjectManagement.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.ProjectManagement.Infrastructure.ProjectManagementDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>()));
+
+// Modules.Identity: the fifth real, persisted business module — real user authentication, replacing the
+// hardcoded actor literals every controller used before (`ARCHITECTURE-AUDIT.md` Part 1 §1). Own
+// "identity" Postgres schema, same physical database as every other module. UserService's constructor
+// dependencies (IAuditRecorder/IAuthorizationService/IActorRoleAssignmentStore/ISecurityCatalog/
+// ISodEngine/ISodExceptionLog) are all already registered above, so it's auto-wired like BusinessPartnerService.
+builder.Services.AddDbContext<IdentityDbContext>(options => options.UseNpgsql(masterDataConnectionString));
+builder.Services.AddScoped<IUserRepository, EfUserRepository>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddSingleton<ITokenService>(_ => new JwtTokenService(jwtSigningKey));
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -375,6 +592,7 @@ else
 }
 
 app.UseCors(appsShellDevCorsPolicy);
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
@@ -401,6 +619,28 @@ integrationEventPublisher.Enqueue(IntegrationEvent.Create(
 
 var outboxRelay = app.Services.GetRequiredService<OutboxRelay>();
 await outboxRelay.RelayPendingAsync();
+
+// Seed the admin-configurable lookup engine's system-defined types/values (Country/BusinessRoleType/
+// AddressType/UnitOfMeasure/Trade) — idempotent, only inserts what's missing, so an administrator's own
+// edits through the Lookup Data admin panel are never touched. See LookupSeeder's own doc comment.
+using (var seedScope = app.Services.CreateScope())
+{
+    var lookupDbContext = seedScope.ServiceProvider.GetRequiredService<MasterDataDbContext>();
+    await LookupSeeder.SeedAsync(lookupDbContext);
+}
+
+// Seed one bootstrap administrator if the `users` table is completely empty — without this, real
+// authentication would make the system unable to bootstrap itself (nobody could log in to create the
+// first user). Idempotent — never runs again once any user exists. See IdentitySeeder's own doc comment.
+var bootstrapAdminPassword = app.Configuration["Identity:BootstrapAdminPassword"]
+    ?? throw new InvalidOperationException(
+        "Missing Identity:BootstrapAdminPassword. Run `dotnet user-secrets set \"Identity:BootstrapAdminPassword\" " +
+        "\"<a strong password>\"` in src/Gateway/Gateway.Api — see HOW-TO-RUN.md.");
+using (var identitySeedScope = app.Services.CreateScope())
+{
+    var identityDbContext = identitySeedScope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+    await IdentitySeeder.SeedAsync(identityDbContext, bootstrapAdminPassword, allRegisteredRoleKeys);
+}
 
 // Prove the audit pipeline works live at boot: record one real, permanent operational entry ("application
 // started"), then verify the chain is intact. This is the same "prove the mechanism at boot" pattern used

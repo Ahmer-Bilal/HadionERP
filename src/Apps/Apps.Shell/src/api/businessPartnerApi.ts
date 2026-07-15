@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { authHeaders } from "./authApi";
 
 export interface BusinessPartnerAddress {
   id: string;
@@ -97,19 +98,19 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function listBusinessPartners(top = 50, skip = 0): Promise<PagedResult<BusinessPartner>> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function getBusinessPartner(id: string): Promise<BusinessPartner> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function createBusinessPartner(input: CreateBusinessPartnerInput): Promise<BusinessPartner> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
@@ -121,7 +122,7 @@ export async function addBusinessPartnerAddress(
 ): Promise<BusinessPartner> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/addresses`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
@@ -133,7 +134,7 @@ export async function addBusinessPartnerContact(
 ): Promise<BusinessPartner> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/contacts`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
@@ -145,29 +146,29 @@ export async function addBusinessPartnerRole(
 ): Promise<BusinessPartner> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/business-roles`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
 }
 
 export async function removeBusinessPartnerRole(id: string, roleId: string): Promise<BusinessPartner> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/business-roles/${roleId}`, { method: "DELETE" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/business-roles/${roleId}`, { method: "DELETE", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function submitBusinessPartner(id: string): Promise<BusinessPartner> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function approveBusinessPartner(id: string): Promise<BusinessPartner> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function rejectBusinessPartner(id: string): Promise<BusinessPartner> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
@@ -176,13 +177,14 @@ export async function uploadBusinessPartnerAttachment(id: string, file: File): P
   formData.append("file", file);
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`, {
     method: "POST",
+    headers: authHeaders(),
     body: formData,
   });
   return handleJson(response);
 }
 
 export async function listBusinessPartnerAttachments(id: string): Promise<Attachment[]> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`, { headers: authHeaders() });
   return handleJson(response);
 }
 
@@ -191,7 +193,7 @@ export function businessPartnerAttachmentDownloadUrl(id: string, attachmentId: s
 }
 
 export async function deleteBusinessPartnerAttachment(id: string, attachmentId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments/${attachmentId}`, { method: "DELETE" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments/${attachmentId}`, { method: "DELETE", headers: authHeaders() });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.detail ?? body?.title ?? `Request failed with status ${response.status}`);
@@ -201,19 +203,19 @@ export async function deleteBusinessPartnerAttachment(id: string, attachmentId: 
 export async function addBusinessPartnerNote(id: string, text: string): Promise<Note> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({ text }),
   });
   return handleJson(response);
 }
 
 export async function listBusinessPartnerNotes(id: string): Promise<Note[]> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function deleteBusinessPartnerNote(id: string, noteId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes/${noteId}`, { method: "DELETE" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/notes/${noteId}`, { method: "DELETE", headers: authHeaders() });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.detail ?? body?.title ?? `Request failed with status ${response.status}`);

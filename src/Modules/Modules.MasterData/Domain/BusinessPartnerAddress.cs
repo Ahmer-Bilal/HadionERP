@@ -7,17 +7,22 @@ namespace Modules.MasterData.Domain;
 /// document number, no lifecycle of its own — it's active exactly when its parent Business Partner is.
 /// Constructed only through <see cref="BusinessPartner.AddAddress"/>, never directly, so the aggregate
 /// root controls creation of its own children.
+///
+/// <see cref="AddressType"/> and <see cref="Country"/> are both admin-configurable lookup codes (Lookup
+/// types <c>"AddressType"</c> and <c>"Country"</c>) rather than a hardcoded enum/free text — validated
+/// against <c>LookupService</c> at the <c>BusinessPartnerService</c> layer, not here.
 /// </summary>
 public sealed class BusinessPartnerAddress
 {
     public Guid Id { get; private set; }
-    public AddressType AddressType { get; private set; }
+    public string AddressType { get; private set; }
     public string? Country { get; private set; }
     public string? City { get; private set; }
     public string? AddressLine { get; private set; }
 
-    internal BusinessPartnerAddress(AddressType addressType, string? country, string? city, string? addressLine)
+    internal BusinessPartnerAddress(string addressType, string? country, string? city, string? addressLine)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(addressType);
         Id = Guid.NewGuid();
         AddressType = addressType;
         Country = country;
@@ -29,5 +34,6 @@ public sealed class BusinessPartnerAddress
     /// parameterless constructor for the same pattern. Never call from application code.</summary>
     private BusinessPartnerAddress()
     {
+        AddressType = null!;
     }
 }

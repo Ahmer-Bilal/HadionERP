@@ -17,6 +17,13 @@
 .app-shell__content {
   flex: 1;
   padding: var(--pi-space-5) var(--pi-space-6);
+  /* A very subtle accent-tinted wash — not decoration for its own sake, it's what the SplitView detail
+     panel's frosted-glass backdrop-filter picks up (components.css's .pi-split-view__detail-panel). A
+     perfectly flat background behind a blur reads as nothing; this gives it something to catch. */
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, color-mix(in srgb, var(--pi-accent) 7%, transparent), transparent),
+    radial-gradient(40rem 24rem at 10% 110%, color-mix(in srgb, var(--pi-accent) 5%, transparent), transparent);
+  background-attachment: fixed;
 }
 
 .app-shell__footer {
@@ -92,4 +99,66 @@
   border-radius: var(--pi-radius-sm);
   background: var(--pi-bg);
   color: var(--pi-text);
+}
+
+/* A small "where this document came from" hint on a detail panel — the document-chain awareness called out
+   in the UI/Visual Density Pass design brief (PR -> RFQ -> PO -> GRN is HadionERP's whole spine; neither
+   reference product surfaces that chain as a first-class thing on the record itself). */
+.pi-doc-chain {
+  display: inline-block;
+  font-size: var(--pi-font-size-sm);
+  color: var(--pi-text-muted);
+  background: var(--pi-surface);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  padding: var(--pi-space-1) var(--pi-space-3);
+  margin-block-end: var(--pi-space-3);
+}
+
+/* --- Login page --- */
+.app-shell__login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 100vh;
+  background: var(--pi-bg);
+}
+
+.app-shell__login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-3);
+  inline-size: 24rem;
+  max-inline-size: 90vw;
+  padding: var(--pi-space-6);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-lg, var(--pi-radius-sm));
+  background: var(--pi-surface);
+  box-shadow: var(--pi-shadow-panel, none);
+}
+
+.app-shell__login-form input {
+  display: block;
+  inline-size: 100%;
+  padding: var(--pi-space-2);
+  margin-block-start: var(--pi-space-1);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+}
+
+.app-shell__login-form button {
+  padding: var(--pi-space-2) var(--pi-space-4);
+  border: 1px solid var(--pi-accent);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-accent);
+  color: white;
+  cursor: pointer;
+  font-weight: var(--pi-font-weight-semibold);
+}
+
+.app-shell__login-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

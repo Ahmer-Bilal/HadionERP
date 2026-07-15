@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { authHeaders } from "./authApi";
 
 export interface RfqLine {
   id: string;
@@ -64,43 +65,43 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function listRequestsForQuotation(top = 50, skip = 0): Promise<PagedResult<RequestForQuotation>> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function getRequestForQuotation(id: string): Promise<RequestForQuotation> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function createRequestForQuotation(input: CreateRequestForQuotationInput): Promise<RequestForQuotation> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
 }
 
 export async function submitRequestForQuotation(id: string): Promise<RequestForQuotation> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function approveRequestForQuotation(id: string): Promise<RequestForQuotation> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function rejectRequestForQuotation(id: string): Promise<RequestForQuotation> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function recordVendorQuote(id: string, input: RecordVendorQuoteInput): Promise<RequestForQuotation> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/vendor-quotes`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);

@@ -42,8 +42,12 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice, both post/reverse-able with full audit trail. AR/Cash-Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-14 |
-| Phase 2 — Procurement | In Progress — BusinessRoles + Vendor Prequalification + Purchase Requisition + RFQ all built and verified. PO/GRN/3-way match/budget-check not started | 2026-07-14 |
-| Phase 3 — Construction & Project Management | Not Started | — |
+| Phase 2 — Procurement | **Exit criteria met** — full procure-to-pay cycle (BusinessRoles/Vendor Prequal → PR → RFQ → PO → GRN) built, tested, and live-verified, with a working 3-way match against AP closing the loop. Real Budget Control enforcement and a real line-by-line invoice match remain deferred Finance/Procurement depth, not required for Phase 2's exit bar | 2026-07-15 |
+| **Checkpoint** — UI/Visual Density Pass | **Paused by explicit user instruction** — teal identity (design-tokens.css) + `Platform.UI.SplitView` are live and retrofitted on `PurchaseOrdersPage`/`BusinessPartnersPage`, but the user judged this insufficient to compete visually with Fiori/Dynamics (color tokens + one layout mechanic, no icons/status pills/KPIs/avatars — see `feedback_visual_richness_gap` in memory) and told the AI to stop touching it and move to roadmap phases instead. Left as-is, not reverted. Resume only when the user explicitly asks for the visual pass again, with real surface richness this time | 2026-07-15 |
+| Phase 3 — Construction & Project Management | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built, tested, and live-verified. Networks/Activities and `Modules.Construction` itself not started | 2026-07-15 |
+| **Checkpoint** — Lookup Data / Admin Panel | **Completed** — a real, admin-configurable picklist engine (`LookupType`/`LookupValue`, `LookupService`, `LookupsController`) replaced the hardcoded `BusinessRoleType`/`AddressType` enums and unvalidated `Country`/`UnitOfMeasure` free text; a genuine multi-page Admin Panel (`LookupDataPage.tsx`, inline-editable SAP-style grids, one nav entry per type) lets an administrator add/edit/deactivate/delete lookup values and even define brand-new lookup types, with in-use delete protection. Live-verified end-to-end, EN+AR | 2026-07-15 |
+| **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, now resolved — see next row) and AP Payment Recording (Part 2 §16, still open — no way in this system to record that an invoice was ever paid) | 2026-07-15 |
+| **Checkpoint** — Real Authentication & Identity | **Completed** — closes audit §1/§3. `Modules.Identity` (JWT bearer auth, persisted Users, global default-deny) replaced every hardcoded actor literal solution-wide; role assignment now runs real Segregation of Duties conflict checking for the first time ever (block → override-with-reason → succeed, live-verified). Live-verified end-to-end, EN+AR, zero regressions (22 test projects) | 2026-07-15 |
 | Phase 4 — HR & Payroll | Not Started | — |
 | Phase 5 — Reporting, Analytics & Mobile | Not Started | — |
 | Phase 6 — Extensibility Ecosystem & Advanced Capabilities | Not Started | — |
@@ -53,6 +57,588 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-15 — Real Authentication & Identity built (closes ARCHITECTURE-AUDIT.md Part 1 §1 and §3)
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Real Authentication & Identity
+- Status: Completed
+- What changed: The user chose to close the audit's top-priority Blocking finding before moving to new
+  feature phases ("i think better to improve before moving forward"). Entered plan mode given the scope
+  (security-critical, multi-file, several valid architectural approaches) and got explicit plan approval
+  before writing code. Built a new `Modules.Identity` module — real username/password authentication via
+  JWT bearer tokens, a persisted Users admin surface, and a global default-deny authorization policy —
+  replacing every hardcoded actor literal (`"system/ui"`/`"system/approver"`/`"system/startup"`, 32 usages)
+  across the entire solution.
+  - **Design**: JWT bearer tokens, not cookies (frontend/backend are different origins in dev, and bearer
+    tokens sidestep CORS-credential complexity). Lean `PasswordHasher<User>` (from
+    `Microsoft.Extensions.Identity.Core`), not the full ASP.NET Core Identity framework — matches
+    `Platform.Workflow`'s own documented precedent of a hand-built engine over unneeded framework surface.
+    `User` is deliberately not a `BusinessObject` (no Draft/Approve lifecycle) — same reasoning as this
+    session's earlier `LookupType`/`LookupValue`: real user administration is immediate-effect, gated by a
+    security role, not a workflow. `Username` is exactly the `actor: string` value every Application-layer
+    service across every module already accepted — **zero changes to any Application-layer service**; only
+    what produces that string changed.
+  - **The single biggest structural win**: role assignment (`UserService.AssignRoleAsync`) now calls
+    `Platform.Security.Sod.ISodEngine.FindUnresolvedConflicts` — the first live call this already-built,
+    already-tested engine has ever received in this codebase's history (every module registered real SoD
+    conflict rules since Phase 1, but nothing could ever check them without a role-*assignment* action to
+    guard). A conflict throws `SodConflictException` (mapped to a structured 409) unless the caller supplies
+    an override reason, which grants a logged exception via the already-existing `ISodExceptionLog.Grant` —
+    the real SAP GRC "risk acceptance" pattern. Live-verified via curl: assigning
+    `MasterData.BusinessPartner.Maintainer` then `MasterData.ApproveBusinessPartner` to the same user
+    correctly 409s with the registered rule's own reason text; retrying with an override reason succeeds.
+  - **Bootstrap seeding** (`IdentitySeeder`, mirrors `LookupSeeder`'s idempotent pattern): creates one
+    `admin` user with every currently-registered role on first run if the `users` table is empty, so the
+    system is immediately usable after this change with no separate manual step — confirmed by restarting
+    Gateway.Api from a clean state and logging in immediately.
+  - **All 14 pre-existing controllers retrofitted**: `PlatformApiController` (in `Platform.Api`, shared
+    across every module) gained a `CurrentActor` property reading the validated JWT's username claim;
+    `MaintainerActor`/`ApproverActor`/`ReviewerActor`/`AdministratorActor` hardcoded constants removed from
+    every controller in `Modules.MasterData`/`Modules.Finance`/`Modules.Procurement`/`Modules.ProjectManagement`,
+    replaced with `CurrentActor`. `BusinessPartnersController`'s doc comment (which specifically explained
+    the old two-hardcoded-actor SoD workaround) rewritten to describe the real mechanism.
+  - **Frontend**: `authApi.ts`/`AuthContext`/`LoginPage.tsx`; every one of the 15 existing `api/*.ts` files
+    retrofitted (via a small Python transform script, since the fetch-call shapes were mechanically
+    consistent across ~120 call sites) to attach `Authorization: Bearer <token>` through a shared
+    `authHeaders()` helper. `Platform.UI.ShellBar` gained optional `currentUserLabel`/`onLogout` props
+    (only rendered when provided, same optional-prop pattern as `tagline`). New `UsersPage.tsx` (list/
+    create/deactivate/reset-password, a Roles FastTab surfacing SoD conflicts inline with a required
+    override-reason field) under a new "Users" nav area alongside "Lookup Data."
+- Verified: 13 new unit tests (`UserServiceTests` — hash/verify round-trip, duplicate-username rejection,
+  authorization denial, deactivation blocking authentication, SoD conflict blocking then override-succeeding,
+  role removal, password reset) + 4 new integration tests against real PostgreSQL. **22 test projects pass
+  solution-wide, zero regressions** — confirmed by design: every pre-existing Application-service test
+  builds its own fake `IActorRoleAssignmentStore` directly, bypassing HTTP/controllers/JWT entirely, exactly
+  as predicted before writing any code. Live `curl` exercise: unauthenticated request to a protected
+  endpoint correctly 401s; bootstrap admin login returns a real JWT carrying every role as claims; the same
+  token against a protected endpoint returns 200; creating a Business Partner with the real token attributes
+  it to `"admin"` in the response (`createdBy`), not `"system/ui"`; the full SoD block→override→succeed
+  sequence above. Live Playwright pass (screenshots, zero console errors) in both English and Arabic: login
+  page, authenticated shell showing "Logged in as System Administrator · Logout" (RTL-correct in Arabic), an
+  existing page (Business Partners) still working end-to-end with a real session, the Users admin page
+  (list, create, detail FastTabs), logout correctly returning to the login page.
+- `ARCHITECTURE-AUDIT.md` §1 and §3 marked Resolved with a link to this entry (per the file's own "add a
+  Resolved note against the specific bullet" convention — Part 1's findings are otherwise left unedited).
+  `docs/architecture/06-roadmap.md`'s checkpoint section updated to match.
+- Files touched: `src/Modules/Modules.Identity/**` (new module — `Domain/User.cs`, `UserRole.cs`;
+  `Application/IUserRepository.cs`, `UserDto.cs`, `IdentitySecurity.cs`, `UserService.cs`,
+  `SodConflictException.cs`; `Infrastructure/IdentityDbContext.cs`, `EfUserRepository.cs`,
+  `EfActorRoleAssignmentStore.cs`, `JwtTokenService.cs`, `IdentitySeeder.cs`,
+  `DesignTimeDbContextFactory.cs`, migration `20260715120755_InitialCreate`; `Api/AuthController.cs`,
+  `UsersController.cs`; `README.md`); `src/Platform/Platform.Security/ITokenService.cs` (new);
+  `src/Platform/Platform.Api/PlatformApiController.cs` (`CurrentActor`); `src/Gateway/Gateway.Api/Program.cs`
+  (JWT auth, global `AuthorizeFilter`, Swagger bearer scheme, DI wiring, bootstrap seeding call), `.csproj`
+  (new package + project references); 14 existing controllers across
+  `Modules.MasterData`/`Modules.Finance`/`Modules.Procurement`/`Modules.ProjectManagement` (actor retrofit);
+  `src/Apps/Apps.Shell/src/api/authApi.ts`, `usersApi.ts` (new), all 15 pre-existing `api/*.ts` files + `systemApi.ts`
+  (auth headers), `AuthContext.tsx` (new), `pages/LoginPage.tsx`, `pages/UsersPage.tsx` (new), `App.tsx`
+  (auth gate, nav, routing), `main.tsx` (`AuthProvider`), `App.css` (login page styles), `i18n/content.ts`
+  (`auth.*`/`users.*`/`nav.users*` keys, EN+AR); `src/Platform/Platform.UI/components/ShellBar.tsx`,
+  `components.css` (logout slot); `tests/UnitTests/Modules.Identity.Tests/**` (new),
+  `tests/IntegrationTests/Modules.Identity.IntegrationTests/**` (new); `ARCHITECTURE-AUDIT.md`,
+  `docs/architecture/06-roadmap.md` (Resolved notes).
+- Next: the audit's remaining Blocking finding — AP Payment Recording & Cash/Bank Management
+  (`ARCHITECTURE-AUDIT.md` Part 2 §16, no way in this system to record that an invoice was ever paid) — or
+  continue Phase 3 (`Modules.Construction`, Networks/Activities for `Modules.ProjectManagement`) per the
+  existing roadmap; the user should choose which, per this session's own established pattern of not assuming
+  an order between two Blocking findings.
+
+### 2026-07-15 — Architecture audit Part 2: core data model & module completeness
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Architecture Gap Audit (Part 2)
+- Status: Completed
+- What changed: The user asked for a second pass distinct from Part 1's cross-cutting platform findings —
+  "i also want other things which are missing like modules and core data... that sap/dynamic have in module
+  1 but we are missing," explicitly not just security/auth. Used a second research fork to ground the actual
+  current field lists on `BusinessPartner`/`GLAccount`/`Item`/`CostCenter`/`TaxCode`/`JournalEntry`/
+  `APInvoice` (reading the real code, not guessing), then compared against real SAP FI/CO/MM and Dynamics
+  365 F&O field-level completeness. Appended as "Part 2" to `ARCHITECTURE-AUDIT.md` (9 new numbered findings,
+  §15-23), preserving Part 1 unedited per the file's own "add a new dated section, don't silently edit past
+  findings" convention.
+  - **Single most important finding**: AP Payment Recording & Cash/Bank Management (§16) — there is
+    currently no way anywhere in this system to record that an AP invoice was actually paid.
+    `APInvoice.Post()` only ever posts Debit Expense/Credit Payable; nothing in the entire codebase ever
+    debits Payable/credits a bank account (confirmed by a solution-wide grep — zero hits for `Payment`/
+    `Disbursement`/`BankAccount`/`HouseBank` as class names anywhere). The AP cycle as built today stops one
+    real-world step short of complete. Rated Blocking — the highest-priority *data-model* gap in the whole
+    audit (Part 1's Authentication finding remains the highest-priority *platform* gap overall).
+  - Business Partner master data (§15) — no Payment Terms, Bank/IBAN, Credit Limit, Reconciliation Account,
+    or Withholding Tax field anywhere on `BusinessPartner`; this is why `APInvoiceService` requires
+    `PayableAccountId` picked by hand on every invoice instead of defaulting from the vendor — the
+    underlying master-data field to default *from* doesn't exist, a materially bigger gap than
+    `Modules.Finance/README.md`'s existing "not yet defaulted" framing suggested.
+  - GL Document Type concept (§17) and Profit Center/Internal Order (§18) — both genuinely missing, but
+    Internal Order specifically flagged as likely already subsumed by `Modules.ProjectManagement`'s WBS
+    Element (`IsAccountAssignmentElement` does structurally the same job) — worth confirming intentionally
+    when Phase 3 builds real cost-posting against WBS, not building both.
+  - Withholding Tax/Tax Jurisdiction Code (§19) — real KSA requirement, low priority given KSA's flat VAT.
+  - **Three entire modules confirmed absent from both code and roadmap**: Fixed Assets (§20 — genuinely
+    construction-relevant: cranes/trucks/generators/formwork are real capital assets for this business),
+    Inventory/Warehouse Management (§21 — `Item.cs`'s own doc comment already presupposes an Inventory
+    module that doesn't exist; Procurement's GRN records receipt but never increments any stock balance
+    anywhere), Plant/Equipment Maintenance (§22 — a distinct concern from Fixed Assets' depreciation
+    accounting, naturally paired with it).
+  - Real Estate/Site-Land Management (§23) flagged as an open question, not a confirmed gap — whether it's
+    needed depends on the user's own land/site-ownership model, not guessed into the roadmap.
+- `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint section
+  extended with a "Part 2" subsection mapping each new finding to a phase — explicit that §16/§15 (AP
+  payment recording) is Phase 1 depth that should land before real Finance production use, and that Fixed
+  Assets/Plant Maintenance/Inventory are new roadmap items (recommended as a checkpoint between Phase 3 and
+  Phase 4, or folded into Phase 4) that weren't named anywhere before this audit.
+- Files touched: `ARCHITECTURE-AUDIT.md` (Part 2 section, §15-23 + summary table), `docs/architecture/06-roadmap.md`
+  (checkpoint section extended), `PROGRESS.md` (this entry).
+- Next: no code changes in this entry — documentation/planning only. Highest-leverage next real
+  implementation work per this audit's own severity ratings is either real Authentication & Identity (Part 1
+  §1, Blocking, platform-wide) or AP Payment Recording & Cash/Bank Management (Part 2 §16, Blocking,
+  Finance-specific) — both are rated Blocking for different reasons (one blocks trustworthy attribution
+  everywhere, the other blocks the AP cycle from ever actually completing) and the user should pick which to
+  tackle first rather than this session assuming an order.
+
+### 2026-07-15 — Trade lookup split into three role-scoped categories; docs reconciled against the audit
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Lookup Data / Admin Panel (follow-up correction)
+- Status: Completed
+- What changed: The user caught a real design shortfall in the just-shipped Lookup Data checkpoint — "Trade"
+  had been seeded as one flat, undifferentiated 20-value list, even though this project's own
+  `docs/architecture/06-roadmap.md` (written well before this session) already explicitly describes trades as
+  three separate taxonomies per role family (Subcontractor → Electrical/Concrete/Steel Structure/...,
+  Supplier → Steel/Cement/MEP Materials/..., Consultant → Structural/Architectural/MEP Design/...). Also
+  caught: the Trade *field* itself was still a plain free-text `<input>` in `BusinessPartnersPage.tsx`,
+  never actually wired to any lookup suggestion despite the earlier session's README claiming it was. Fixed
+  both: replaced the single `Trade` lookup type with `SubcontractorTrade`/`SupplierTrade`/`ConsultantTrade`
+  (each its own admin-panel heading/nav item, matching how the roadmap already separates them), and wired
+  `BusinessPartnersPage.tsx`'s Trade field to a role-scoped HTML `<datalist>` — selecting "Subcontractor"
+  shows Subcontractor trade suggestions, "Supplier" shows Supplier trade suggestions, still free-text-entry
+  underneath per the roadmap's own deliberate "suggestion, not enforced" design.
+  - Confirmed the underlying design (immediate-effect, single-privilege-gated CRUD; in-use delete
+    protection; the enum-vs-lookup-table split) matches real SAP (Domain/Value-Table maintenance via SM30,
+    foreign-key-checked deletion) and Dynamics 365 (the Option-Set-vs-reference-table-entity distinction) —
+    not just an invented pattern, per user request to verify against the reference products.
+  - Cleaned up stale dev/test data: the old flat "Trade" lookup type/values (orphaned by the split) and a
+    leftover "PWTest" Country value from an earlier Playwright verification pass were removed from the dev
+    database directly.
+  - Reconciled existing docs against `ARCHITECTURE-AUDIT.md`'s findings per explicit user instruction ("update
+    the existing documents if they are not aligning with the audit report"): `Platform.Localization/README.md`,
+    `Platform.Workflow/README.md`, and `Platform.Security/README.md` each got a new disclosure noting which of
+    their described capabilities are real-but-not-yet-consumed-anywhere (Hijri calendar, ZATCA QR generation,
+    Delegation, FieldLevel/RowLevel), cross-referencing `ARCHITECTURE-AUDIT.md` instead of silently reading as
+    more complete than they are.
+  - One real regression caught only by the full test suite (not by any check run during development): the
+    new `LookupSeeder.cs` seed data (real Arabic country/role/trade names) tripped
+    `Platform.ArchitectureTests`'s "no hardcoded Arabic string outside the allow-list" guard — correctly so,
+    since that test can't distinguish seed business data from hardcoded UI copy by itself. Added
+    `LookupSeeder.cs` to the test's explicit `AllowedFiles` list with a written justification (the same
+    "deliberate, reviewed decision" pattern the test's own doc comment calls for), not a workaround.
+- Verified: full solution test suite (20 test projects) green with zero failures after the fix. Live `curl`
+  exercise confirmed the three new trade types seed correctly (15/10/8 values) and the old flat type is gone.
+  Live Playwright pass: the admin hub shows 7 correctly-separated lookup types (not the old 5 with one
+  mixed-together "Trade"), and the Business Partner create form's Trade suggestions genuinely change based on
+  the selected role (verified both Subcontractor's and Supplier's distinct suggestion lists render correctly),
+  zero console errors.
+- Files touched: `src/Modules/Modules.MasterData/Infrastructure/LookupSeeder.cs` (Trade → three role-scoped
+  types), `Domain/BusinessRole.cs` (doc comment), `src/Apps/Apps.Shell/src/App.tsx` (nav/routing — one Trades
+  nav item → three), `i18n/content.ts` (`nav.lookup*Trades` keys), `pages/BusinessPartnersPage.tsx` (role-scoped
+  Trade datalist); `tests/ArchitectureTests/Platform.ArchitectureTests/NoHardcodedTranslatableTextTests.cs`
+  (allow-list entry); `src/Platform/Platform.Localization/README.md`, `Platform.Workflow/README.md`,
+  `Platform.Security/README.md` (audit-alignment disclosures).
+- Next: none — this closes out the Lookup Data checkpoint and the audit-alignment request together. Continue
+  Phase 3 or the audit's own prioritized next step (real Authentication & Identity) per
+  `ARCHITECTURE-AUDIT.md`'s summary table.
+
+### 2026-07-15 — Comprehensive SAP/Dynamics architecture gap audit performed, persistent audit file created
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Architecture Gap Audit
+- Status: Completed
+- What changed: Per explicit user instruction ("act as real architecture of sap... audit the system... tell
+  me what is missing... check others too. list them in roadmap and update all relevant docs. keep the audit
+  file too"), performed a full, evidence-grounded comparison of HadionERP against real SAP S/4HANA and
+  Dynamics 365 F&O capabilities. Used a research fork to gather hard evidence (grep results, specific file
+  paths — not speculation) across 10 categories before writing any findings. Created `ARCHITECTURE-AUDIT.md`
+  at the repo root (same tier as `ARCHITECTURE.md`/`PROGRESS.md`) with 14 rated gap findings:
+  1. **Authentication & Identity** — Blocking. Zero real auth exists anywhere (no auth package in any
+     `.csproj`, no `[Authorize]` attribute anywhere, `UseAuthorization()` is a no-op since nothing populates
+     `HttpContext.User`); every actor across the whole solution is one of three hardcoded literals
+     (`"system/ui"`/`"system/approver"`/`"system/startup"`). This is the top-priority finding — it's why two
+     already-real platform capabilities are currently inert (see next two items).
+  2. **Segregation of Duties enforcement** — Structural. `ISodEngine`/`SodEngine` and every module's
+     registered conflict rules are real and unit-tested, but `FindConflicts` is never called from any live
+     request path (it's meant to run at role-*assignment* time, and there's no assignment UI yet).
+  3. **Delegation** — Structural. `IDelegationRegistry` is genuinely wired into
+     `RoleBasedWorkflowEligibilityService`'s live eligibility check, but `Program.cs` registers an empty
+     `InMemoryDelegationRegistry` with no API/UI to ever populate it.
+  4. **Escalation** — Missing/orphaned. `Platform.Workflow/Escalation/` has zero references anywhere outside
+     its own two files, not even wired into `WorkflowEngine`.
+  5. **Row-Level/Field-Level Security** — Structural/dead code. `Platform.Security/FieldLevel/`/`RowLevel/`
+     exist with real types but are referenced nowhere outside their own directory.
+  6. **Amount-conditioned approval matrices** — Depth gap. Phase 2's exit criteria named "configurable
+     approval matrix" but every workflow built so far (across every module) is role-based only, fixed
+     regardless of document value — the engine's `AttributeConstraints` condition-gating primitive already
+     exists (proven by Vendor Prequalification's 5-step chain) and has simply never been pointed at an
+     amount field.
+  7. **ZATCA e-invoicing** — Structural. `Platform.Localization/Zatca/*` exists but is never wired into
+     `APInvoice`/`APInvoiceService` — no real QR code or invoice XML is ever generated, despite Phase 1's
+     original roadmap scope naming this as in-scope.
+  8. **Hijri calendar** — Structural. `Platform.Localization/Calendar/*` exists but is never referenced by
+     any UI date field (all 7 date inputs across `Apps.Shell` are plain Gregorian HTML date inputs).
+  9. **Multi-currency** — Missing. Zero `Currency` field on any Domain entity anywhere; the whole system
+     implicitly assumes SAR.
+  10. **Multi-company/legal entity** — Missing. No `Company`/`LegalEntity` entity anywhere; `"C001"` is a
+      hardcoded literal in ~15 places.
+  11. **Fiscal Year/Period management** — Missing. No period-open/close/lock concept at all; fiscal year is
+      just `DateTimeOffset.UtcNow.Year` passed into number-range calls.
+  12. **Notifications & output management** — Missing entirely, not even a stub (zero email/PDF/print code
+      anywhere in `src/`).
+  13. **Reporting/Analytics/Extensibility/Integration** — Missing, but this confirms rather than surfaces a
+      new gap: `Platform.Reporting`/`Platform.Extensibility`/`Platform.Integration` are all README-only
+      placeholders, and Phases 5/6 already correctly scope this work — nothing has been started early that
+      needs correcting.
+  14. **Attachments** — Depth gap. Real, correctly-wired Postgres `bytea` storage (not dead code — proven
+      live by Vendor Prequalification's attachment cycle), but not real object storage, and no virus
+      scanning anywhere.
+  Also explicitly documented what this audit deliberately does NOT flag as a gap (the just-closed
+  Configurable Lookup Data engine, Trade's deliberate non-enforcement, the module-dependency/Contracts-
+  package/BO-lifecycle architecture itself) — to avoid the roadmap being over-scoped with items that are
+  working exactly as designed.
+- `docs/architecture/06-roadmap.md` updated with a new "Checkpoint — Architecture Gap Audit & Platform
+  Hardening" section mapping each finding onto an existing or new roadmap phase (a new "Phase 0.5 — Identity
+  & Access" is implied for the Authentication finding; the rest slot into Phase 1 depth, next Procurement/
+  Finance approval work, next UI pass, Phase 4, Phase 5, or Phase 6 as appropriate) — explicit that none of
+  this blocks Phase 3 (in progress) from continuing.
+- Files touched: `ARCHITECTURE-AUDIT.md` (new, repo root), `docs/architecture/06-roadmap.md` (new checkpoint
+  section), `PROGRESS.md` (this entry + Phase Status Summary row).
+- Next: this was a documentation/planning checkpoint, not an implementation one — no code changes. The
+  highest-leverage next real implementation work per this audit's own severity ratings is real Authentication
+  & Identity (§1 of `ARCHITECTURE-AUDIT.md`), since it's rated Blocking and unblocks two already-built
+  platform capabilities for free. Otherwise, continue Phase 3 (`Modules.Construction`, Networks/Activities for
+  `Modules.ProjectManagement`) per the existing roadmap.
+
+### 2026-07-15 — Configurable Lookup Data engine + Admin Panel built (checkpoint complete)
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Lookup Data / Admin Panel
+- Status: Completed
+- What changed: The user explicitly instructed (repeatedly, escalating) that hardcoded lookup/classification
+  data — "customers, vendors — these words" — must become admin-editable like real SAP domain-value
+  maintenance or Dynamics 365 Option Sets, with a real multi-page Admin Panel, not a token gesture. Built:
+  1. **`Modules.MasterData.Domain.LookupType`/`LookupValue`** — deliberately not `BusinessObject`s (no
+     Draft/Approve lifecycle; immediate-effect, single-privilege-gated, matching how real ERP picklist
+     maintenance actually works). `LookupService` gives full CRUD on both levels, including letting an
+     administrator define an entirely new lookup *category* from scratch (not just add values to existing
+     ones) — the most general form of "keep option so we can add and change."
+  2. **Retrofitted real hardcoded data onto it**: `BusinessRole.RoleType` and `BusinessPartnerAddress.AddressType`
+     changed from C# enums to lookup-validated strings (no data migration needed — the EF column was already
+     `character varying`). `BusinessPartnerAddress.Country` (previously free text, zero validation) and
+     `Item.UnitOfMeasure` (previously free text, a disclosed Phase 1 gap) are now validated the same way.
+     `BusinessRole.Trade` deliberately stays an unenforced suggestion, per the roadmap's own prior design
+     decision — now backed by real seeded data instead of nothing.
+  3. **Seeded 5 real lookup types at every startup** (idempotent, never overwrites an admin's own edits):
+     Country (~74 countries, EN+AR), BusinessRoleType (10), AddressType (4), UnitOfMeasure (15), Trade (20).
+  4. **A genuine Admin Panel, not one page**: `LookupDataPage.tsx` gets its own distinct nav entry per type
+     (Countries/Business Role Types/Address Types/Units of Measure/Trades, each its own heading and URL)
+     plus an "All Lookup Types" hub — inline-editable SAP-style table maintenance grids (Edit/Deactivate/
+     Delete per row, an always-visible add-row), Name and Name (Arabic) always shown side by side so a
+     bilingual entry is never guessing at the other language (an explicit user requirement). Delete refuses
+     when a value is actually in use (409) or when a type is system-defined or non-empty — deactivate
+     instead, same "correct by reversal" principle as the rest of the platform.
+  5. **Retrofitted the dropdowns that used to be hardcoded**: `BusinessPartnersPage.tsx`'s Business Role
+     Type/Address Type/Country fields and `ItemsPage.tsx`'s Unit of Measure field now fetch their options
+     live from this engine — an admin's own addition is immediately selectable, no code change, no rebuild.
+- Two real bugs caught only by the live Playwright pass (not by unit/integration tests): the Lookup Data
+  page's own heading only ever read the English `Name`, never `NameArabic`, so it stayed in English even in
+  Arabic mode; and entering a type's grid via its direct nav link (not via the hub) never populated the
+  `types` list the heading needed, so the heading fell back to the raw code (e.g. "BusinessRoleType" instead
+  of "Business Role Type"/"نوع دور الشريك التجاري"). Both fixed, re-verified live in both languages.
+- Verified: 12 new unit tests (`LookupServiceTests`) + 3 new integration tests against real PostgreSQL — all
+  pass; 138 unit + 26 integration tests in Modules.MasterData alone, zero regressions solution-wide (19 test
+  projects). Frontend typecheck + Arabic-hardcoding guardrail pass. Live `curl` exercise: full value CRUD
+  lifecycle (create/rename/deactivate/reactivate/delete), confirmed in-use-value delete and system-defined-
+  type delete both correctly 409, confirmed a bogus role/country/UoM is rejected with 400 while real seeded
+  values succeed. Live Playwright pass (screenshots, zero console errors) on the hub, an inline add on the
+  Countries grid, and Business Role Types, in both English and Arabic — full RTL mirroring confirmed.
+- Files touched: `src/Modules/Modules.MasterData/Domain/LookupType.cs`, `LookupValue.cs` (new);
+  `Application/LookupDto.cs`, `ILookupRepository.cs`, `LookupSecurity.cs`, `LookupService.cs` (new);
+  `Infrastructure/EfLookupRepository.cs`, `LookupSeeder.cs` (new), `MasterDataDbContext.cs` (new
+  DbSets/mapping, dropped `.HasConversion<string>()` on RoleType/AddressType), migration
+  `20260715102410_AddLookupEngine`; `Api/LookupsController.cs` (new); `Domain/BusinessPartner.cs`,
+  `BusinessRole.cs`, `BusinessPartnerAddress.cs` (enum → string retrofit), deleted `BusinessRoleType.cs`/
+  `AddressType.cs`; `Application/BusinessPartnerService.cs`, `ItemService.cs` (lookup validation replacing
+  `Enum.TryParse`/free text); `src/Gateway/Gateway.Api/Program.cs` (DI wiring, security catalog, actor role
+  assignment, startup seeding call); `src/Apps/Apps.Shell/src/api/lookupApi.ts` (new),
+  `src/Apps/Apps.Shell/src/pages/LookupDataPage.tsx` (new), `App.tsx` (nav/routing),
+  `i18n/content.ts` (`lookup.*`/`nav.lookup*` keys, EN+AR), `pages/BusinessPartnersPage.tsx`,
+  `pages/ItemsPage.tsx` (dropdown retrofit); `tests/UnitTests/Modules.MasterData.Tests/LookupServiceTests.cs`,
+  `FakeLookupRepository.cs` (new), `BusinessPartnerServiceTests.cs`, `ItemServiceTests.cs` (wired in the
+  fake), `BusinessPartnerTests.cs` (enum literals → string literals);
+  `tests/IntegrationTests/Modules.MasterData.IntegrationTests/LookupPersistenceTests.cs` (new),
+  `TestDatabase.cs` (truncate the two new tables), `BusinessPartnerPersistenceTests.cs` (enum → string);
+  `src/Modules/Modules.MasterData/README.md` (new "Lookup Data" section, updated Deferred list).
+- Next: this checkpoint is complete. Still pending from the same user instructions, not part of this slice:
+  the comprehensive SAP/Dynamics architecture gap audit with a persistent audit file (see the roadmap/
+  PROGRESS entries this session already flagged as the next piece of work). Minor, disclosed gaps left in
+  the admin panel itself (no rename-type UI, no bulk import/export, no cross-module `Contracts` publication
+  of lookup values) are listed in `Modules.MasterData/README.md`'s Deferred section, not hidden.
+
+### 2026-07-15 — Phase 3 slice 1: Modules.ProjectManagement (Project + WBS Element) built, tested, live-verified
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 3 — Construction & Project Management
+- Status: In Progress — this slice (WBS foundation) is complete; Networks/Activities and Modules.Construction
+  itself are not started
+- What changed: Scaffolded a new `Modules.ProjectManagement` module (Domain/Application/Infrastructure/Api,
+  own `"projectmanagement"` Postgres schema, wired into Gateway.Api) implementing the opening piece of Phase
+  3's roadmap item, per the user's earlier confirmed choice ("ProjectManagement: WBS/Networks foundation").
+  Built `Project : BusinessObject` (ProjectName/ProjectNameArabic/optional Customer validated as a "Client"
+  role via `IBusinessPartnerLookup`/Start-End dates) owning a child `WbsElement` hierarchy
+  (Code/Name/ParentWbsElementId/IsPlanningElement/IsAccountAssignmentElement/IsBillingElement — the three
+  real-SAP Controlling-object flags). `ProjectService.CreateAsync` accepts the entire WBS hierarchy in one
+  request via a tempId/parentTempId scheme (no element has a real Guid yet at request time) and resolves it
+  in a single parent-before-child pass. Stops at Approved (no Post/Reverse — a Project Definition is
+  organizational, not a financial document). Standard one-step Any-quorum Maintainer/Approver workflow and
+  security, same shape as every other module's first workflow cut.
+- Verified: 19 new unit tests + 3 new integration tests against real PostgreSQL — 22/22 pass, zero
+  regressions solution-wide (19 test projects, full `dotnet test erp-platform.sln` run clean). Frontend
+  (`ProjectsPage.tsx`, using the established `SplitView` pattern) builds clean, Arabic-hardcoding guardrail
+  passes. Live `curl` exercise: created a Project with a 3-element WBS hierarchy (root + 2 children) in one
+  request, confirmed correct tempId→Guid parent resolution in the response, drove it through Submit→Approve
+  against the real running backend. Live Playwright pass (screenshots, zero console errors) on the list,
+  details (General + WBS Elements FastTabs), and create form, in both English and Arabic — full RTL
+  mirroring confirmed including the WBS table's parent-reference column.
+- Files touched: `src/Modules/Modules.ProjectManagement/**` (new module — Domain: `Project.cs`,
+  `WbsElement.cs`; Application: `ProjectDto.cs`, `IProjectRepository.cs`, `ProjectSecurity.cs`,
+  `ProjectWorkflow.cs`, `ProjectService.cs`; Infrastructure: `ProjectManagementDbContext.cs`,
+  `EfProjectRepository.cs`, `EfCoreNumberRangeService.cs`, `EfWorkflowInstanceRepository.cs`,
+  `NumberRangeCounterEntity.cs`, `DesignTimeDbContextFactory.cs`, migration `20260715003053_InitialCreate`;
+  Api: `ProjectsController.cs`); `src/Modules/Modules.ProjectManagement/README.md` (new, replaces the earlier
+  planning stub); `src/Gateway/Gateway.Api/Gateway.Api.csproj`, `Program.cs` (module wiring — security
+  catalog, workflow catalog, DbContext, DI, number range); `tests/UnitTests/Modules.ProjectManagement.Tests/**`
+  (new), `tests/IntegrationTests/Modules.ProjectManagement.IntegrationTests/**` (new);
+  `src/Apps/Apps.Shell/src/api/projectApi.ts` (new), `src/Apps/Apps.Shell/src/pages/ProjectsPage.tsx` (new),
+  `src/Apps/Apps.Shell/src/App.tsx` (routing/nav), `src/Apps/Apps.Shell/src/i18n/content.ts` (`proj.*`/
+  `nav.project*` keys, EN+AR).
+- Next: Networks/Activities/Milestones (the other half of this module's roadmap name — scheduling,
+  dependencies, resource/equipment allocation) is not built. `Modules.Construction` (the commercial layer —
+  subcontracts, variation orders, progress billing — referencing this module's WBS elements) has not been
+  started. Also still pending from prior user instructions, not part of this slice: (1) build a real
+  configurable lookup-data platform capability (admin-editable Country/BusinessRoleType/AddressType etc.,
+  not hardcoded enums/arrays) with actual CRUD, organized in a proper Admin Panel by heading; (2) a
+  comprehensive SAP/Dynamics architecture gap audit with a persistent audit file and roadmap updates.
+
+### 2026-07-15 — UI/Visual Density Pass paused per explicit user instruction
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — UI/Visual Density Pass
+- Status: Paused (not reverted) — see Phase Status Summary above
+- What changed: After the proof-of-concept slice below (teal identity + `SplitView` retrofit on two pages,
+  published as an Artifact for review), the user rejected the result as not competitive with SAP
+  Fiori/Dynamics 365 ("shitting color... opening one window") and explicitly instructed: stop touching the
+  visual work, do not change or revert it, move directly to roadmap-driven phase work instead ("go abhead
+  with ither phase just forget do not change or do anything go with road map and create the next phase in 1
+  go"). Complied: made zero further edits to `Platform.UI` tokens/`SplitView`/the two retrofitted pages'
+  visual styling. `SplitView` continued to be used for the new `ProjectsPage.tsx` below purely because it is
+  now this codebase's established page-building pattern, not as further "visual work."
+  - Root-cause read (recorded in memory as `feedback_visual_richness_gap` for future sessions): the pass
+    delivered infrastructure/plumbing (a color-token swap, one layout mechanic, one CSS blur effect) but no
+    actual surface richness — no icons anywhere, plain-text status instead of colored pills, no KPI/summary
+    numbers, no avatar/initials badges. A real competitive pass needs to add visual weight/detail per
+    surface, not just restructure layout and recolor tokens.
+- Files touched: none (no code changes in this entry — status/documentation only).
+- Next: do not resume this checkpoint unless the user explicitly asks for it again. When resumed, prioritize
+  actual surface richness (icons, status pills, KPI numbers, avatar badges) over further layout/token
+  changes, per `feedback_visual_richness_gap`.
+
+### 2026-07-15 — UI/Visual Density Pass started: new color identity + SplitView master-detail pattern
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — UI/Visual Density Pass (see the roadmap checkpoint added earlier this session)
+- Status: In Progress — proof-of-concept slice complete, full rollout across remaining pages not done
+- What changed: Per the checkpoint scheduled right after Phase 2 closed, started the visual redesign the
+  user asked to be genuinely original rather than a copy of SAP Fiori or Dynamics 365. Two concrete, durable
+  decisions (recorded in memory as `project_visual_identity_decisions` for future sessions):
+  1. **Color identity**: `Platform.UI/tokens/design-tokens.css`'s palette was — unintentionally — an exact
+     copy of GitHub Primer's colors (`#0969da` etc.). Since blue is also Fiori's and Dynamics's default
+     accent, replaced it with a deep **teal** accent (`#0d7377` light / `#2dd4bf` dark) and teal-tinted cool
+     neutrals, keeping conventional green/red/amber for success/danger/warning (status colors need instant
+     recognition; the creative budget went into the identity color, not the semantic vocabulary). This one
+     token-file change ripples through every existing page automatically — verified live on an
+     un-retrofitted page (Business Partners) to confirm nothing broke.
+  2. **Interaction pattern**: new `Platform.UI.SplitView` component — the list pane stays visible while the
+     detail pane slides in beside it (RTL-aware CSS `@keyframes` entrance), instead of replacing the list the
+     way both Fiori and Dynamics 365 do on drill-down. Closer to a mail client's master-detail. The detail
+     pane is rendered as a translucent "glass" panel (`backdrop-filter: blur()` + a soft inner top highlight),
+     needing a subtle accent-tinted background wash behind it (`Apps.Shell/src/App.css`) to actually read as
+     glass rather than a flat opaque card — genuinely different from either reference product's flat panels.
+     Also added `.pi-dense-table`/`.pi-link` (compact rows, key-column drill-down links in the product's own
+     accent color instead of literal blue, RTL-correct selected-row indicator) and a small `.pi-doc-chain`
+     hint for chained procurement documents.
+  3. Retrofitted two pages end-to-end as the proof: `PurchaseOrdersPage.tsx` (the densest/most-chained
+     document) and `BusinessPartnersPage.tsx` (the largest existing page — 6 FastTabs, several sub-forms —
+     proving the pattern survives real complexity, not just a toy page).
+- Verified: frontend typecheck + Arabic-hardcoding guardrail both pass. Live Playwright pass: light mode,
+  dark mode, and Arabic (RTL) all screenshotted on both retrofitted pages — confirmed the split view mirrors
+  correctly under RTL (detail pane and its slide-in direction both flip to the correct logical side, the
+  selected-row indicator bar flips from inset-start to inset-end), zero browser console errors throughout.
+  Confirmed via a live screenshot that an un-retrofitted page (a plain FastTabs page) automatically inherited
+  the new teal identity with nothing broken, proving the token-only part of this change is safe to leave
+  applied everywhere immediately even before every page is converted to SplitView.
+- Files touched: `src/Platform/Platform.UI/tokens/design-tokens.css` (full palette replacement + elevation/
+  motion/glass tokens), `src/Platform/Platform.UI/components/SplitView.tsx` (new), `components/components.css`
+  (SplitView layout/animation, `.pi-dense-table`/`.pi-link`), `index.ts` (SplitView export);
+  `src/Apps/Apps.Shell/src/App.css` (content-area background wash for the glass blur, `.pi-doc-chain`);
+  `src/Apps/Apps.Shell/src/pages/PurchaseOrdersPage.tsx`, `BusinessPartnersPage.tsx` (both converted to
+  SplitView); `src/Apps/Apps.Shell/src/i18n/content.ts` (`po.selectHint`/`bp.selectHint` keys);
+  `src/Platform/Platform.UI/README.md` (documented the new tokens/component, updated Deferred list).
+- Next: retrofit the remaining pages (GL Accounts, Items, Cost Centers, Tax Codes, Journal Entries, AP
+  Invoices, Vendor Prequalification, Purchase Requisitions, RFQs, GRNs) to SplitView the same way — each is a
+  mechanical repeat of the pattern proven on these two pages, not a new design decision. Also flagged but not
+  fixed in this slice: no BO anywhere has a real "Edit" Action Pane button yet (see Platform.UI/README.md's
+  Deferred list) — worth closing while doing the mechanical retrofit pass, since SplitView's Action Pane is
+  exactly where it belongs. Phase 3 (`Modules.ProjectManagement`'s WBS/Networks foundation) starts once the
+  retrofit is done.
+
+### 2026-07-15 — Goods Receipt Note + 3-Way Match built (Phase 2 slice 6) — Phase 2 exit criteria met
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 2 — Procurement
+- Status: Completed — **this closes Phase 2's exit criteria** ("full procure-to-pay cycle with configurable
+  approval matrix")
+- What changed: Built `GoodsReceiptNote`/`GrnLine` — the fourth procure-to-pay document, recording partial/
+  staged receipts against an Approved PO, with cumulative-quantity-vs-ordered validation across every
+  non-Rejected GRN for a line. Built `ThreeWayMatchService` — a computed-on-demand (never persisted) check
+  comparing Ordered (`PurchaseOrder.Total`) vs Received (sum of Approved GRNs) vs Invoiced (an AP Invoice's
+  `NetAmount`, via a new `Modules.Finance.Contracts.IAPInvoiceLookup`). The match deliberately lives entirely
+  on the Procurement side — Finance is upstream of Procurement in the module dependency graph, so Finance
+  can never depend back on Procurement; Procurement reads its own PO/GRN data directly and reaches into
+  Finance only through the one new published lookup, same direction `IBudgetCheckService` already
+  established. The match is at the document-amount level, not line-by-line, since `APInvoice` has no lines/
+  PO reference to match per line — disclosed as deferred rather than reworking an already-shipped Phase 1
+  entity's shape mid-Phase-2.
+- Also fixed a real UX gap the user caught live: the create-form line-entry grids (Purchase Requisition,
+  Purchase Order's direct mode) had no way to remove a wrongly-added line before clicking Create — only
+  Submit/Approve/Reject exist after creation, so a mis-added line among many would have forced a full
+  reject-and-redo. Added a "Remove" button per line in both grids (and built the new GRN create form with
+  one from the start).
+- One real bug, caught only by the live `curl` exercise (not by unit tests, which build their own
+  self-contained workflow catalog per test): Gateway.Api's DI wiring registered
+  `GoodsReceiptNoteSecurity`/`GoodsReceiptNoteWorkflow`'s roles and actor-role assignments but never added
+  `GoodsReceiptNoteWorkflow.SubmitApprovalDefinition` to the actual `IWorkflowDefinitionCatalog`
+  registration — a GRN could be Submitted (silently treated as "no approval configured") but never Approved.
+  Fixed immediately, re-verified live and via the full test suite.
+- Verified: 105 unit tests in Modules.Procurement.Tests (22 new) + 13 integration tests in
+  Modules.Procurement.IntegrationTests (3 new) pass; full solution (17 test projects) builds and tests clean
+  with zero regressions, architecture guardrail tests pass. Frontend typecheck + Arabic-hardcoding guardrail
+  pass. Live `curl` exercise: partially received a PO (15 of 50 units), submitted/approved the GRN, created
+  an AP invoice within the received value and confirmed the match reports Matched with exact figures, then
+  created a second invoice exceeding the received value and confirmed Variance with a human-readable note;
+  confirmed over-receipt is rejected both within one GRN and cumulatively across two GRNs. Live Playwright
+  pass (screenshots, zero console errors) in both English and Arabic on `GoodsReceiptNotesPage.tsx` and
+  `PurchaseOrdersPage.tsx`'s new 3-Way Match FastTab — full RTL mirroring confirmed.
+- Files touched: `src/Modules/Modules.Finance/Contracts/IAPInvoiceLookup.cs` (new),
+  `src/Modules/Modules.Finance/Infrastructure/EfAPInvoiceLookup.cs` (new);
+  `src/Modules/Modules.Procurement/Domain/GoodsReceiptNote.cs`, `GrnLine.cs` (new);
+  `Application/GoodsReceiptNoteDto.cs`, `IGoodsReceiptNoteRepository.cs`, `GoodsReceiptNoteSecurity.cs`,
+  `GoodsReceiptNoteWorkflow.cs`, `GoodsReceiptNoteService.cs`, `ThreeWayMatchDto.cs`,
+  `ThreeWayMatchService.cs` (new); `Infrastructure/ProcurementDbContext.cs` (GRN/GrnLine mapping),
+  `EfGoodsReceiptNoteRepository.cs` (new), migration `20260714230934_AddGoodsReceiptNote`;
+  `Api/GoodsReceiptNotesController.cs` (new), `PurchaseOrdersController.cs` (three-way-match endpoint);
+  `src/Gateway/Gateway.Api/Program.cs` (DI/Security/SoD/Workflow registrations for GRN, IAPInvoiceLookup
+  registration); frontend `src/Apps/Apps.Shell/src/api/goodsReceiptNoteApi.ts` (new),
+  `src/Apps/Apps.Shell/src/api/purchaseOrderApi.ts` (checkThreeWayMatch), `pages/GoodsReceiptNotesPage.tsx`
+  (new), `pages/PurchaseOrdersPage.tsx` (3-Way Match FastTab), `pages/PurchaseRequisitionsPage.tsx`
+  (Remove-line button), `App.tsx` (new nav Area), `i18n/content.ts` (`grn.*`/`po.match*`/`po.tabThreeWayMatch`/
+  `nav.goodsReceiptNotesArea`/`pr.actionRemoveLine`/`po.actionRemoveLine` keys); tests:
+  `tests/UnitTests/Modules.Procurement.Tests/GoodsReceiptNoteTests.cs`, `GoodsReceiptNoteServiceTests.cs`,
+  `ThreeWayMatchServiceTests.cs`, `FakeGoodsReceiptNoteRepository.cs`, `FakeAPInvoiceLookup.cs` (new);
+  `tests/IntegrationTests/Modules.Procurement.IntegrationTests/GoodsReceiptNotePersistenceTests.cs` (new),
+  `TestDatabase.cs` (added goods_receipt_notes truncate); `src/Modules/Modules.Procurement/README.md`.
+- Next: Phase 2 is functionally complete against its own stated exit criteria. Per this session's earlier
+  go-ahead: the UI/Visual Density Pass checkpoint is next (see the entry below) — build a shared dense
+  List+Details component and retrofit every existing page — before any Phase 3 code starts. Phase 3's first
+  slice, once that pass is done, is `Modules.ProjectManagement`'s WBS/Networks foundation (the generic
+  cost backbone `Modules.Construction`'s Contracts/BOQ/Subcontracts depend on).
+
+### 2026-07-15 — Purchase Order built (Phase 2 slice 5); deferred RFQ Playwright check closed out
+- Agent: Claude Sonnet 5
+- Phase: Phase 2 — Procurement
+- Status: Completed
+- What changed: Built `PurchaseOrder` — the third document in the procure-to-pay chain — "from an
+  RFQ-selected quote or direct" per task #102's own wording. Domain: `PurchaseOrder` + child
+  `PurchaseOrderLine` (carries the real negotiated `UnitPrice`, not an estimate, plus `CostCenterId` — unlike
+  `RfqLine`, which drops Cost Center; a PO needs one back for the budget check). From-RFQ creation validates
+  the RFQ is Approved, the vendor was invited and has quoted *every* line, then copies lines at the vendor's
+  quoted price and traces each line's Cost Center back through `RfqLine.PurchaseRequisitionLineId` to the
+  source PR's own line. Direct creation validates Item/Cost Center references the same way Purchase
+  Requisition does. Also built **`Modules.Finance.Contracts`** (new project, mirrors
+  `Modules.MasterData.Contracts`'s shape) publishing `IBudgetCheckService` — the exact synchronous
+  cross-module contract call docs/architecture/01-architecture-foundation.md §3.2 names as its own worked
+  example ("Procurement asks Finance's IBudgetCheckService before releasing a PO");
+  `PurchaseOrderService.SubmitAsync` calls it once per distinct cost center before submitting for approval.
+  The implementation, `PassThroughBudgetCheckService`, always allows for now — Budget Control itself is still
+  deferred Finance depth, so there's no real budget data to check against yet, disclosed in that class's own
+  doc comment rather than faking enforcement. Also closed out the previous session's explicitly-flagged open
+  item: a live Playwright pass (EN+AR) on `RequestsForQuotationPage.tsx`, deferred when that slice was built.
+- Verified: 83 unit tests in Modules.Procurement.Tests (18 new) + 10 integration tests in
+  Modules.Procurement.IntegrationTests (3 new) all pass; full solution (15 test projects) builds and tests
+  clean with zero regressions; architecture guardrail tests (module dependency direction) pass with the new
+  Modules.Finance.Contracts package in the graph. Frontend typecheck + Arabic-hardcoding guardrail both pass.
+  Live `curl` exercise: built the full PR→RFQ→PO chain end-to-end (created/approved a PR, created/approved an
+  RFQ with a vendor quote, created a PO from that RFQ — confirmed it used the vendor's *quoted* price, not
+  the PR's *estimated* price, and correctly traced the cost center), submitted it (budget check ran and
+  passed) and approved it, created a second PO directly with no RFQ, confirmed supplying both an RFQ and
+  direct lines is rejected with a 400. Live Playwright pass (screenshots, zero browser console errors) in
+  both English and Arabic on both `PurchaseOrdersPage.tsx` (list, create form's From-RFQ/Direct source toggle,
+  line-entry grid, details FastTabs) and `RequestsForQuotationPage.tsx` — full RTL mirroring confirmed on
+  both pages including nav tree, table columns, and FastTabs.
+- Files touched: `src/Modules/Modules.Finance/Contracts/Modules.Finance.Contracts.csproj`,
+  `IBudgetCheckService.cs` (new project); `src/Modules/Modules.Finance/Infrastructure/
+  PassThroughBudgetCheckService.cs` (new), `Modules.Finance.Infrastructure.csproj` (project reference);
+  `src/Modules/Modules.Procurement/Domain/PurchaseOrder.cs`, `PurchaseOrderLine.cs` (new);
+  `Application/PurchaseOrderDto.cs`, `IPurchaseOrderRepository.cs`, `PurchaseOrderSecurity.cs`,
+  `PurchaseOrderWorkflow.cs`, `PurchaseOrderService.cs` (new), `Modules.Procurement.Application.csproj`
+  (Finance.Contracts reference); `Infrastructure/ProcurementDbContext.cs` (PurchaseOrder/Line mapping),
+  `EfPurchaseOrderRepository.cs` (new), migration `20260714205512_AddPurchaseOrder`;
+  `Api/PurchaseOrdersController.cs` (new); `src/Gateway/Gateway.Api/Program.cs` (DI/Security/SoD/Workflow
+  registrations for PO, IBudgetCheckService registration); frontend
+  `src/Apps/Apps.Shell/src/api/purchaseOrderApi.ts`, `src/Apps/Apps.Shell/src/pages/PurchaseOrdersPage.tsx`,
+  `App.tsx` (new nav Area under Procurement), `i18n/content.ts` (`po.*`/`nav.purchaseOrdersArea` keys); tests:
+  `tests/UnitTests/Modules.Procurement.Tests/PurchaseOrderTests.cs`, `PurchaseOrderServiceTests.cs`,
+  `FakePurchaseOrderRepository.cs`, `FakeBudgetCheckService.cs` (new), `Modules.Procurement.Tests.csproj`
+  (Finance.Contracts reference); `tests/IntegrationTests/Modules.Procurement.IntegrationTests/
+  PurchaseOrderPersistenceTests.cs` (new), `TestDatabase.cs` (added purchase_orders truncate);
+  `erp-platform.sln` (new Modules.Finance.Contracts project entry); `src/Modules/Modules.Procurement/
+  README.md`, `src/Modules/Modules.Finance/README.md`.
+- Next: GRN (Goods Receipt Note) + 3-way match against AP Invoice — the last piece of Phase 2's exit
+  criteria ("full procure-to-pay cycle with configurable approval matrix"). After that closes out, the
+  UI/Visual Density Pass checkpoint (see the entry below) is next, before Phase 3 starts.
+
+### 2026-07-14 — Decision: UI/Visual Density Pass scheduled as a checkpoint before Phase 3
+- Agent: Claude Sonnet 5
+- Phase: Architecture / Roadmap (no code changed)
+- Status: Completed (decision + docs only)
+- What changed: User wants every page to reach Dynamics 365 F&O-level density and navigation — dense
+  sortable/filterable grids (like Dynamics's vendor list), key/ID fields rendered as blue hyperlinks that
+  drill into that record's own full details page, comprehensive FastTab-based detail pages — this matters
+  particularly for the future Construction/Project Management module (Phase 3), which needs SAP
+  Fiori/Dynamics-grade density given this is a contracting-company ERP. `docs/architecture/02-business-object-
+  model.md` §2/§3 already specified this exact target pattern (merged List+Details form, FastTabs, Action
+  Pane, hyperlink drill-down) — it was written but never actually built that way; every page from Phase 0–2
+  was hand-rolled per slice at a simpler functional level (no shared component, `tools/object-page-gen`
+  never finished into a real generator). Rather than retrofitting density page-by-page (expensive, and Phase
+  2 isn't done), added a **Checkpoint — UI/Visual Density Pass** section to
+  `docs/architecture/06-roadmap.md`, placed right after Phase 2's exit criteria and before Phase 3: build one
+  shared `Platform.UI` List+Details component (or finish `tools/object-page-gen`) once every recurring page
+  shape has appeared (flat list, hierarchical list, multi-step workflow, line-item grid, cross-document
+  drill-down — all present by the time PO/GRN/3-way match lands), then apply it to every existing page in one
+  pass and get it for free on every Phase 3+ page. Explicitly told future sessions not to hand-roll partial
+  density on new Phase 2 pages before this checkpoint — that would be the exact rework this is meant to avoid.
+- Files touched: `docs/architecture/06-roadmap.md` (new Checkpoint section between Phase 2 and Phase 3),
+  `PROGRESS.md` (this entry + Phase Status Summary row).
+- Next: finish Phase 2 (Purchase Order → GRN → 3-way match + budget-check integration) exactly as already
+  planned, still in the current simpler page style. Do the UI/Visual Density Pass only after that, then start
+  Phase 3 already using the new dense component from day one.
 
 ### 2026-07-14 — Request for Quotation built (Phase 2 slice 4) — session paused here by user request
 - Agent: Claude Sonnet 5

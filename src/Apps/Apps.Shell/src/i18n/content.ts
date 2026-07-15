@@ -46,6 +46,7 @@ type TranslationKey =
   | "bp.heading"
   | "bp.newHeading"
   | "bp.emptyState"
+  | "bp.selectHint"
   | "bp.actionNew"
   | "bp.actionCreate"
   | "bp.actionBack"
@@ -279,6 +280,22 @@ type TranslationKey =
   | "nav.allVendorPrequalifications"
   | "nav.allPurchaseRequisitions"
   | "nav.allRequestsForQuotation"
+  | "nav.purchaseOrdersArea"
+  | "nav.allPurchaseOrders"
+  | "nav.goodsReceiptNotesArea"
+  | "nav.allGoodsReceiptNotes"
+  | "nav.projectManagementModule"
+  | "nav.projectsArea"
+  | "nav.allProjects"
+  | "nav.lookupDataArea"
+  | "nav.allLookupTypes"
+  | "nav.lookupCountries"
+  | "nav.lookupBusinessRoleTypes"
+  | "nav.lookupAddressTypes"
+  | "nav.lookupUnitsOfMeasure"
+  | "nav.lookupSubcontractorTrades"
+  | "nav.lookupSupplierTrades"
+  | "nav.lookupConsultantTrades"
   | "vpq.heading"
   | "vpq.newHeading"
   | "vpq.emptyState"
@@ -310,6 +327,7 @@ type TranslationKey =
   | "pr.actionApprove"
   | "pr.actionReject"
   | "pr.actionAddLine"
+  | "pr.actionRemoveLine"
   | "pr.columnDocumentNumber"
   | "pr.columnDescription"
   | "pr.columnRequiredByDate"
@@ -352,7 +370,163 @@ type TranslationKey =
   | "rfq.fieldVendor"
   | "rfq.fieldQuotedUnitPrice"
   | "rfq.columnQuotedUnitPrice"
-  | "rfq.emptyQuotes";
+  | "rfq.emptyQuotes"
+  | "po.heading"
+  | "po.newHeading"
+  | "po.emptyState"
+  | "po.actionNew"
+  | "po.actionCreate"
+  | "po.actionBack"
+  | "po.actionSubmit"
+  | "po.actionApprove"
+  | "po.actionReject"
+  | "po.actionAddLine"
+  | "po.actionRemoveLine"
+  | "po.fieldSource"
+  | "po.sourceFromRfq"
+  | "po.sourceDirect"
+  | "po.fieldRequestForQuotation"
+  | "po.fieldVendor"
+  | "po.fieldItem"
+  | "po.fieldCostCenter"
+  | "po.fieldQuantity"
+  | "po.fieldUnitPrice"
+  | "po.noEligibleVendors"
+  | "po.columnDocumentNumber"
+  | "po.columnVendor"
+  | "po.columnSourceRfq"
+  | "po.columnTotal"
+  | "po.columnStatus"
+  | "po.columnLineTotal"
+  | "po.tabLines"
+  | "po.selectHint"
+  | "po.tabThreeWayMatch"
+  | "po.fieldApInvoice"
+  | "po.actionCheckMatch"
+  | "po.matchOrdered"
+  | "po.matchReceived"
+  | "po.matchInvoiced"
+  | "po.matchResultLabel"
+  | "po.matchMatched"
+  | "po.matchVariance"
+  | "grn.heading"
+  | "grn.newHeading"
+  | "grn.emptyState"
+  | "grn.actionNew"
+  | "grn.actionCreate"
+  | "grn.actionBack"
+  | "grn.actionSubmit"
+  | "grn.actionApprove"
+  | "grn.actionReject"
+  | "grn.actionAddLine"
+  | "grn.actionRemoveLine"
+  | "grn.fieldPurchaseOrder"
+  | "grn.fieldPurchaseOrderLine"
+  | "grn.fieldReceivedDate"
+  | "grn.fieldQuantityReceived"
+  | "grn.columnDocumentNumber"
+  | "grn.columnPurchaseOrder"
+  | "grn.columnReceivedValue"
+  | "grn.columnStatus"
+  | "grn.columnItem"
+  | "grn.columnUnitPrice"
+  | "grn.columnLineValue"
+  | "grn.tabLines"
+  | "proj.heading"
+  | "proj.newHeading"
+  | "proj.emptyState"
+  | "proj.selectHint"
+  | "proj.actionNew"
+  | "proj.actionCreate"
+  | "proj.actionBack"
+  | "proj.actionSubmit"
+  | "proj.actionApprove"
+  | "proj.actionReject"
+  | "proj.actionAddWbsElement"
+  | "proj.actionRemoveWbsElement"
+  | "proj.fieldProjectName"
+  | "proj.fieldProjectNameArabic"
+  | "proj.fieldCustomer"
+  | "proj.fieldStartDate"
+  | "proj.fieldEndDate"
+  | "proj.fieldWbsCode"
+  | "proj.fieldWbsName"
+  | "proj.fieldWbsParent"
+  | "proj.fieldPlanningElement"
+  | "proj.fieldAccountAssignmentElement"
+  | "proj.fieldBillingElement"
+  | "proj.wbsTopLevel"
+  | "proj.columnDocumentNumber"
+  | "proj.columnProjectName"
+  | "proj.columnStatus"
+  | "proj.tabWbsElements"
+  | "lookup.hubHeading"
+  | "lookup.newTypeHeading"
+  | "lookup.columnCode"
+  | "lookup.columnName"
+  | "lookup.columnNameArabic"
+  | "lookup.columnValueCount"
+  | "lookup.columnKind"
+  | "lookup.columnActions"
+  | "lookup.columnSortOrder"
+  | "lookup.columnStatus"
+  | "lookup.statusActive"
+  | "lookup.statusInactive"
+  | "lookup.kindSystem"
+  | "lookup.kindCustom"
+  | "lookup.actionEdit"
+  | "lookup.actionSave"
+  | "lookup.actionCancel"
+  | "lookup.actionActivate"
+  | "lookup.actionDeactivate"
+  | "lookup.actionDelete"
+  | "lookup.actionAddValue"
+  | "lookup.actionBackToHub"
+  | "lookup.actionCreateType"
+  | "lookup.fieldTypeCode"
+  | "lookup.fieldTypeName"
+  | "lookup.fieldTypeNameArabic"
+  | "lookup.newCodePlaceholder"
+  | "lookup.newNamePlaceholder"
+  | "lookup.newNameArabicPlaceholder"
+  | "nav.usersArea"
+  | "nav.allUsers"
+  | "auth.signInPrompt"
+  | "auth.usernameLabel"
+  | "auth.passwordLabel"
+  | "auth.loginButton"
+  | "auth.invalidCredentials"
+  | "auth.loggedInAs"
+  | "auth.logoutButton"
+  | "users.heading"
+  | "users.newHeading"
+  | "users.emptyState"
+  | "users.selectHint"
+  | "users.actionNew"
+  | "users.actionCreate"
+  | "users.actionBack"
+  | "users.actionActivate"
+  | "users.actionDeactivate"
+  | "users.actionAssignRole"
+  | "users.actionRemoveRole"
+  | "users.actionGrantExceptionAndAssign"
+  | "users.actionResetPassword"
+  | "users.columnUsername"
+  | "users.columnDisplayName"
+  | "users.columnStatus"
+  | "users.statusActive"
+  | "users.statusInactive"
+  | "users.fieldUsername"
+  | "users.fieldDisplayName"
+  | "users.fieldEmail"
+  | "users.fieldPassword"
+  | "users.fieldNewPassword"
+  | "users.fieldRoleKey"
+  | "users.fieldOverrideReason"
+  | "users.tabRoles"
+  | "users.tabPassword"
+  | "users.emptyRoles"
+  | "users.sodConflictHeading";
 
 const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "shell.title": { en: "HadionERP", ar: "HadionERP" },
@@ -399,6 +573,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "bp.heading": { en: "Business Partners", ar: "شركاء الأعمال" },
   "bp.newHeading": { en: "New Business Partner", ar: "شريك أعمال جديد" },
   "bp.emptyState": { en: "No business partners yet.", ar: "لا يوجد شركاء أعمال حتى الآن." },
+  "bp.selectHint": { en: "Select a business partner from the list to see its details.", ar: "اختر شريك أعمال من القائمة لعرض تفاصيله." },
   "bp.actionNew": { en: "New", ar: "جديد" },
   "bp.actionCreate": { en: "Create", ar: "إنشاء" },
   "bp.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
@@ -633,6 +808,22 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.allVendorPrequalifications": { en: "All Prequalifications", ar: "جميع طلبات التأهيل" },
   "nav.allPurchaseRequisitions": { en: "All Requisitions", ar: "جميع طلبات الشراء" },
   "nav.allRequestsForQuotation": { en: "All RFQs", ar: "جميع طلبات عروض الأسعار" },
+  "nav.purchaseOrdersArea": { en: "Purchase Orders", ar: "أوامر الشراء" },
+  "nav.allPurchaseOrders": { en: "All Purchase Orders", ar: "جميع أوامر الشراء" },
+  "nav.goodsReceiptNotesArea": { en: "Goods Receipt Notes", ar: "إشعارات استلام البضائع" },
+  "nav.allGoodsReceiptNotes": { en: "All Goods Receipt Notes", ar: "جميع إشعارات استلام البضائع" },
+  "nav.projectManagementModule": { en: "Project Management", ar: "إدارة المشاريع" },
+  "nav.projectsArea": { en: "Projects", ar: "المشاريع" },
+  "nav.allProjects": { en: "All Projects", ar: "جميع المشاريع" },
+  "nav.lookupDataArea": { en: "Lookup Data", ar: "بيانات القوائم" },
+  "nav.allLookupTypes": { en: "All Lookup Types", ar: "جميع أنواع القوائم" },
+  "nav.lookupCountries": { en: "Countries", ar: "الدول" },
+  "nav.lookupBusinessRoleTypes": { en: "Business Role Types", ar: "أنواع أدوار الشركاء" },
+  "nav.lookupAddressTypes": { en: "Address Types", ar: "أنواع العناوين" },
+  "nav.lookupUnitsOfMeasure": { en: "Units of Measure", ar: "وحدات القياس" },
+  "nav.lookupSubcontractorTrades": { en: "Subcontractor Trades", ar: "تخصصات مقاولي الباطن" },
+  "nav.lookupSupplierTrades": { en: "Supplier Trades", ar: "تخصصات الموردين" },
+  "nav.lookupConsultantTrades": { en: "Consultant Trades", ar: "تخصصات الاستشاريين" },
 
   "vpq.heading": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
   "vpq.newHeading": { en: "New Vendor Prequalification", ar: "تأهيل مورّد جديد" },
@@ -667,6 +858,7 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "pr.actionApprove": { en: "Approve", ar: "اعتماد" },
   "pr.actionReject": { en: "Reject", ar: "رفض" },
   "pr.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "pr.actionRemoveLine": { en: "Remove", ar: "إزالة" },
   "pr.columnDocumentNumber": { en: "Number", ar: "الرقم" },
   "pr.columnDescription": { en: "Description", ar: "الوصف" },
   "pr.columnRequiredByDate": { en: "Required By", ar: "مطلوب بحلول" },
@@ -712,6 +904,168 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "rfq.fieldQuotedUnitPrice": { en: "Quoted Unit Price", ar: "سعر الوحدة المعروض" },
   "rfq.columnQuotedUnitPrice": { en: "Quoted Unit Price", ar: "سعر الوحدة المعروض" },
   "rfq.emptyQuotes": { en: "No vendor quotes recorded yet.", ar: "لم يتم تسجيل أي عروض أسعار حتى الآن." },
+
+  "po.heading": { en: "Purchase Orders", ar: "أوامر الشراء" },
+  "po.newHeading": { en: "New Purchase Order", ar: "أمر شراء جديد" },
+  "po.emptyState": { en: "No purchase orders yet.", ar: "لا توجد أوامر شراء حتى الآن." },
+  "po.actionNew": { en: "New", ar: "جديد" },
+  "po.actionCreate": { en: "Create", ar: "إنشاء" },
+  "po.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "po.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "po.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "po.actionReject": { en: "Reject", ar: "رفض" },
+  "po.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "po.actionRemoveLine": { en: "Remove", ar: "إزالة" },
+  "po.fieldSource": { en: "Source", ar: "المصدر" },
+  "po.sourceFromRfq": { en: "From an RFQ-selected quote", ar: "من عرض سعر تم اختياره من طلب عروض الأسعار" },
+  "po.sourceDirect": { en: "Direct (no RFQ)", ar: "مباشر (بدون طلب عروض أسعار)" },
+  "po.fieldRequestForQuotation": { en: "Request for Quotation", ar: "طلب عرض السعر" },
+  "po.fieldVendor": { en: "Vendor", ar: "المورّد" },
+  "po.fieldItem": { en: "Item", ar: "الصنف" },
+  "po.fieldCostCenter": { en: "Cost Center", ar: "مركز التكلفة" },
+  "po.fieldQuantity": { en: "Quantity", ar: "الكمية" },
+  "po.fieldUnitPrice": { en: "Unit Price", ar: "سعر الوحدة" },
+  "po.noEligibleVendors": {
+    en: "No invited vendor has quoted every line of this RFQ yet.",
+    ar: "لم يقدم أي مورّد مدعو عرض سعر لجميع بنود طلب عروض الأسعار هذا حتى الآن.",
+  },
+  "po.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "po.columnVendor": { en: "Vendor", ar: "المورّد" },
+  "po.columnSourceRfq": { en: "Source RFQ", ar: "طلب عرض السعر المصدر" },
+  "po.columnTotal": { en: "Total", ar: "الإجمالي" },
+  "po.columnStatus": { en: "Status", ar: "الحالة" },
+  "po.columnLineTotal": { en: "Line Total", ar: "إجمالي البند" },
+  "po.tabLines": { en: "Lines", ar: "البنود" },
+  "po.selectHint": { en: "Select a purchase order from the list to see its details.", ar: "اختر أمر شراء من القائمة لعرض تفاصيله." },
+  "po.tabThreeWayMatch": { en: "3-Way Match", ar: "المطابقة الثلاثية" },
+  "po.fieldApInvoice": { en: "AP Invoice", ar: "فاتورة الموردين" },
+  "po.actionCheckMatch": { en: "Check Match", ar: "التحقق من المطابقة" },
+  "po.matchOrdered": { en: "Ordered", ar: "المطلوب" },
+  "po.matchReceived": { en: "Received", ar: "المستلم" },
+  "po.matchInvoiced": { en: "Invoiced", ar: "المفوتر" },
+  "po.matchResultLabel": { en: "Result", ar: "النتيجة" },
+  "po.matchMatched": { en: "Matched", ar: "مطابق" },
+  "po.matchVariance": { en: "Variance", ar: "يوجد فرق" },
+
+  "grn.heading": { en: "Goods Receipt Notes", ar: "إشعارات استلام البضائع" },
+  "grn.newHeading": { en: "New Goods Receipt Note", ar: "إشعار استلام بضائع جديد" },
+  "grn.emptyState": { en: "No goods receipt notes yet.", ar: "لا توجد إشعارات استلام بضائع حتى الآن." },
+  "grn.actionNew": { en: "New", ar: "جديد" },
+  "grn.actionCreate": { en: "Create", ar: "إنشاء" },
+  "grn.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "grn.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "grn.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "grn.actionReject": { en: "Reject", ar: "رفض" },
+  "grn.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "grn.actionRemoveLine": { en: "Remove", ar: "إزالة" },
+  "grn.fieldPurchaseOrder": { en: "Purchase Order", ar: "أمر الشراء" },
+  "grn.fieldPurchaseOrderLine": { en: "Purchase Order Line", ar: "بند أمر الشراء" },
+  "grn.fieldReceivedDate": { en: "Received Date", ar: "تاريخ الاستلام" },
+  "grn.fieldQuantityReceived": { en: "Quantity Received", ar: "الكمية المستلمة" },
+  "grn.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "grn.columnPurchaseOrder": { en: "Purchase Order", ar: "أمر الشراء" },
+  "grn.columnReceivedValue": { en: "Received Value", ar: "قيمة المستلم" },
+  "grn.columnStatus": { en: "Status", ar: "الحالة" },
+  "grn.columnItem": { en: "Item", ar: "الصنف" },
+  "grn.columnUnitPrice": { en: "Unit Price", ar: "سعر الوحدة" },
+  "grn.columnLineValue": { en: "Line Value", ar: "قيمة البند" },
+  "grn.tabLines": { en: "Lines", ar: "البنود" },
+
+  "proj.heading": { en: "Projects", ar: "المشاريع" },
+  "proj.newHeading": { en: "New Project", ar: "مشروع جديد" },
+  "proj.emptyState": { en: "No projects yet.", ar: "لا توجد مشاريع حتى الآن." },
+  "proj.selectHint": { en: "Select a project from the list to see its details.", ar: "اختر مشروعًا من القائمة لعرض تفاصيله." },
+  "proj.actionNew": { en: "New", ar: "جديد" },
+  "proj.actionCreate": { en: "Create", ar: "إنشاء" },
+  "proj.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "proj.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "proj.actionApprove": { en: "Approve (Release)", ar: "اعتماد (إطلاق)" },
+  "proj.actionReject": { en: "Reject", ar: "رفض" },
+  "proj.actionAddWbsElement": { en: "Add WBS Element", ar: "إضافة عنصر هيكل تجزئة العمل" },
+  "proj.actionRemoveWbsElement": { en: "Remove", ar: "إزالة" },
+  "proj.fieldProjectName": { en: "Project Name", ar: "اسم المشروع" },
+  "proj.fieldProjectNameArabic": { en: "Project Name (Arabic)", ar: "اسم المشروع (عربي)" },
+  "proj.fieldCustomer": { en: "Customer", ar: "العميل" },
+  "proj.fieldStartDate": { en: "Start Date", ar: "تاريخ البدء" },
+  "proj.fieldEndDate": { en: "End Date", ar: "تاريخ الانتهاء" },
+  "proj.fieldWbsCode": { en: "WBS Code", ar: "رمز هيكل تجزئة العمل" },
+  "proj.fieldWbsName": { en: "WBS Name", ar: "اسم عنصر هيكل تجزئة العمل" },
+  "proj.fieldWbsParent": { en: "Parent", ar: "العنصر الأصل" },
+  "proj.fieldPlanningElement": { en: "Planning", ar: "تخطيط" },
+  "proj.fieldAccountAssignmentElement": { en: "Account Assignment", ar: "إسناد الحساب" },
+  "proj.fieldBillingElement": { en: "Billing", ar: "فوترة" },
+  "proj.wbsTopLevel": { en: "— Top level —", ar: "— المستوى الأعلى —" },
+  "proj.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "proj.columnProjectName": { en: "Project Name", ar: "اسم المشروع" },
+  "proj.columnStatus": { en: "Status", ar: "الحالة" },
+  "proj.tabWbsElements": { en: "WBS Elements", ar: "عناصر هيكل تجزئة العمل" },
+  "lookup.hubHeading": { en: "Lookup Data", ar: "بيانات القوائم" },
+  "lookup.newTypeHeading": { en: "Create a new lookup type", ar: "إنشاء نوع قائمة جديد" },
+  "lookup.columnCode": { en: "Code", ar: "الرمز" },
+  "lookup.columnName": { en: "Name", ar: "الاسم" },
+  "lookup.columnNameArabic": { en: "Name (Arabic)", ar: "الاسم (عربي)" },
+  "lookup.columnValueCount": { en: "Values", ar: "عدد القيم" },
+  "lookup.columnKind": { en: "Kind", ar: "النوع" },
+  "lookup.columnActions": { en: "Actions", ar: "الإجراءات" },
+  "lookup.columnSortOrder": { en: "Sort Order", ar: "ترتيب العرض" },
+  "lookup.columnStatus": { en: "Status", ar: "الحالة" },
+  "lookup.statusActive": { en: "Active", ar: "فعال" },
+  "lookup.statusInactive": { en: "Inactive", ar: "غير فعال" },
+  "lookup.kindSystem": { en: "System", ar: "نظامي" },
+  "lookup.kindCustom": { en: "Custom", ar: "مخصص" },
+  "lookup.actionEdit": { en: "Edit", ar: "تعديل" },
+  "lookup.actionSave": { en: "Save", ar: "حفظ" },
+  "lookup.actionCancel": { en: "Cancel", ar: "إلغاء" },
+  "lookup.actionActivate": { en: "Activate", ar: "تفعيل" },
+  "lookup.actionDeactivate": { en: "Deactivate", ar: "إيقاف" },
+  "lookup.actionDelete": { en: "Delete", ar: "حذف" },
+  "lookup.actionAddValue": { en: "Add", ar: "إضافة" },
+  "lookup.actionBackToHub": { en: "Back to Lookup Types", ar: "العودة إلى أنواع القوائم" },
+  "lookup.actionCreateType": { en: "Create Lookup Type", ar: "إنشاء نوع القائمة" },
+  "lookup.fieldTypeCode": { en: "Code", ar: "الرمز" },
+  "lookup.fieldTypeName": { en: "Name", ar: "الاسم" },
+  "lookup.fieldTypeNameArabic": { en: "Name (Arabic)", ar: "الاسم (عربي)" },
+  "lookup.newCodePlaceholder": { en: "New code", ar: "رمز جديد" },
+  "lookup.newNamePlaceholder": { en: "New name", ar: "اسم جديد" },
+  "lookup.newNameArabicPlaceholder": { en: "New name (Arabic)", ar: "اسم جديد (عربي)" },
+  "nav.usersArea": { en: "Users", ar: "المستخدمون" },
+  "nav.allUsers": { en: "All Users", ar: "جميع المستخدمين" },
+  "auth.signInPrompt": { en: "Sign in to continue.", ar: "سجّل الدخول للمتابعة." },
+  "auth.usernameLabel": { en: "Username", ar: "اسم المستخدم" },
+  "auth.passwordLabel": { en: "Password", ar: "كلمة المرور" },
+  "auth.loginButton": { en: "Log In", ar: "تسجيل الدخول" },
+  "auth.invalidCredentials": { en: "Invalid username or password.", ar: "اسم المستخدم أو كلمة المرور غير صحيحة." },
+  "auth.loggedInAs": { en: "Logged in as {username}", ar: "مسجل الدخول باسم {username}" },
+  "auth.logoutButton": { en: "Logout", ar: "تسجيل الخروج" },
+  "users.heading": { en: "Users", ar: "المستخدمون" },
+  "users.newHeading": { en: "New User", ar: "مستخدم جديد" },
+  "users.emptyState": { en: "No users yet.", ar: "لا يوجد مستخدمون بعد." },
+  "users.selectHint": { en: "Select a user from the list to see its details.", ar: "اختر مستخدمًا من القائمة لعرض تفاصيله." },
+  "users.actionNew": { en: "New", ar: "جديد" },
+  "users.actionCreate": { en: "Create", ar: "إنشاء" },
+  "users.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "users.actionActivate": { en: "Activate", ar: "تفعيل" },
+  "users.actionDeactivate": { en: "Deactivate", ar: "إيقاف" },
+  "users.actionAssignRole": { en: "Assign Role", ar: "تعيين دور" },
+  "users.actionRemoveRole": { en: "Remove", ar: "إزالة" },
+  "users.actionGrantExceptionAndAssign": { en: "Grant Exception & Assign", ar: "منح استثناء وتعيين" },
+  "users.actionResetPassword": { en: "Reset Password", ar: "إعادة تعيين كلمة المرور" },
+  "users.columnUsername": { en: "Username", ar: "اسم المستخدم" },
+  "users.columnDisplayName": { en: "Display Name", ar: "الاسم المعروض" },
+  "users.columnStatus": { en: "Status", ar: "الحالة" },
+  "users.statusActive": { en: "Active", ar: "فعال" },
+  "users.statusInactive": { en: "Inactive", ar: "غير فعال" },
+  "users.fieldUsername": { en: "Username", ar: "اسم المستخدم" },
+  "users.fieldDisplayName": { en: "Display Name", ar: "الاسم المعروض" },
+  "users.fieldEmail": { en: "Email", ar: "البريد الإلكتروني" },
+  "users.fieldPassword": { en: "Password", ar: "كلمة المرور" },
+  "users.fieldNewPassword": { en: "New Password", ar: "كلمة مرور جديدة" },
+  "users.fieldRoleKey": { en: "Role Key", ar: "رمز الدور" },
+  "users.fieldOverrideReason": { en: "Override Reason", ar: "سبب التجاوز" },
+  "users.tabRoles": { en: "Roles", ar: "الأدوار" },
+  "users.tabPassword": { en: "Password", ar: "كلمة المرور" },
+  "users.emptyRoles": { en: "No roles assigned yet.", ar: "لم يتم تعيين أي أدوار بعد." },
+  "users.sodConflictHeading": { en: "Segregation of Duties conflict:", ar: "تعارض في فصل المهام:" },
 };
 
 export function t(key: TranslationKey, language: SupportedLanguageCode): string {

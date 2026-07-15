@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { authHeaders } from "./authApi";
 import type { SupportedLanguageCode } from "../i18n/language";
 
 export interface EventsOutboxStatus {
@@ -36,7 +37,7 @@ export interface SystemGreeting {
 }
 
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, { headers: authHeaders() });
 
   if (!response.ok) {
     throw new Error(`Request to ${path} failed with status ${response.status}`);

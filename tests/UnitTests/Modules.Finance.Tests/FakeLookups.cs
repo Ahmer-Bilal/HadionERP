@@ -45,3 +45,17 @@ internal sealed class FakeTaxCodeLookup : ITaxCodeLookup
     public Task<TaxCodeSummary?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_taxCodes.GetValueOrDefault(id));
 }
+
+/// <summary>Seeded with the same "PaymentMethod" values the real startup seeder provisions
+/// (<c>Modules.MasterData.Infrastructure.LookupSeeder</c>), trimmed to what these unit tests reference.</summary>
+internal sealed class FakeLookupCatalog : ILookupCatalog
+{
+    private readonly Dictionary<(string, string), LookupValueSummary> _values = new()
+    {
+        [("PaymentMethod", "BankTransfer")] = new LookupValueSummary("PaymentMethod", "BankTransfer", "Bank Transfer", null, true),
+        [("PaymentMethod", "Check")] = new LookupValueSummary("PaymentMethod", "Check", "Check", null, true),
+    };
+
+    public Task<LookupValueSummary?> GetValueAsync(string lookupTypeCode, string valueCode, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_values.GetValueOrDefault((lookupTypeCode, valueCode)));
+}

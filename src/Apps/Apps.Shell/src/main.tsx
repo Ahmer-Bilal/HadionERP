@@ -8,9 +8,12 @@ import "@platform/ui/tokens/design-tokens.css"
 import "@platform/ui/components/components.css"
 import "./index.css"
 import App from './App.tsx'
+import { AuthProvider } from './AuthContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )

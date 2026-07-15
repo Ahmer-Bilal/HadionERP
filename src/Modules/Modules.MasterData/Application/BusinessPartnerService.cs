@@ -39,6 +39,7 @@ public sealed class BusinessPartnerService
     private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
     private readonly IAttachmentService _attachmentService;
     private readonly INoteService _noteService;
+    private readonly ILookupRepository _lookupRepository;
 
     public BusinessPartnerService(
         IBusinessPartnerRepository repository,
@@ -49,7 +50,8 @@ public sealed class BusinessPartnerService
         IAuthorizationService authorizationService,
         IActorRoleAssignmentStore actorRoleAssignmentStore,
         IAttachmentService attachmentService,
-        INoteService noteService)
+        INoteService noteService,
+        ILookupRepository lookupRepository)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
@@ -60,6 +62,7 @@ public sealed class BusinessPartnerService
         _actorRoleAssignmentStore = actorRoleAssignmentStore;
         _attachmentService = attachmentService;
         _noteService = noteService;
+        _lookupRepository = lookupRepository;
     }
 
     public async Task<BusinessPartnerDto> CreateAsync(
@@ -67,14 +70,9 @@ public sealed class BusinessPartnerService
     {
         RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
 
-        if (!Enum.TryParse<BusinessRoleType>(request.InitialRole, ignoreCase: true, out var initialRole))
-        {
-            throw new ArgumentException(
-                $"Invalid business role '{request.InitialRole}'. Expected Client, Supplier, Subcontractor, Consultant, " +
-                "JointVenturePartner, GovernmentAuthority, RentalCompany, Manufacturer, ManpowerSupplier, or TestingLaboratory.");
-        }
+        await ValidateRoleTypeAsync(request.InitialRole, cancellationToken);
 
-        var partner = new BusinessPartner(actor, request.Name, initialRole, request.InitialTrade);
+        var partner = new BusinessPartner(actor, request.Name, request.InitialRole, request.InitialTrade);
         partner.UpdateTaxRegistrationNumber(request.TaxRegistrationNumber);
         partner.UpdateNameArabic(request.NameArabic);
 
@@ -112,14 +110,11 @@ public sealed class BusinessPartnerService
     {
         RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
 
-        if (!Enum.TryParse<AddressType>(request.AddressType, ignoreCase: true, out var addressType))
-        {
-            throw new ArgumentException(
-                $"Invalid address type '{request.AddressType}'. Expected HeadOffice, Billing, Shipping, or SiteOffice.");
-        }
+        await ValidateAddressTypeAsync(request.AddressType, cancellationToken);
+        await ValidateCountryAsync(request.Country, cancellationToken);
 
         var partner = await RequirePartnerAsync(id, cancellationToken);
-        var address = partner.AddAddress(addressType, request.Country, request.City, request.AddressLine);
+        var address = partner.AddAddress(request.AddressType, request.Country, request.City, request.AddressLine);
         await _repository.SaveChangesAsync(cancellationToken);
 
         _auditRecorder.RecordFieldUpdate(
@@ -132,7 +127,7 @@ public sealed class BusinessPartnerService
                     "Addresses",
                     OldValueJson: null,
                     NewValueJson: JsonSerializer.Serialize(new BusinessPartnerAddressDto(
-                        address.Id, address.AddressType.ToString(), address.Country, address.City, address.AddressLine)))
+                        address.Id, address.AddressType, address.Country, address.City, address.AddressLine)))
             },
             AuditSource);
 
@@ -170,22 +165,17 @@ public sealed class BusinessPartnerService
     {
         RequireAuthorization(actor, BusinessPartnerSecurity.MaintainPrivilegeKey);
 
-        if (!Enum.TryParse<BusinessRoleType>(request.RoleType, ignoreCase: true, out var roleType))
-        {
-            throw new ArgumentException(
-                $"Invalid business role '{request.RoleType}'. Expected Client, Supplier, Subcontractor, Consultant, " +
-                "JointVenturePartner, GovernmentAuthority, RentalCompany, Manufacturer, ManpowerSupplier, or TestingLaboratory.");
-        }
+        await ValidateRoleTypeAsync(request.RoleType, cancellationToken);
 
         var partner = await RequirePartnerAsync(id, cancellationToken);
-        var role = partner.AddBusinessRole(roleType, request.Trade);
+        var role = partner.AddBusinessRole(request.RoleType, request.Trade);
         await _repository.SaveChangesAsync(cancellationToken);
 
         _auditRecorder.RecordFieldUpdate(
             AuditReference(partner.Id),
             actor,
             $"Business role '{role.RoleType}' added to '{partner.Name}'.",
-            new[] { new FieldValueChange("BusinessRoles", OldValueJson: null, NewValueJson: JsonSerializer.Serialize(new BusinessRoleDto(role.Id, role.RoleType.ToString(), role.Trade))) },
+            new[] { new FieldValueChange("BusinessRoles", OldValueJson: null, NewValueJson: JsonSerializer.Serialize(new BusinessRoleDto(role.Id, role.RoleType, role.Trade))) },
             AuditSource);
 
         return ToDto(partner);
@@ -464,6 +454,34 @@ public sealed class BusinessPartnerService
     private SecurityPrincipal BuildPrincipal(string actor) =>
         new(actor, _actorRoleAssignmentStore.ResolveRoleKeys(actor), new Dictionary<string, IReadOnlySet<string>>());
 
+    /// <summary>Validates a role code against the admin-configurable <c>"BusinessRoleType"</c> lookup
+    /// type instead of <c>Enum.TryParse</c> — CLAUDE.md's "don't hard-code lookup data" instruction; an
+    /// administrator can add a new role type via the Lookup Data admin panel without a code change, and it
+    /// becomes selectable here immediately.</summary>
+    private async Task ValidateRoleTypeAsync(string roleType, CancellationToken cancellationToken)
+    {
+        var value = await _lookupRepository.GetValueByCodeAsync("BusinessRoleType", roleType, cancellationToken);
+        if (value is null || !value.IsActive)
+            throw new ArgumentException($"'{roleType}' is not a known, active Business Role Type.");
+    }
+
+    private async Task ValidateAddressTypeAsync(string addressType, CancellationToken cancellationToken)
+    {
+        var value = await _lookupRepository.GetValueByCodeAsync("AddressType", addressType, cancellationToken);
+        if (value is null || !value.IsActive)
+            throw new ArgumentException($"'{addressType}' is not a known, active Address Type.");
+    }
+
+    /// <summary>Country is optional on an address, so a null/blank value is always allowed — only a
+    /// non-blank value is checked against the admin-configurable <c>"Country"</c> lookup type.</summary>
+    private async Task ValidateCountryAsync(string? country, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(country)) return;
+        var value = await _lookupRepository.GetValueByCodeAsync("Country", country, cancellationToken);
+        if (value is null || !value.IsActive)
+            throw new ArgumentException($"'{country}' is not a known, active Country.");
+    }
+
     private static BusinessObjectReference AuditReference(Guid partnerId) => new(partnerId, AuditTargetType, "Self");
 
     private async Task<BusinessPartner> RequirePartnerAsync(Guid id, CancellationToken cancellationToken) =>
@@ -482,9 +500,9 @@ public sealed class BusinessPartnerService
         partner.Name,
         partner.NameArabic,
         partner.TaxRegistrationNumber,
-        partner.Addresses.Select(a => new BusinessPartnerAddressDto(a.Id, a.AddressType.ToString(), a.Country, a.City, a.AddressLine)).ToList(),
+        partner.Addresses.Select(a => new BusinessPartnerAddressDto(a.Id, a.AddressType, a.Country, a.City, a.AddressLine)).ToList(),
         partner.Contacts.Select(c => new BusinessPartnerContactDto(c.Id, c.Name, c.JobTitle, c.Email, c.Phone)).ToList(),
-        partner.BusinessRoles.Select(r => new BusinessRoleDto(r.Id, r.RoleType.ToString(), r.Trade)).ToList(),
+        partner.BusinessRoles.Select(r => new BusinessRoleDto(r.Id, r.RoleType, r.Trade)).ToList(),
         partner.CreatedAt,
         partner.CreatedBy);
 }

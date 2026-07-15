@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { authHeaders } from "./authApi";
 
 export interface CostCenter {
   id: string;
@@ -48,19 +49,19 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function listCostCenters(top = 50, skip = 0): Promise<PagedResult<CostCenter>> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function getCostCenter(id: string): Promise<CostCenter> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function createCostCenter(input: CreateCostCenterInput): Promise<CostCenter> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
@@ -69,23 +70,23 @@ export async function createCostCenter(input: CreateCostCenterInput): Promise<Co
 export async function updateCostCenter(id: string, input: UpdateCostCenterInput): Promise<CostCenter> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
 }
 
 export async function submitCostCenter(id: string): Promise<CostCenter> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function approveCostCenter(id: string): Promise<CostCenter> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function rejectCostCenter(id: string): Promise<CostCenter> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }

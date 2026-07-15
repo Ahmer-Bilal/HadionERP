@@ -42,7 +42,7 @@ public class ItemServiceTests
 
         return new ItemService(
             repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances,
-            new AuthorizationService(securityCatalog), BuildActorRoles());
+            new AuthorizationService(securityCatalog), BuildActorRoles(), FakeLookupRepository.WithDefaults());
     }
 
     private static CreateItemRequest ValidRequest(string code = "MAT-1010") =>

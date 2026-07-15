@@ -8,15 +8,13 @@ public sealed record ReverseJournalEntryRequest(DateOnly? ReversalDate = null);
 
 /// <summary>
 /// Journal Entry controller — inherits <see cref="PlatformApiController"/> for shared conventions (paging,
-/// error envelope), same route/actor/exception-mapping pattern as Modules.MasterData's controllers. Two
-/// distinct actor literals enforce the Segregation of Duties split (maintainer can't be approver/poster).
+/// error envelope), same route/actor/exception-mapping pattern as Modules.MasterData's controllers. Real authenticated identity ("CurrentActor" from Platform.Api.PlatformApiController) is the acting user;
+/// Segregation of Duties is enforced at role-assignment time (see Modules.Identity.Application.UserService
+/// .AssignRoleAsync), not by separate hardcoded actors here.
 /// </summary>
 [Route("api/v1/finance/journal-entries")]
 public sealed class JournalEntriesController : PlatformApiController
 {
-    private const string MaintainerActor = "system/ui";
-    private const string ApproverActor = "system/approver";
-
     private readonly JournalEntryService _service;
 
     public JournalEntriesController(JournalEntryService service) => _service = service;
@@ -45,7 +43,7 @@ public sealed class JournalEntriesController : PlatformApiController
         const string companyId = "C001";
         try
         {
-            var created = await _service.CreateAsync(request, MaintainerActor, companyId, cancellationToken);
+            var created = await _service.CreateAsync(request, CurrentActor, companyId, cancellationToken);
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
@@ -55,7 +53,7 @@ public sealed class JournalEntriesController : PlatformApiController
     [HttpPost("{id:guid}/submit")]
     public async Task<IActionResult> Submit(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.SubmitAsync(id, MaintainerActor, cancellationToken)); }
+        try { return Ok(await _service.SubmitAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
@@ -65,7 +63,7 @@ public sealed class JournalEntriesController : PlatformApiController
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.ApproveAsync(id, ApproverActor, cancellationToken)); }
+        try { return Ok(await _service.ApproveAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -74,7 +72,7 @@ public sealed class JournalEntriesController : PlatformApiController
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> Reject(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.RejectAsync(id, ApproverActor, cancellationToken)); }
+        try { return Ok(await _service.RejectAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -83,7 +81,7 @@ public sealed class JournalEntriesController : PlatformApiController
     [HttpPost("{id:guid}/post")]
     public async Task<IActionResult> Post(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.PostAsync(id, ApproverActor, cancellationToken)); }
+        try { return Ok(await _service.PostAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -93,7 +91,7 @@ public sealed class JournalEntriesController : PlatformApiController
     public async Task<IActionResult> Reverse(Guid id, [FromBody] ReverseJournalEntryRequest? request, CancellationToken cancellationToken)
     {
         var reversalDate = request?.ReversalDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        try { return Ok(await _service.ReverseAsync(id, ApproverActor, reversalDate, cancellationToken)); }
+        try { return Ok(await _service.ReverseAsync(id, CurrentActor, reversalDate, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }

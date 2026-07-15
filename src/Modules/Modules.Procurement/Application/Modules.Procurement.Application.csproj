@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Domain\Modules.Procurement.Domain.csproj" />
     <ProjectReference Include="..\..\Modules.MasterData\Contracts\Modules.MasterData.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules.Finance\Contracts\Modules.Finance.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Core\Platform.Core.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Audit\Platform.Audit.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Workflow\Platform.Workflow.csproj" />

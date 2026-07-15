@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { authHeaders } from "./authApi";
 
 export interface Item {
   id: string;
@@ -47,19 +48,19 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function listItems(top = 50, skip = 0): Promise<PagedResult<Item>> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function getItem(id: string): Promise<Item> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function createItem(input: CreateItemInput): Promise<Item> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
@@ -68,23 +69,23 @@ export async function createItem(input: CreateItemInput): Promise<Item> {
 export async function updateItem(id: string, input: UpdateItemInput): Promise<Item> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
 }
 
 export async function submitItem(id: string): Promise<Item> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function approveItem(id: string): Promise<Item> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function rejectItem(id: string): Promise<Item> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }

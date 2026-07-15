@@ -22,6 +22,7 @@ public sealed class ItemService
     private readonly IWorkflowInstanceRepository _workflowInstanceRepository;
     private readonly IAuthorizationService _authorizationService;
     private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
+    private readonly ILookupRepository _lookupRepository;
 
     public ItemService(
         IItemRepository repository,
@@ -30,7 +31,8 @@ public sealed class ItemService
         IWorkflowEngine workflowEngine,
         IWorkflowInstanceRepository workflowInstanceRepository,
         IAuthorizationService authorizationService,
-        IActorRoleAssignmentStore actorRoleAssignmentStore)
+        IActorRoleAssignmentStore actorRoleAssignmentStore,
+        ILookupRepository lookupRepository)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
@@ -39,6 +41,7 @@ public sealed class ItemService
         _workflowInstanceRepository = workflowInstanceRepository;
         _authorizationService = authorizationService;
         _actorRoleAssignmentStore = actorRoleAssignmentStore;
+        _lookupRepository = lookupRepository;
     }
 
     public async Task<ItemDto> CreateAsync(
@@ -48,6 +51,8 @@ public sealed class ItemService
 
         if (!Enum.TryParse<ItemType>(request.ItemType, ignoreCase: true, out var itemType))
             throw new ArgumentException($"Invalid item type '{request.ItemType}'. Expected Stock, NonStock, or Service.");
+
+        await ValidateUnitOfMeasureAsync(request.UnitOfMeasure, cancellationToken);
 
         var existing = await _repository.GetByCodeAsync(request.ItemCode, cancellationToken);
         if (existing is not null)
@@ -86,6 +91,7 @@ public sealed class ItemService
         Guid id, UpdateItemRequest request, string actor, CancellationToken cancellationToken = default)
     {
         RequireAuthorization(actor, ItemSecurity.MaintainPrivilegeKey);
+        await ValidateUnitOfMeasureAsync(request.UnitOfMeasure, cancellationToken);
         var item = await RequireItemAsync(id, cancellationToken);
 
         item.UpdateItemName(request.ItemName);
@@ -184,6 +190,16 @@ public sealed class ItemService
 
     private SecurityPrincipal BuildPrincipal(string actor) =>
         new(actor, _actorRoleAssignmentStore.ResolveRoleKeys(actor), new Dictionary<string, IReadOnlySet<string>>());
+
+    /// <summary>Validates against the admin-configurable <c>"UnitOfMeasure"</c> lookup type instead of the
+    /// free-text field this module's own doc comment used to disclose as "no UoM master... yet" — CLAUDE.md's
+    /// "don't hard-code lookup data" instruction, and this module's own README Lookup Data section.</summary>
+    private async Task ValidateUnitOfMeasureAsync(string unitOfMeasure, CancellationToken cancellationToken)
+    {
+        var value = await _lookupRepository.GetValueByCodeAsync("UnitOfMeasure", unitOfMeasure, cancellationToken);
+        if (value is null || !value.IsActive)
+            throw new ArgumentException($"'{unitOfMeasure}' is not a known, active Unit of Measure.");
+    }
 
     private static BusinessObjectReference AuditReference(Guid itemId) => new(itemId, AuditTargetType, "Self");
 

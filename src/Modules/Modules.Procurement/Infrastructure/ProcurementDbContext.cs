@@ -24,6 +24,10 @@ public sealed class ProcurementDbContext : DbContext
     internal DbSet<RfqLine> RfqLines => Set<RfqLine>();
     internal DbSet<RfqInvitedVendor> RfqInvitedVendors => Set<RfqInvitedVendor>();
     internal DbSet<RfqVendorQuoteLine> RfqVendorQuoteLines => Set<RfqVendorQuoteLine>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    internal DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
+    public DbSet<GoodsReceiptNote> GoodsReceiptNotes => Set<GoodsReceiptNote>();
+    internal DbSet<GrnLine> GrnLines => Set<GrnLine>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
     public DbSet<AttachmentMetadata> Attachments => Set<AttachmentMetadata>();
@@ -201,6 +205,107 @@ public sealed class ProcurementDbContext : DbContext
             entity.Property(e => e.RfqLineId).HasColumnName("rfq_line_id");
             entity.Property(e => e.QuotedUnitPrice).HasColumnName("quoted_unit_price").HasColumnType("numeric(18,2)");
             entity.Property<Guid>("RequestForQuotationId").HasColumnName("request_for_quotation_id");
+        });
+
+        modelBuilder.Entity<PurchaseOrder>(entity =>
+        {
+            entity.ToTable("purchase_orders");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.VendorId).HasColumnName("vendor_id");
+            entity.Property(e => e.RequestForQuotationId).HasColumnName("request_for_quotation_id");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("PurchaseOrderId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.Total);
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<PurchaseOrderLine>(entity =>
+        {
+            entity.ToTable("purchase_order_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.ItemId).HasColumnName("item_id");
+            entity.Property(e => e.CostCenterId).HasColumnName("cost_center_id");
+            entity.Property(e => e.Quantity).HasColumnName("quantity").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.UnitPrice).HasColumnName("unit_price").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.RfqLineId).HasColumnName("rfq_line_id");
+            entity.Property<Guid>("PurchaseOrderId").HasColumnName("purchase_order_id");
+            entity.Ignore(e => e.LineTotal);
+        });
+
+        modelBuilder.Entity<GoodsReceiptNote>(entity =>
+        {
+            entity.ToTable("goods_receipt_notes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.PurchaseOrderId).HasColumnName("purchase_order_id");
+            entity.Property(e => e.ReceivedDate).HasColumnName("received_date");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("GoodsReceiptNoteId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.ReceivedValue);
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<GrnLine>(entity =>
+        {
+            entity.ToTable("grn_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.PurchaseOrderLineId).HasColumnName("purchase_order_line_id");
+            entity.Property(e => e.ItemId).HasColumnName("item_id");
+            entity.Property(e => e.QuantityReceived).HasColumnName("quantity_received").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.UnitPrice).HasColumnName("unit_price").HasColumnType("numeric(18,2)");
+            entity.Property<Guid>("GoodsReceiptNoteId").HasColumnName("goods_receipt_note_id");
+            entity.Ignore(e => e.LineValue);
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

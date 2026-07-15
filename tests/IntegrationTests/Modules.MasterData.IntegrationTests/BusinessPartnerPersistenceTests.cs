@@ -22,10 +22,10 @@ public class BusinessPartnerPersistenceTests : IAsyncLifetime
         Guid id;
         await using (var writeContext = TestDatabase.CreateContext())
         {
-            var partner = new BusinessPartner("ahmer.bilal", "Gulf Falcon Trading Co", BusinessRoleType.Supplier);
+            var partner = new BusinessPartner("ahmer.bilal", "Gulf Falcon Trading Co", "Supplier");
             partner.UpdateTaxRegistrationNumber("300000000000003");
             partner.UpdateNameArabic("شركة صقر الخليج التجارية");
-            partner.AddAddress(AddressType.HeadOffice, "Saudi Arabia", "Riyadh", "King Fahd Road");
+            partner.AddAddress("HeadOffice", "Saudi Arabia", "Riyadh", "King Fahd Road");
             partner.AddContact("Fahad Al-Otaibi", "Procurement Manager", "info@gulffalcon.example", "+966500000000");
             partner.AssignNumber("MD-BP-2026-000001");
             partner.ExtensionFields.Set("preferredLanguage", "ar");
@@ -45,11 +45,11 @@ public class BusinessPartnerPersistenceTests : IAsyncLifetime
         Assert.NotNull(reloaded);
         Assert.Equal("Gulf Falcon Trading Co", reloaded!.Name);
         var role = Assert.Single(reloaded.BusinessRoles);
-        Assert.Equal(BusinessRoleType.Supplier, role.RoleType);
+        Assert.Equal("Supplier", role.RoleType);
         Assert.Equal("300000000000003", reloaded.TaxRegistrationNumber);
         Assert.Equal("شركة صقر الخليج التجارية", reloaded.NameArabic);
         var address = Assert.Single(reloaded.Addresses);
-        Assert.Equal(AddressType.HeadOffice, address.AddressType);
+        Assert.Equal("HeadOffice", address.AddressType);
         Assert.Equal("Riyadh", address.City);
         var contact = Assert.Single(reloaded.Contacts);
         Assert.Equal("Fahad Al-Otaibi", contact.Name);
@@ -66,7 +66,7 @@ public class BusinessPartnerPersistenceTests : IAsyncLifetime
         Guid id;
         await using (var writeContext = TestDatabase.CreateContext())
         {
-            var partner = new BusinessPartner("ahmer.bilal", "Approve Me Co", BusinessRoleType.Client);
+            var partner = new BusinessPartner("ahmer.bilal", "Approve Me Co", "Client");
             writeContext.BusinessPartners.Add(partner);
             await writeContext.SaveChangesAsync();
             id = partner.Id;
@@ -93,7 +93,7 @@ public class BusinessPartnerPersistenceTests : IAsyncLifetime
         Guid id;
         await using (var writeContext = TestDatabase.CreateContext())
         {
-            var partner = new BusinessPartner("ahmer.bilal", "Concurrency Test Co", BusinessRoleType.Supplier);
+            var partner = new BusinessPartner("ahmer.bilal", "Concurrency Test Co", "Supplier");
             writeContext.BusinessPartners.Add(partner);
             await writeContext.SaveChangesAsync();
             id = partner.Id;

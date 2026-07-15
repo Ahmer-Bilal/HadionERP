@@ -14,6 +14,13 @@ import { APInvoicesPage } from "./pages/APInvoicesPage";
 import { VendorPrequalificationsPage } from "./pages/VendorPrequalificationsPage";
 import { PurchaseRequisitionsPage } from "./pages/PurchaseRequisitionsPage";
 import { RequestsForQuotationPage } from "./pages/RequestsForQuotationPage";
+import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
+import { GoodsReceiptNotesPage } from "./pages/GoodsReceiptNotesPage";
+import { ProjectsPage } from "./pages/ProjectsPage";
+import { LookupDataPage } from "./pages/LookupDataPage";
+import { UsersPage } from "./pages/UsersPage";
+import { LoginPage } from "./pages/LoginPage";
+import { useAuth } from "./AuthContext";
 import { directionFor, type SupportedLanguageCode } from "./i18n/language";
 import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
@@ -21,7 +28,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -35,6 +42,18 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#vendor-prequalifications") return "vendor-prequalifications";
   if (window.location.hash === "#purchase-requisitions") return "purchase-requisitions";
   if (window.location.hash === "#requests-for-quotation") return "requests-for-quotation";
+  if (window.location.hash === "#purchase-orders") return "purchase-orders";
+  if (window.location.hash === "#goods-receipt-notes") return "goods-receipt-notes";
+  if (window.location.hash === "#projects") return "projects";
+  if (window.location.hash === "#lookup-data") return "lookup-data";
+  if (window.location.hash === "#lookup-country") return "lookup-country";
+  if (window.location.hash === "#lookup-business-role-type") return "lookup-business-role-type";
+  if (window.location.hash === "#lookup-address-type") return "lookup-address-type";
+  if (window.location.hash === "#lookup-unit-of-measure") return "lookup-unit-of-measure";
+  if (window.location.hash === "#lookup-subcontractor-trade") return "lookup-subcontractor-trade";
+  if (window.location.hash === "#lookup-supplier-trade") return "lookup-supplier-trade";
+  if (window.location.hash === "#lookup-consultant-trade") return "lookup-consultant-trade";
+  if (window.location.hash === "#users") return "users";
   return "home";
 }
 
@@ -42,6 +61,7 @@ function App() {
   const [language, setLanguage] = useState<SupportedLanguageCode>("en");
   const [page, setPage] = useState<PageKey>(currentPageFromHash);
   const direction = directionFor(language);
+  const { user, isLoading, logout } = useAuth();
 
   useEffect(() => {
     document.documentElement.dir = direction;
@@ -53,6 +73,13 @@ function App() {
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  // Real authentication (ARCHITECTURE-AUDIT.md Part 1 §1) — nothing past this point renders until a real
+  // session exists. isLoading covers the brief /auth/me confirmation on first load (see AuthContext);
+  // rendering nothing rather than a flash of the login form avoids a jarring flicker for an already-valid
+  // session surviving a reload.
+  if (isLoading) return null;
+  if (!user) return <LoginPage language={language} />;
 
   // The navigation tree, data-driven per docs/architecture/02-business-object-model.md #3. A new business
   // module adds its own entry here as data — Platform.UI's NavigationPane renders whatever structure it's
@@ -89,6 +116,72 @@ function App() {
               label: t("nav.systemStatus", language),
               href: "#system-status",
               isActive: page === "system-status",
+            },
+          ],
+        },
+        {
+          key: "lookup-data",
+          label: t("nav.lookupDataArea", language),
+          items: [
+            {
+              key: "all-lookup-types",
+              label: t("nav.allLookupTypes", language),
+              href: "#lookup-data",
+              isActive: page === "lookup-data",
+            },
+            {
+              key: "lookup-countries",
+              label: t("nav.lookupCountries", language),
+              href: "#lookup-country",
+              isActive: page === "lookup-country",
+            },
+            {
+              key: "lookup-business-role-types",
+              label: t("nav.lookupBusinessRoleTypes", language),
+              href: "#lookup-business-role-type",
+              isActive: page === "lookup-business-role-type",
+            },
+            {
+              key: "lookup-address-types",
+              label: t("nav.lookupAddressTypes", language),
+              href: "#lookup-address-type",
+              isActive: page === "lookup-address-type",
+            },
+            {
+              key: "lookup-units-of-measure",
+              label: t("nav.lookupUnitsOfMeasure", language),
+              href: "#lookup-unit-of-measure",
+              isActive: page === "lookup-unit-of-measure",
+            },
+            {
+              key: "lookup-subcontractor-trades",
+              label: t("nav.lookupSubcontractorTrades", language),
+              href: "#lookup-subcontractor-trade",
+              isActive: page === "lookup-subcontractor-trade",
+            },
+            {
+              key: "lookup-supplier-trades",
+              label: t("nav.lookupSupplierTrades", language),
+              href: "#lookup-supplier-trade",
+              isActive: page === "lookup-supplier-trade",
+            },
+            {
+              key: "lookup-consultant-trades",
+              label: t("nav.lookupConsultantTrades", language),
+              href: "#lookup-consultant-trade",
+              isActive: page === "lookup-consultant-trade",
+            },
+          ],
+        },
+        {
+          key: "users",
+          label: t("nav.usersArea", language),
+          items: [
+            {
+              key: "all-users",
+              label: t("nav.allUsers", language),
+              href: "#users",
+              isActive: page === "users",
             },
           ],
         },
@@ -230,6 +323,48 @@ function App() {
             },
           ],
         },
+        {
+          key: "purchase-orders",
+          label: t("nav.purchaseOrdersArea", language),
+          items: [
+            {
+              key: "all-purchase-orders",
+              label: t("nav.allPurchaseOrders", language),
+              href: "#purchase-orders",
+              isActive: page === "purchase-orders",
+            },
+          ],
+        },
+        {
+          key: "goods-receipt-notes",
+          label: t("nav.goodsReceiptNotesArea", language),
+          items: [
+            {
+              key: "all-goods-receipt-notes",
+              label: t("nav.allGoodsReceiptNotes", language),
+              href: "#goods-receipt-notes",
+              isActive: page === "goods-receipt-notes",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      key: "project-management",
+      label: t("nav.projectManagementModule", language),
+      areas: [
+        {
+          key: "projects",
+          label: t("nav.projectsArea", language),
+          items: [
+            {
+              key: "all-projects",
+              label: t("nav.allProjects", language),
+              href: "#projects",
+              isActive: page === "projects",
+            },
+          ],
+        },
       ],
     },
   ];
@@ -248,6 +383,9 @@ function App() {
         activeLanguage={language}
         onLanguageChange={setLanguage}
         languageSwitchLabel={t("aria.languageSwitchGroup", language)}
+        currentUserLabel={t("auth.loggedInAs", language).replace("{username}", user.displayName)}
+        onLogout={logout}
+        logoutLabel={t("auth.logoutButton", language)}
       />
       <div className="app-shell__body">
         <NavigationPane
@@ -275,6 +413,30 @@ function App() {
             <PurchaseRequisitionsPage language={language} />
           ) : page === "requests-for-quotation" ? (
             <RequestsForQuotationPage language={language} />
+          ) : page === "purchase-orders" ? (
+            <PurchaseOrdersPage language={language} />
+          ) : page === "goods-receipt-notes" ? (
+            <GoodsReceiptNotesPage language={language} />
+          ) : page === "projects" ? (
+            <ProjectsPage language={language} />
+          ) : page === "lookup-data" ? (
+            <LookupDataPage language={language} />
+          ) : page === "lookup-country" ? (
+            <LookupDataPage language={language} initialTypeCode="Country" />
+          ) : page === "lookup-business-role-type" ? (
+            <LookupDataPage language={language} initialTypeCode="BusinessRoleType" />
+          ) : page === "lookup-address-type" ? (
+            <LookupDataPage language={language} initialTypeCode="AddressType" />
+          ) : page === "lookup-unit-of-measure" ? (
+            <LookupDataPage language={language} initialTypeCode="UnitOfMeasure" />
+          ) : page === "lookup-subcontractor-trade" ? (
+            <LookupDataPage language={language} initialTypeCode="SubcontractorTrade" />
+          ) : page === "lookup-supplier-trade" ? (
+            <LookupDataPage language={language} initialTypeCode="SupplierTrade" />
+          ) : page === "lookup-consultant-trade" ? (
+            <LookupDataPage language={language} initialTypeCode="ConsultantTrade" />
+          ) : page === "users" ? (
+            <UsersPage language={language} />
           ) : page === "system-status" ? (
             <SystemStatusPage language={language} />
           ) : (

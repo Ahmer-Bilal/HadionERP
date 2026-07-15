@@ -142,13 +142,129 @@ built today.
   submitted it, recorded a vendor quote, and approved — confirmed the quote persisted through to the
   Approved response.
 
+## What's built (Phase 2, slice 5: Purchase Order)
+
+- **Domain**: `PurchaseOrder` — the third document in the procure-to-pay chain, built "from an RFQ-selected
+  quote or direct" per task #102's own wording. Child `PurchaseOrderLine` carries the real negotiated
+  `UnitPrice` (not an estimate) plus a `CostCenterId` — unlike `RfqLine`, which drops Cost Center, a PO needs
+  one back for the budget check below. `RequestForQuotationId`/`RfqLineId` are set only on the from-RFQ path,
+  kept purely for traceability, same role `RfqLine.PurchaseRequisitionLineId` plays back to the PR. Stops at
+  Approved — GRN (task #103, not built yet) is the actual receipt/financial event; a PO is a commitment, not
+  a posting.
+- **First real use of `Modules.Finance.Contracts.IBudgetCheckService`** — the exact synchronous cross-module
+  contract call docs/architecture/01-architecture-foundation.md §3.2 names as its own worked example
+  ("Procurement asks Finance's IBudgetCheckService before releasing a PO"). New `Modules.Finance.Contracts`
+  project (mirrors `Modules.MasterData.Contracts`'s shape) publishes `IBudgetCheckService`/`BudgetCheckResult`;
+  `PurchaseOrderService.SubmitAsync` calls it once per distinct cost center on the PO (summing that cost
+  center's lines) before the PO is ever submitted for approval — a denied cost center blocks the whole
+  submit. The real implementation, `Modules.Finance.Infrastructure.PassThroughBudgetCheckService`, always
+  allows for now: Budget Control itself is still deferred Finance depth (PROGRESS.md), so there is no real
+  budget data to check against yet — disclosed in that class's own doc comment rather than faking
+  enforcement against numbers that don't exist. Swapping in a real check later only touches that one class's
+  body, not the interface or any caller.
+- **From-RFQ creation**: given an Approved RFQ and a vendor, builds the PO's lines from that RFQ's own lines
+  at the price the vendor quoted — the vendor must be one of the RFQ's invited vendors and must have quoted
+  *every* line (a partial award, splitting different vendors across lines, is a future PO-splitting concern,
+  not built here — the RFQ's own "no award step" design, disclosed in its README section above, is why this
+  had to be solved at PO-creation time). Each line's Cost Center is traced back through
+  `RfqLine.PurchaseRequisitionLineId` to the source Purchase Requisition's own line — the field RFQ kept
+  purely for traceability now earns its keep.
+- **Direct creation**: no RFQ behind it — vendor and lines (Item/CostCenter/Quantity/UnitPrice) are supplied
+  directly, validated through `Modules.MasterData.Contracts.IItemLookup`/`ICostCenterLookup` exactly like
+  Purchase Requisition's own lines.
+- **`PurchaseOrderSecurity`/`PurchaseOrderWorkflow`**: same one-step Any-quorum Maintainer/Approver shape as
+  Purchase Requisition and RFQ, a distinct Duty/Role pair from both.
+- **Api**: `PurchaseOrdersController` at `api/v1/procurement/purchase-orders` — Create/Get/List +
+  `submit`/`approve`/`reject`.
+- **Frontend**: `PurchaseOrdersPage.tsx` — list/create/details. Create form has a Source radio (From an
+  RFQ-selected quote / Direct), then either an RFQ + vendor-eligible-for-that-RFQ dropdown pair, or a vendor
+  dropdown plus the same Item/CostCenter/Quantity/UnitPrice line-entry grid Purchase Requisition uses. Details
+  view has two FastTabs: General (vendor, source RFQ, total, status) and Lines. Own nav Area under
+  Procurement, alongside Vendor Prequalification/Purchase Requisition/RFQ.
+- Verified end-to-end: 18 new unit tests (direct-creation validation, from-RFQ line/price/cost-center
+  copying, RFQ-not-Approved/vendor-not-invited/vendor-hasn't-quoted-every-line rejection, both-shapes-supplied
+  rejection, budget-check-denies-blocks-submit, the full Draft→Submit→Approve/Reject lifecycle) + 3 new
+  integration tests against real PostgreSQL (PO with lines round-trips identically including the RFQ
+  traceability fields, a direct PO persists a null RFQ id, cascade delete). Live `curl` exercise: built the
+  full PR→RFQ→PO chain (created and approved a PR, created and approved an RFQ against it with a vendor quote,
+  created a PO from that RFQ — confirmed it picked up the *quoted* price 18.50, not the PR's *estimated*
+  price 20, and correctly traced the cost center back through the PR), submitted (budget check ran and
+  passed) and approved it, created a second PO directly with no RFQ, and confirmed the both-a-RFQ-and-lines
+  request is rejected with a 400. Live Playwright pass in both English and Arabic on this page and (closing
+  the prior session's deferred item) `RequestsForQuotationPage.tsx` — full RTL mirroring confirmed on both,
+  zero browser console errors.
+
+## What's built (Phase 2, slice 6: Goods Receipt Note + 3-Way Match — Phase 2 exit criteria complete)
+
+- **Domain**: `GoodsReceiptNote` — the fourth document in the procure-to-pay chain, recording that goods
+  against an Approved PO were physically received. Child `GrnLine` copies Item and `UnitPrice` from the
+  referenced PO line (frozen at receipt time, same "freeze the financial fact" reasoning as `APInvoice.TaxRate`).
+  Multiple GRNs can exist against one PO — construction deliveries are normally staged/partial —
+  `GoodsReceiptNoteService.CreateAsync` sums every non-Rejected GRN's received quantity per PO line before
+  admitting a new one, so cumulative receipts across any number of GRNs can never exceed what was ordered.
+  Stops at Approved like every procurement document so far; it does **not** post a G/L entry itself
+  (inventory/GR-IR clearing accounting is out of scope for this phase, disclosed below) — it exists purely so
+  the 3-way match has a real "received" figure to compare against.
+- **3-Way Match (`ThreeWayMatchService`)**: computed on demand, nothing persisted — same "computed, not
+  stored" treatment as `PurchaseOrder.Total`. Compares **Ordered** (`PurchaseOrder.Total`), **Received** (sum
+  of every *Approved* GRN's value against that PO), and **Invoiced** (an AP Invoice's `NetAmount`, looked up
+  via a new `Modules.Finance.Contracts.IAPInvoiceLookup`) — flags a match only if the vendor agrees and the
+  invoiced amount is within both the received value and the ordered total. Deliberately lives entirely on the
+  Procurement side of the module boundary: Finance is upstream of Procurement in the dependency graph
+  (docs/architecture/01-architecture-foundation.md §3.2), so Procurement reads its own PO/GRN data directly
+  and reaches into Finance only through the one published, read-only `IAPInvoiceLookup` contract — the same
+  direction `IBudgetCheckService` already established. The match is at the document-amount level, not
+  line-by-line — `APInvoice` is header/amount-only by design (no lines, no PO reference), and reworking that
+  shape into a full line-item document is a bigger change than this slice justifies; disclosed below rather
+  than attempted.
+- **`GoodsReceiptNoteSecurity`/`GoodsReceiptNoteWorkflow`**: same one-step Any-quorum Maintainer/Approver
+  shape as every other document, a distinct Duty/Role pair (confirming a delivery is typically a site/
+  warehouse authority, different from raising or approving the PO itself).
+- **Api**: `GoodsReceiptNotesController` at `api/v1/procurement/goods-receipt-notes` — Create/Get/List +
+  `submit`/`approve`/`reject`. The match check is `GET api/v1/procurement/purchase-orders/{id}/three-way-match
+  ?apInvoiceId={id}` on `PurchaseOrdersController` (it's a query about a PO, not its own resource).
+- **Frontend**: `GoodsReceiptNotesPage.tsx` — list/create/details, a PO dropdown (Approved POs only) that
+  populates a per-line dropdown of that PO's own lines. `PurchaseOrdersPage.tsx` gained a "3-Way Match"
+  FastTab: pick an AP Invoice, "Check Match," see Ordered/Received/Invoiced and a Matched/Variance result
+  with human-readable variance notes.
+- **This closes Phase 2's exit criteria** — "full procure-to-pay cycle with configurable approval matrix"
+  (docs/architecture/06-roadmap.md): PR → RFQ → PO → GRN are all built, tested, and live-verified, and the
+  3-way match against AP proves the loop closes.
+- Verified end-to-end: 22 new unit tests (GRN line/quantity validation incl. cumulative-across-multiple-GRNs
+  and rejected-GRNs-don't-count, the full Draft→Submit→Approve/Reject lifecycle; 3-way match's
+  matched/vendor-mismatch/exceeds-received/exceeds-ordered/unapproved-GRNs-excluded cases) + 3 new
+  integration tests against real PostgreSQL (GRN with lines round-trips identically, cascade delete,
+  `ListByPurchaseOrderAsync` finds every GRN regardless of status). 105 unit + 13 integration tests pass in
+  this module alone, zero regressions solution-wide (17 test projects). Live `curl` exercise: partially
+  received a PO (15 of 50 units), submitted/approved the GRN, created an AP invoice within the received
+  value and confirmed the match reports Matched, then created a second invoice exceeding the received value
+  and confirmed the match reports Variance with the exact figures and a human-readable note; also confirmed
+  a GRN attempting to over-receive beyond the PO's ordered quantity is rejected with a 400 (both in one GRN
+  and cumulatively across two GRNs). One real bug caught only by this live exercise: the Gateway.Api wiring
+  registered `GoodsReceiptNoteSecurity`/`GoodsReceiptNoteWorkflow`'s roles and actor-role assignments but the
+  workflow *definition itself* was never added to the `IWorkflowDefinitionCatalog` registration — a GRN could
+  be Submitted (no validation catches a missing definition, `WorkflowEngine.Start` just returns null and
+  treats it as "no approval configured") but never Approved (`GetActiveAsync` correctly found no active
+  instance). Fixed immediately, re-verified live and via the full test suite — the unit tests didn't catch
+  this because `GoodsReceiptNoteServiceTests` builds its own self-contained workflow catalog per test, which
+  correctly included the definition; only Gateway.Api's actual composition root had the gap. Live Playwright
+  pass (screenshots, zero console errors) in both English and Arabic on `GoodsReceiptNotesPage.tsx` and
+  `PurchaseOrdersPage.tsx`'s new 3-Way Match tab — full RTL mirroring confirmed.
+
 ## Deferred (disclosed, not hidden)
 
-- Purchase Order, GRN, 3-way match, and the Finance budget-check integration
-  (`Modules.Finance.Contracts.IBudgetCheckService`) — the rest of Phase 2, genuinely next, not built yet.
+- Real Budget Control enforcement — `IBudgetCheckService` is wired and called at the right point (PO submit)
+  but its only implementation always allows, since Budget Control itself doesn't exist in Finance yet.
+- GRN doesn't post a G/L entry (inventory/GR-IR clearing accounting) — out of scope for this phase; the 3-way
+  match uses GRN's `ReceivedValue` as a computed figure, not a posted balance.
+- The 3-way match is document-amount-level, not line-by-line — `APInvoice` has no lines/PO reference to match
+  against per line; a real line-by-line match needs that shape change, deferred as a bigger future rework.
+- No "release" distinction between a matched invoice and actually posting/paying it — the match is advisory
+  (an AP clerk checks it before posting), not an enforced gate on `APInvoiceService.PostAsync` itself.
+- No PO amendment/change-order flow, no partial-award PO splitting across vendors for one RFQ.
 - No "award" action on the RFQ itself (e.g. marking one vendor's quote as selected per line) — Approving an
-  RFQ only closes the quote-collection process; the eventual Purchase Order slice picks which recorded quote
-  to use when it's built.
+  RFQ only closes the quote-collection process; picking which recorded quote to use now happens at Purchase
+  Order creation time instead (see the Purchase Order section above), not on the RFQ.
 - No duplicate-detection across RFQs (e.g. the same PR line being quoted on two different open RFQs) —
   genuinely useful, genuinely deferred, not required by this slice.
 - No amount-conditioned approval matrix for Purchase Requisition — one Any-quorum step for every

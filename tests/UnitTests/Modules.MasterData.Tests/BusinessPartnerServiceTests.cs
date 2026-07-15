@@ -62,7 +62,7 @@ public class BusinessPartnerServiceTests
 
         return new BusinessPartnerService(
             repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances,
-            authorizationService, BuildActorRoles(), attachmentService, noteService);
+            authorizationService, BuildActorRoles(), attachmentService, noteService, FakeLookupRepository.WithDefaults());
     }
 
     private static CreateBusinessPartnerRequest ValidRequest(string businessRole = "Supplier") =>

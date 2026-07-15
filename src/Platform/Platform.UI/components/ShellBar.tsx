@@ -18,6 +18,12 @@ interface ShellBarProps {
   onLanguageChange: (language: LanguageCode) => void;
   /** Accessible label for the language-switcher group — resolved by the consumer, never hardcoded here. */
   languageSwitchLabel: string;
+  /** Optional "logged in as X" label + logout action — only rendered when both are provided, so ShellBar
+   * stays usable by any consumer that has no concept of a logged-in user, same optional-prop pattern as
+   * `tagline`. */
+  currentUserLabel?: string;
+  onLogout?: () => void;
+  logoutLabel?: string;
 }
 
 export function ShellBar({
@@ -27,6 +33,9 @@ export function ShellBar({
   activeLanguage,
   onLanguageChange,
   languageSwitchLabel,
+  currentUserLabel,
+  onLogout,
+  logoutLabel,
 }: ShellBarProps) {
   return (
     <header className="pi-shell-bar">
@@ -46,6 +55,12 @@ export function ShellBar({
           </button>
         ))}
       </div>
+      {currentUserLabel && onLogout && (
+        <div className="pi-shell-bar__user">
+          <span className="pi-shell-bar__user-label">{currentUserLabel}</span>
+          <button type="button" onClick={onLogout}>{logoutLabel ?? "Logout"}</button>
+        </div>
+      )}
     </header>
   );
 }

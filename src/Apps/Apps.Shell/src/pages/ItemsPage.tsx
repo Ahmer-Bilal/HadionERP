@@ -11,6 +11,8 @@ import {
   submitItem,
 } from "../api/itemApi";
 import type { CreateItemInput, Item } from "../api/itemApi";
+import { listLookupValues } from "../api/lookupApi";
+import type { LookupValue } from "../api/lookupApi";
 
 interface ItemsPageProps {
   language: SupportedLanguageCode;
@@ -46,6 +48,11 @@ export function ItemsPage({ language }: ItemsPageProps) {
   const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [unitOfMeasureOptions, setUnitOfMeasureOptions] = useState<LookupValue[]>([]);
+
+  useEffect(() => {
+    listLookupValues("UnitOfMeasure", false).then(setUnitOfMeasureOptions).catch(() => {});
+  }, []);
 
   const [form, setForm] = useState<CreateItemInput>({
     itemCode: "",
@@ -113,7 +120,7 @@ export function ItemsPage({ language }: ItemsPageProps) {
 
   if (view.kind === "create") {
     const actions: ActionItem[] = [
-      { key: "create", label: t("item.actionCreate", language), onClick: handleCreate, variant: "primary", isDisabled: busy },
+      { key: "create", label: t("item.actionCreate", language), onClick: handleCreate, variant: "primary", isDisabled: busy || !form.unitOfMeasure },
       { key: "back", label: t("item.actionBack", language), onClick: () => setView({ kind: "list" }) },
     ];
     return (
@@ -139,7 +146,14 @@ export function ItemsPage({ language }: ItemsPageProps) {
             </select>
           </label>
           <label>{t("item.fieldUnitOfMeasure", language)}
-            <input style={inputStyle} value={form.unitOfMeasure} onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })} />
+            <select style={inputStyle} value={form.unitOfMeasure} onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}>
+              <option value="">—</option>
+              {unitOfMeasureOptions.map((uom) => (
+                <option key={uom.code} value={uom.code}>
+                  {language === "ar" && uom.nameArabic ? `${uom.code} — ${uom.nameArabic}` : `${uom.code} — ${uom.name}`}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
       </section>

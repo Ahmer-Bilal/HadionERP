@@ -46,7 +46,7 @@ public sealed class BusinessPartner : BusinessObject
     public IReadOnlyCollection<BusinessPartnerContact> Contacts => _contacts.AsReadOnly();
     public IReadOnlyCollection<BusinessRole> BusinessRoles => _businessRoles.AsReadOnly();
 
-    public BusinessPartner(string createdBy, string name, BusinessRoleType initialRole, string? trade = null) : base(createdBy)
+    public BusinessPartner(string createdBy, string name, string initialRole, string? trade = null) : base(createdBy)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
@@ -68,10 +68,14 @@ public sealed class BusinessPartner : BusinessObject
     /// Adds an address. Not gated by lifecycle status the way a financial document's fields would be (an
     /// approved vendor's address can be corrected or extended without "reversing" anything) — a
     /// deliberate difference from transactional Business Objects, not an oversight. Multiple addresses of
-    /// the same <see cref="AddressType"/> are allowed on purpose (e.g. several Site Office addresses for
-    /// different active projects).
+    /// the same <paramref name="addressType"/> are allowed on purpose (e.g. several Site Office addresses
+    /// for different active projects). Both <paramref name="addressType"/> and <paramref name="country"/>
+    /// are admin-configurable lookup codes (Lookup types <c>"AddressType"</c>/<c>"Country"</c>) — validated
+    /// against <c>LookupService</c> at the <c>BusinessPartnerService</c> layer, not here (the Domain layer
+    /// has no dependency on the lookup store, same "Domain stays pure, Application validates references"
+    /// split every other cross-cutting reference in this codebase follows).
     /// </summary>
-    public BusinessPartnerAddress AddAddress(AddressType addressType, string? country, string? city, string? addressLine)
+    public BusinessPartnerAddress AddAddress(string addressType, string? country, string? city, string? addressLine)
     {
         var address = new BusinessPartnerAddress(addressType, country, city, addressLine);
         _addresses.Add(address);
@@ -89,24 +93,35 @@ public sealed class BusinessPartner : BusinessObject
 
     public void RemoveContact(Guid contactId) => _contacts.RemoveAll(c => c.Id == contactId);
 
+    /// <summary>The one <see cref="BusinessRoleType"/> lookup value every consumer across every module
+    /// (this Domain, Procurement's VendorPrequalificationService/RequestForQuotationService, Finance's
+    /// APInvoiceService) special-cases by this exact code — "no commercial relationship, no AP/AR posting,
+    /// no scorecard" per docs/architecture/06-roadmap.md's Phase 2 design. Making <see cref="BusinessRole.RoleType"/>
+    /// admin-extensible (any other code) doesn't change this one rule; a real SAP/Dynamics account-group
+    /// taxonomy has the same kind of fixed special case (e.g. a "one-time customer" account group) sitting
+    /// alongside otherwise-configurable groups.</summary>
+    public const string GovernmentAuthorityRoleCode = "GovernmentAuthority";
+
     /// <summary>
     /// Adds a role. <paramref name="trade"/> is meaningless for Client/JointVenturePartner/
     /// GovernmentAuthority (no trade/specialty concept) but genuinely useful for the
     /// Supplier/Subcontractor/Consultant family, where the same partner can legitimately hold the same
-    /// <see cref="BusinessRoleType"/> more than once with a different Trade (e.g. Subcontractor–Electrical
-    /// and Subcontractor–Concrete on the same company) — docs/architecture/06-roadmap.md's Phase 2 design
-    /// calls this out explicitly for Vendor Prequalification's own sake ("a vendor can be prequalified as a
-    /// Steel Supplier without being prequalified as an Electrical Subcontractor").
+    /// role type more than once with a different Trade (e.g. Subcontractor–Electrical and
+    /// Subcontractor–Concrete on the same company) — docs/architecture/06-roadmap.md's Phase 2 design calls
+    /// this out explicitly for Vendor Prequalification's own sake ("a vendor can be prequalified as a Steel
+    /// Supplier without being prequalified as an Electrical Subcontractor"). <paramref name="roleType"/> is
+    /// an admin-configurable lookup code (Lookup type <c>"BusinessRoleType"</c>) — validated against
+    /// <c>LookupService</c> at the <c>BusinessPartnerService</c> layer, same split as <see cref="AddAddress"/>.
     ///
-    /// Government Authority is mutually exclusive with every other role — "no commercial relationship, no
-    /// AP/AR posting, no scorecard" per the roadmap, so a partner is either a Government Authority or it
-    /// participates in the commercial roles, never both.
+    /// Government Authority is mutually exclusive with every other role — see
+    /// <see cref="GovernmentAuthorityRoleCode"/>.
     /// </summary>
-    public BusinessRole AddBusinessRole(BusinessRoleType roleType, string? trade = null)
+    public BusinessRole AddBusinessRole(string roleType, string? trade = null)
     {
-        if (roleType == BusinessRoleType.GovernmentAuthority && _businessRoles.Count > 0)
+        ArgumentException.ThrowIfNullOrWhiteSpace(roleType);
+        if (roleType == GovernmentAuthorityRoleCode && _businessRoles.Count > 0)
             throw new InvalidOperationException("Government Authority cannot be combined with any other role.");
-        if (roleType != BusinessRoleType.GovernmentAuthority && _businessRoles.Any(r => r.RoleType == BusinessRoleType.GovernmentAuthority))
+        if (roleType != GovernmentAuthorityRoleCode && _businessRoles.Any(r => r.RoleType == GovernmentAuthorityRoleCode))
             throw new InvalidOperationException("Government Authority cannot be combined with any other role.");
         if (_businessRoles.Any(r => r.RoleType == roleType && r.Trade == trade))
             throw new ArgumentException($"This partner already holds the {roleType} role with the same trade.");

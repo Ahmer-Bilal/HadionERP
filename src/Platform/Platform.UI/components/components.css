@@ -48,6 +48,29 @@
   font-weight: var(--pi-font-weight-semibold);
 }
 
+.pi-shell-bar__user {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-space-2);
+  margin-inline-start: var(--pi-space-4);
+  padding-inline-start: var(--pi-space-4);
+  border-inline-start: 1px solid var(--pi-border);
+}
+
+.pi-shell-bar__user-label {
+  font-size: var(--pi-font-size-sm);
+  color: var(--pi-text-muted);
+}
+
+.pi-shell-bar__user button {
+  padding: var(--pi-space-1) var(--pi-space-3);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  cursor: pointer;
+}
+
 /* --- NavigationPane --- */
 .pi-nav-pane {
   inline-size: 240px;
@@ -182,4 +205,137 @@
 .pi-fast-tab__content {
   padding: var(--pi-space-3) var(--pi-space-4);
   border-block-start: 1px solid var(--pi-border);
+}
+
+/* --- SplitView --- */
+/* List pane is sticky (stays put while the detail pane's own content scrolls) up to the viewport height,
+   so a long list and a long detail record can each scroll independently — same as a mail client. */
+.pi-split-view {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pi-space-5);
+}
+
+.pi-split-view__list {
+  flex: 1 1 36%;
+  min-inline-size: 16rem;
+  max-inline-size: 26rem;
+  position: sticky;
+  inset-block-start: var(--pi-space-4);
+  max-block-size: calc(100svh - 8rem);
+  overflow-y: auto;
+  padding-inline-end: var(--pi-space-2);
+}
+
+.pi-split-view__detail {
+  flex: 1 1 64%;
+  min-inline-size: 0;
+}
+
+.pi-split-view__detail-empty {
+  color: var(--pi-text-muted);
+  text-align: center;
+  padding: var(--pi-space-6);
+  border: 1px dashed var(--pi-border);
+  border-radius: var(--pi-radius-lg);
+}
+
+/* "Crystal" material — a frosted-glass panel (translucent + blurred backdrop + a soft inner top highlight),
+   not the flat opaque card both Fiori's Object Page and Dynamics 365's record form use. Needs something with
+   depth behind it to actually read as glass, not just a tinted box — see .app-shell__content's subtle
+   accent-tinted wash in App.css, which is what the blur picks up. Degrades gracefully: a browser without
+   backdrop-filter support just sees a solid var(--pi-bg) panel (backdrop-filter is simply ignored), so no
+   @supports fallback is needed. */
+.pi-split-view__detail-panel {
+  background: color-mix(in srgb, var(--pi-bg) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--pi-border) 70%, transparent);
+  border-radius: var(--pi-radius-lg);
+  box-shadow:
+    inset 0 1px 0 var(--pi-glass-highlight),
+    var(--pi-shadow-panel);
+  padding: var(--pi-space-5);
+  animation: pi-detail-enter var(--pi-motion-duration) var(--pi-motion-easing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-split-view__detail-panel {
+    animation: none;
+  }
+}
+
+@keyframes pi-detail-enter {
+  from {
+    opacity: 0;
+    transform: translateX(var(--pi-slide-distance));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* --- Dense list table (used across every module's List page) --- */
+/* Scoped by element, not a required extra class, so every existing "bp-table"-style page gets the density
+   tune-up for free. Rows are keyed by whatever the consumer put in the row (usually the record id via
+   React's key prop) so hover/selection styling stays correct without markup changes. */
+.pi-dense-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--pi-font-size-sm);
+}
+
+.pi-dense-table th {
+  text-align: start;
+  padding: var(--pi-space-2) var(--pi-space-3);
+  color: var(--pi-text-muted);
+  font-weight: var(--pi-font-weight-semibold);
+  border-block-end: 1px solid var(--pi-border);
+  white-space: nowrap;
+}
+
+.pi-dense-table td {
+  text-align: start;
+  padding: var(--pi-space-2) var(--pi-space-3);
+  border-block-end: 1px solid var(--pi-border);
+}
+
+.pi-dense-table tbody tr {
+  cursor: pointer;
+  transition: background-color var(--pi-motion-duration) var(--pi-motion-easing);
+}
+
+.pi-dense-table tbody tr:hover,
+.pi-dense-table tbody tr:focus-visible,
+.pi-dense-table tbody tr.is-selected {
+  background: var(--pi-surface);
+  outline: none;
+}
+
+.pi-dense-table tbody tr.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--pi-accent);
+}
+
+:root[dir="rtl"] .pi-dense-table tbody tr.is-selected td:first-child {
+  box-shadow: inset -3px 0 0 var(--pi-accent);
+}
+
+/* The key/ID column drill-down link — the "blue vendor ID" pattern from Dynamics 365, reworked in the
+   product's own accent color rather than literal blue. Renders as a real link (keyboard-focusable,
+   underline on hover) so it reads as navigation, not just colored text. */
+.pi-link {
+  color: var(--pi-accent);
+  font-weight: var(--pi-font-weight-semibold);
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pi-link:hover,
+.pi-link:focus-visible {
+  text-decoration: underline;
 }

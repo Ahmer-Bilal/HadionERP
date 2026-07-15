@@ -17,6 +17,18 @@ namespace Platform.Api;
 [Route("api/v1/[controller]")]
 public abstract class PlatformApiController : ControllerBase
 {
+    /// <summary>The real logged-in user's username, resolved from the validated JWT's name claim — replaces
+    /// what every controller used to hardcode as <c>"system/ui"</c>/<c>"system/approver"</c>
+    /// (`ARCHITECTURE-AUDIT.md` Part 1 §1). This is the exact string every Application-layer service's
+    /// existing <c>actor: string</c> parameter already expects; no service-layer code changes when a
+    /// controller switches from a hardcoded literal to this property. Throws if called from an action that
+    /// doesn't actually require authentication — every action does by default (see the global
+    /// <c>AuthorizeFilter</c> registered in Gateway.Api's <c>Program.cs</c>) except <c>AuthController.Login</c>,
+    /// which never needs this since it's what produces the identity in the first place.</summary>
+    protected string CurrentActor =>
+        User.Identity?.Name
+        ?? throw new InvalidOperationException("CurrentActor was accessed from an unauthenticated request.");
+
     /// <summary>Returns a paged result from a full in-memory set, applying the OData $top/$skip. This is
     /// the helper a module's list endpoint calls when its data source is already materialized.</summary>
     protected static PagedResult<T> Paged<T>(IReadOnlyList<T> fullSet, ODataQuery query) =>

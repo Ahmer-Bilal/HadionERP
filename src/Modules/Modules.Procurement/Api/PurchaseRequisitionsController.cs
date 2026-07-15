@@ -11,9 +11,6 @@ namespace Modules.Procurement.Api;
 [Route("api/v1/procurement/purchase-requisitions")]
 public sealed class PurchaseRequisitionsController : PlatformApiController
 {
-    private const string MaintainerActor = "system/ui";
-    private const string ApproverActor = "system/approver";
-
     private readonly PurchaseRequisitionService _service;
 
     public PurchaseRequisitionsController(PurchaseRequisitionService service) => _service = service;
@@ -42,7 +39,7 @@ public sealed class PurchaseRequisitionsController : PlatformApiController
         const string companyId = "C001";
         try
         {
-            var created = await _service.CreateAsync(request, MaintainerActor, companyId, cancellationToken);
+            var created = await _service.CreateAsync(request, CurrentActor, companyId, cancellationToken);
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
@@ -52,7 +49,7 @@ public sealed class PurchaseRequisitionsController : PlatformApiController
     [HttpPost("{id:guid}/submit")]
     public async Task<IActionResult> Submit(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.SubmitAsync(id, MaintainerActor, cancellationToken)); }
+        try { return Ok(await _service.SubmitAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
@@ -62,7 +59,7 @@ public sealed class PurchaseRequisitionsController : PlatformApiController
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.ApproveAsync(id, ApproverActor, cancellationToken)); }
+        try { return Ok(await _service.ApproveAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
@@ -71,7 +68,7 @@ public sealed class PurchaseRequisitionsController : PlatformApiController
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> Reject(Guid id, CancellationToken cancellationToken)
     {
-        try { return Ok(await _service.RejectAsync(id, ApproverActor, cancellationToken)); }
+        try { return Ok(await _service.RejectAsync(id, CurrentActor, cancellationToken)); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
         catch (InvalidOperationException ex) { return ConflictError(ex.Message); }

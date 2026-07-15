@@ -110,10 +110,25 @@ actually built today.
   accounts and vendors, and post/reverse a GL journal and an AP invoice end-to-end with full audit trail,
   exactly as docs/architecture/06-roadmap.md's Phase 1 exit criteria states.
 
+## Modules.Finance.Contracts (added Phase 2, for Procurement's Purchase Order)
+
+A second published Contracts package alongside `Modules.MasterData.Contracts` — same "thin, dependency-free
+project" shape, this time published *by* Finance instead of consumed by it. Publishes
+`IBudgetCheckService`/`BudgetCheckResult`, the exact synchronous cross-module contract call
+docs/architecture/01-architecture-foundation.md §3.2 names as its own worked example ("Procurement asks
+Finance's IBudgetCheckService before releasing a PO") — `Modules.Procurement.Application.PurchaseOrderService`
+is its first and only real consumer. The implementation,
+`Modules.Finance.Infrastructure.PassThroughBudgetCheckService`, always allows for now: Budget Control itself
+(the actual per-cost-center budget data to check against) is still deferred Finance depth, listed below —
+disclosed in that class's own doc comment rather than faking enforcement against numbers that don't exist.
+The interface and the call site are both real and exercised end-to-end; only the enforcement logic is a
+placeholder, and swapping it for a real one later only touches that one class's body.
+
 ## Deferred (disclosed, not hidden)
 
 - Document Splitting, Parallel Ledgers, Controlling objects beyond a flat Cost Center reference, Budget
-  Control, Results Analysis/Settlement to CO-PA, AR/Cash-Bank — all real, all in
+  Control (see `Modules.Finance.Contracts.IBudgetCheckService` above — the contract exists, the real budget
+  data behind it doesn't yet), Results Analysis/Settlement to CO-PA, AR/Cash-Bank — all real, all in
   docs/architecture/07-project-accounting-and-financial-architecture.md, all genuinely later work. Phase 1's
   exit bar (GL journal + AP invoice, both post/reverse-able with full audit trail) is now met; the full
   module vision in that document is not, and isn't meant to be yet.

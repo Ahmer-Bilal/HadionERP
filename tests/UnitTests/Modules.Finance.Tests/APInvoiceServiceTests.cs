@@ -96,7 +96,7 @@ public class APInvoiceServiceTests
         var invoiceService = new APInvoiceService(
             invoiceRepo, invoiceNumberRanges, auditRecorder, workflowEngine, workflowInstances,
             authorizationService, actorRoles, BuildBusinessPartnerLookup(), glLookup, costCenterLookup,
-            BuildTaxCodeLookup(), journalEntryService);
+            BuildTaxCodeLookup(), journalEntryService, new FakePaymentRepository());
 
         return (invoiceService, journalEntryService, invoiceRepo, journalRepo, auditLog);
     }

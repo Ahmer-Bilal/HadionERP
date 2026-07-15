@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config";
+import { authHeaders } from "./authApi";
 
 export interface VendorPrequalification {
   id: string;
@@ -46,12 +47,12 @@ async function handleJson<T>(response: Response): Promise<T> {
 }
 
 export async function listVendorPrequalifications(top = 50, skip = 0): Promise<PagedResult<VendorPrequalification>> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function getVendorPrequalification(id: string): Promise<VendorPrequalification> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
@@ -60,24 +61,24 @@ export async function createVendorPrequalification(
 ): Promise<VendorPrequalification> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(input),
   });
   return handleJson(response);
 }
 
 export async function submitVendorPrequalification(id: string): Promise<VendorPrequalification> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function approveVendorPrequalification(id: string): Promise<VendorPrequalification> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
 export async function rejectVendorPrequalification(id: string): Promise<VendorPrequalification> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
@@ -86,13 +87,14 @@ export async function uploadVendorPrequalificationAttachment(id: string, file: F
   formData.append("file", file);
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`, {
     method: "POST",
+    headers: authHeaders(),
     body: formData,
   });
   return handleJson(response);
 }
 
 export async function listVendorPrequalificationAttachments(id: string): Promise<Attachment[]> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`);
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments`, { headers: authHeaders() });
   return handleJson(response);
 }
 
@@ -101,7 +103,7 @@ export function vendorPrequalificationAttachmentDownloadUrl(id: string, attachme
 }
 
 export async function deleteVendorPrequalificationAttachment(id: string, attachmentId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments/${attachmentId}`, { method: "DELETE" });
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/attachments/${attachmentId}`, { method: "DELETE", headers: authHeaders() });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.detail ?? body?.title ?? `Request failed with status ${response.status}`);

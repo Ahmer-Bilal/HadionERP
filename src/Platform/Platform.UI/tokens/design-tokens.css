@@ -1,24 +1,31 @@
 /*
- * Platform.UI design tokens — the single source of truth for color, spacing, typography, and radius.
- * Consumed by Platform.UI's own components AND by Apps.Shell's app-level CSS. Every consumer references
- * these --pi-* variables; none hardcodes a raw color/size. Theme-able (light/dark today, per-tenant
- * branding later) by redefining the same variables, per docs/architecture/02-business-object-model.md #4.
+ * Platform.UI design tokens — the single source of truth for color, spacing, typography, radius, elevation,
+ * and motion. Consumed by Platform.UI's own components AND by Apps.Shell's app-level CSS. Every consumer
+ * references these --pi-* variables; none hardcodes a raw color/size. Theme-able (light/dark today,
+ * per-tenant branding later) by redefining the same variables, per docs/architecture/02-business-object-model.md #4.
  *
- * These were extracted from Apps.Shell's original index.css (7 color tokens only) and expanded with the
- * spacing/typography/radius scales that were previously hardcoded per-rule.
+ * Color identity (2026-07-15 UI/Visual Density Pass): deliberately NOT blue. The original palette here
+ * (before this pass) was, unintentionally, GitHub Primer's exact color scheme (#0969da accent etc.) — and
+ * blue is also SAP Fiori's and Dynamics 365's default accent, so a blue HadionERP would read as "yet another
+ * enterprise app" at a glance. Moved to a deep teal accent with teal-tinted cool neutrals instead — distinct
+ * from both reference products, still reads as professional/trustworthy, and leaves green/red/amber free for
+ * their conventional success/danger/warning meaning (the creative budget went into the *identity* color, not
+ * the status vocabulary — users need instant recognition there). See
+ * project_visual_identity_decisions memory for the full reasoning.
  */
 
 :root {
   /* --- Color (light) --- */
-  --pi-text: #1f2328;
-  --pi-text-muted: #57606a;
-  --pi-bg: #ffffff;
-  --pi-surface: #f6f8fa;
-  --pi-border: #d0d7de;
-  --pi-accent: #0969da;
+  --pi-text: #10201f;
+  --pi-text-muted: #52706c;
+  --pi-bg: #fbfdfc;
+  --pi-surface: #eef5f3;
+  --pi-border: #cddbd8;
+  --pi-accent: #0d7377;
   --pi-accent-contrast: #ffffff;
-  --pi-danger: #cf222e;
-  --pi-success: #1a7f37;
+  --pi-danger: #b3261e;
+  --pi-success: #1b7a43;
+  --pi-warning: #a15c07;
 
   /* --- Spacing scale (rem, so it respects the user's font-size preference) --- */
   --pi-space-1: 0.25rem;
@@ -44,21 +51,48 @@
   /* --- Radius --- */
   --pi-radius-sm: 6px;
   --pi-radius-md: 8px;
+  --pi-radius-lg: 12px;
+
+  /* --- Elevation --- */
+  /* Used by the SplitView detail panel and other content that visually "lifts" above the page (docs/
+     architecture/02-business-object-model.md #2.1's Details Master form, now rendered as a floating panel
+     rather than a flat inline block — see SplitView's own doc comment). */
+  --pi-shadow-panel: 0 1px 2px rgba(16, 32, 31, 0.06), 0 8px 24px rgba(16, 32, 31, 0.10);
+  /* A light glint along a glass panel's top edge — glass catches light from above regardless of theme, so
+     this stays white-based even in dark mode (just dimmer), unlike every other color token here. */
+  --pi-glass-highlight: rgba(255, 255, 255, 0.55);
+
+  /* --- Motion --- */
+  /* One shared duration/easing so every animated transition (SplitView's detail entrance, FastTab chevron,
+     future additions) feels like the same product, not a grab-bag of ad hoc timings. */
+  --pi-motion-duration: 220ms;
+  --pi-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Directional slide distance for the SplitView detail panel's entrance — flipped under [dir="rtl"] below
+     so the panel slides in from the correct logical side (in from the end, same side new content should
+     arrive from in either language) rather than always sliding from a fixed physical direction. */
+  --pi-slide-distance: 14px;
 
   color-scheme: light dark;
   font: var(--pi-font-size-base)/var(--pi-line-height) var(--pi-font-family);
 }
 
+:root[dir="rtl"] {
+  --pi-slide-distance: -14px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --pi-text: #e6edf3;
-    --pi-text-muted: #9198a1;
-    --pi-bg: #0d1117;
-    --pi-surface: #161b22;
-    --pi-border: #30363d;
-    --pi-accent: #4493f8;
-    --pi-accent-contrast: #0d1117;
-    --pi-danger: #ff7b72;
-    --pi-success: #3fb950;
+    --pi-text: #e3f1ee;
+    --pi-text-muted: #9ab5b0;
+    --pi-bg: #0a1413;
+    --pi-surface: #101f1d;
+    --pi-border: #24403c;
+    --pi-accent: #2dd4bf;
+    --pi-accent-contrast: #052220;
+    --pi-danger: #f2867e;
+    --pi-success: #4fd189;
+    --pi-warning: #e3a548;
+    --pi-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
+    --pi-glass-highlight: rgba(255, 255, 255, 0.07);
   }
 }
