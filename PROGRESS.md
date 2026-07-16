@@ -41,13 +41,14 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice, both post/reverse-able with full audit trail. AR/Cash-Bank, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-14 |
+| Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice (both post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording (2026-07-16). AR, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-16 |
 | Phase 2 — Procurement | **Exit criteria met** — full procure-to-pay cycle (BusinessRoles/Vendor Prequal → PR → RFQ → PO → GRN) built, tested, and live-verified, with a working 3-way match against AP closing the loop. Real Budget Control enforcement and a real line-by-line invoice match remain deferred Finance/Procurement depth, not required for Phase 2's exit bar | 2026-07-15 |
 | **Checkpoint** — UI/Visual Density Pass | **Paused by explicit user instruction** — teal identity (design-tokens.css) + `Platform.UI.SplitView` are live and retrofitted on `PurchaseOrdersPage`/`BusinessPartnersPage`, but the user judged this insufficient to compete visually with Fiori/Dynamics (color tokens + one layout mechanic, no icons/status pills/KPIs/avatars — see `feedback_visual_richness_gap` in memory) and told the AI to stop touching it and move to roadmap phases instead. Left as-is, not reverted. Resume only when the user explicitly asks for the visual pass again, with real surface richness this time | 2026-07-15 |
-| Phase 3 — Construction & Project Management | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built, tested, and live-verified. Networks/Activities and `Modules.Construction` itself not started | 2026-07-15 |
+| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s opening slice (Customer Contract + BOQ mapped onto WBS elements) built, tested, and live-verified 2026-07-16. Subcontracts/Site Progress/Variation Orders/Retention/IPC, the AR/Fiscal-Period/Budget-Check depth this phase was expanded to include, and Networks/Activities for ProjectManagement all remain not started | 2026-07-16 |
 | **Checkpoint** — Lookup Data / Admin Panel | **Completed** — a real, admin-configurable picklist engine (`LookupType`/`LookupValue`, `LookupService`, `LookupsController`) replaced the hardcoded `BusinessRoleType`/`AddressType` enums and unvalidated `Country`/`UnitOfMeasure` free text; a genuine multi-page Admin Panel (`LookupDataPage.tsx`, inline-editable SAP-style grids, one nav entry per type) lets an administrator add/edit/deactivate/delete lookup values and even define brand-new lookup types, with in-use delete protection. Live-verified end-to-end, EN+AR | 2026-07-15 |
-| **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, now resolved — see next row) and AP Payment Recording (Part 2 §16, still open — no way in this system to record that an invoice was ever paid) | 2026-07-15 |
+| **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, resolved) and AP Payment Recording (§16, now also resolved — see below) | 2026-07-15 |
 | **Checkpoint** — Real Authentication & Identity | **Completed** — closes audit §1/§3. `Modules.Identity` (JWT bearer auth, persisted Users, global default-deny) replaced every hardcoded actor literal solution-wide; role assignment now runs real Segregation of Duties conflict checking for the first time ever (block → override-with-reason → succeed, live-verified). Live-verified end-to-end, EN+AR, zero regressions (22 test projects) | 2026-07-15 |
+| **Checkpoint** — AP Payment Recording & Bank Accounts | **Completed** — closes audit §16 (the single biggest data-model gap found) and half of §15. `BankAccount` master data + a `Payment` Business Object (Draft→Submit→Approve→Post→Reverse) now let this system record that an AP invoice was actually paid, generating a real balanced Journal Entry (Dr Payable/Cr Bank) with cumulative overpayment protection across multiple payments. Live-verified end-to-end (curl full cycle + Playwright EN+AR), zero regressions (21 test projects, 28 new tests) | 2026-07-16 |
 | Phase 4 — HR & Payroll | Not Started | — |
 | Phase 5 — Reporting, Analytics & Mobile | Not Started | — |
 | Phase 6 — Extensibility Ecosystem & Advanced Capabilities | Not Started | — |
@@ -57,6 +58,220 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-16 — Modules.Construction slice 1: Customer Contract + BOQ mapped onto WBS elements built, tested, live-verified
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 3 — Construction, Project Accounting & Accounts Receivable
+- Status: In Progress — this slice (Contract + BOQ) is complete; Subcontracts/Site Progress/Variation
+  Orders/Retention/IPC (Interim Payment Certificate billing, which needs Finance's still-open AR gap closed
+  first) are not started
+- What changed: Per the build sequencing recorded in this same file's immediately preceding entry
+  ("Roadmap restructured around Missing-Features Audit V1.1"), started Phase 3's expanded scope with the
+  natural first slice — Customer Contract + BOQ, since Subcontracts/Site Progress/Variation Orders/
+  Retention/IPC all reference a BOQ line or the Contract itself. Entered plan mode given the scope (new
+  module, new cross-module Contracts package, several files) and got explicit user authorization to proceed
+  without further approval gates before writing code.
+  - **Built `Modules.ProjectManagement.Contracts.IProjectLookup`** (new package) as a prerequisite —
+    `Modules.Construction/README.md` had referenced consuming ProjectManagement's "Contracts package" since
+    before this session, but it never actually existed. `ProjectSummary` carries the Project's status plus
+    its full `WbsElementSummary` list (including the three Controlling-object flags) in one call, giving
+    Construction everything it needs to validate a Contract's `ProjectId` and each BOQ line's `WbsElementId`
+    without touching ProjectManagement's Domain/Infrastructure/Application directly. Implemented as
+    `EfProjectLookup`.
+  - **Built `Modules.Construction`** (new module, sixth real persisted business module, own "construction"
+    Postgres schema) — `Contract : BusinessObject` (ProjectId validated Approved via `IProjectLookup`,
+    ContractType lookup-validated against a new `ContractType` Lookup type seeded LumpSum/UnitPrice/
+    CostPlus EN+AR, PaymentTerms free text, AdvancePaymentPercentage?, DefectsLiabilityPeriodMonths?) owning
+    a child `BoqLine` collection (Code/Description/DescriptionArabic?/UnitOfMeasure/Quantity/Rate, Amount
+    computed as Quantity×Rate, WbsElementId validated to belong to the Contract's own Project). Stops at
+    Approved — no Post/Reverse, since a Contract is commercial/organizational, not itself a journal-posting
+    document. `Contract.ContractValue` computed as the sum of BOQ line amounts, mirroring
+    `PurchaseOrder.Total`. Same one-shot creation, Any-quorum Maintainer/Approver workflow/security shape as
+    every other module's first-cut BO — closely mirrored `Modules.ProjectManagement.Project`/`ProjectService`
+    throughout, including its `ProjectSecurity`/`ProjectWorkflow`/`ProjectManagementDbContext`/
+    `ProjectsController` shapes.
+  - Number range key `CON-CONTRACT` → `CON-CONTR-2026-000001`.
+- Verified: full solution `dotnet test` after the change — 23 test projects (added `Modules.Construction.Tests`
+  and `Modules.Construction.IntegrationTests`), zero regressions. Added 17 new unit tests
+  (`ContractTests` domain-level lifecycle/validation/computed-amount coverage, `ContractServiceTests` —
+  WBS-must-belong-to-project rejection, Project-must-be-Approved rejection, unknown ContractType/
+  UnitOfMeasure rejection, Draft-only line add, full lifecycle, SoD/security denial) and 3 new integration
+  tests against real PostgreSQL (`ContractPersistenceTests` — round-trip with child BOQ lines including
+  Arabic description, cascade delete, RowVersion increments across real transitions). Generated and applied
+  a new EF migration (`InitialCreate` for `ConstructionDbContext`) to both `erp_platform_dev` and
+  `erp_platform_test`. Live `curl` cycle: created and approved a Project with two WBS elements (reusing
+  `Modules.ProjectManagement`'s existing API), confirmed a BOQ line referencing a WBS element from a
+  *different* project is correctly rejected with 400, created a real Contract with two BOQ lines against the
+  approved Project (confirmed `ContractValue` computed correctly: 100×50 + 40×30 = 6,200), drove it through
+  Submit→Approve. **Operational note**: the bootstrap `admin` user's roles had to be manually re-granted the
+  two new `Construction.Contract.Maintainer`/`Construction.ApproveContract` roles via
+  `POST /api/v1/identity/users/{id}/roles` before this curl cycle could run — the same known, disclosed
+  gap the AP Payment Recording session's PROGRESS entry already flagged (bootstrap admin's roles aren't
+  retroactively synced when new roles get registered), not a new issue. Live Playwright pass (standalone
+  install, no MCP browser tool available in this session, same deviation as the AP Payment Recording
+  session) — screenshots, zero console errors — on `ContractsPage.tsx`'s list, create form, and detail view
+  (General + BOQ Lines FastTabs) in both English and Arabic, full RTL mirroring confirmed including the new
+  "Construction" nav module and area. One minor cosmetic RTL bug found and disclosed (not fixed): the
+  free-text `PaymentTerms` value renders bidi-reversed in Arabic since it isn't wrapped in
+  `<bdi dir="ltr">` like the page's numeric/code fields — noted in `Modules.Construction/README.md`'s
+  Deferred section, not a data-integrity issue.
+- Files touched: `src/Modules/Modules.ProjectManagement/Contracts/Modules.ProjectManagement.Contracts.csproj`,
+  `IProjectLookup.cs` (new); `src/Modules/Modules.ProjectManagement/Infrastructure/EfProjectLookup.cs` (new),
+  `Modules.ProjectManagement.Infrastructure.csproj` (Contracts reference); `src/Modules/Modules.Construction/**`
+  (new module — `Domain/Contract.cs`, `BoqLine.cs`; `Application/ContractDto.cs`, `IContractRepository.cs`,
+  `ContractSecurity.cs`, `ContractWorkflow.cs`, `ContractService.cs`; `Infrastructure/ConstructionDbContext.cs`,
+  `EfContractRepository.cs`, `EfCoreNumberRangeService.cs`, `EfWorkflowInstanceRepository.cs`,
+  `NumberRangeCounterEntity.cs`, `DesignTimeDbContextFactory.cs`, migration `20260716185025_InitialCreate`;
+  `Api/ContractsController.cs`; all four `.csproj`; `README.md` rewrite);
+  `src/Modules/Modules.MasterData/Infrastructure/LookupSeeder.cs` (ContractType lookup type);
+  `src/Gateway/Gateway.Api/Program.cs` (IProjectLookup registration, full Construction module DI wiring,
+  security/workflow/SoD catalog entries), `Gateway.Api.csproj` (new project references); `erp-platform.sln`
+  (5 new projects); `tests/UnitTests/Modules.Construction.Tests/**` (new — `ContractTests.cs`,
+  `ContractServiceTests.cs`, `FakeContractRepository.cs`, `FakeProjectLookup.cs`,
+  `FakeWorkflowInstanceRepository.cs`, `FakeLookupCatalog.cs`),
+  `tests/IntegrationTests/Modules.Construction.IntegrationTests/**` (new — `ContractPersistenceTests.cs`,
+  `TestDatabase.cs`); frontend `src/Apps/Apps.Shell/src/api/contractApi.ts` (new),
+  `pages/ContractsPage.tsx` (new), `App.tsx` (nav/routing), `i18n/content.ts` (`con.*`/`nav.construction*`/
+  `nav.contracts*` keys, EN+AR).
+- Next: Subcontracts (procurement documents assigned to a WBS element, needs retention %/mobilization
+  advance/back-charges) is the natural next Construction slice per the dependency order this session's own
+  plan established. In parallel or after, Finance's AR gap (no Customer Invoice at all today) needs closing
+  before IPC billing can exist — per the roadmap's own "AR is not usable without BOQ/measurement, and
+  BOQ/measurement is not billable without AR" framing, these were meant to be scoped together, not
+  necessarily built in the same slice. Also still open from this same file's prior entries: Fiscal Year/
+  Period management, real Budget Check, amount-conditioned approval matrices, and the generic Statement
+  pattern design — all elevated into this phase's scope by the roadmap restructuring but not started.
+
+### 2026-07-16 — Roadmap restructured around Missing-Features Audit V1.1 build sequencing
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Missing-Features Audit & Build Sequencing
+- Status: Completed
+- What changed: The user asked to update `docs/architecture/06-roadmap.md` to reflect a concrete build order
+  before continuing implementation, having just been walked through `ARCHITECTURE.md`, this file,
+  `ARCHITECTURE-AUDIT.md`, and `HadionERP_Missing_Features_Audit_V1.1.md` (the newer of two untracked audit
+  files at repo root — `V1.0` is now superseded, left as-is per this repo's "don't silently edit past
+  findings" convention). Adopted that audit's own §6/§9 sequencing recommendation rather than re-deriving one:
+  Accounts Receivable is not usable without BOQ/measurement, and BOQ/measurement is not billable without AR —
+  they're one real-world capability (Interim Payment Certificate billing), not two backlog items on different
+  phases, so Phase 3 is expanded to build both together instead of Construction-first-AR-later.
+  - **Phase 3** renamed "Construction, Project Accounting & Accounts Receivable" and its scope expanded beyond
+    the original BOQ/Subcontracts/Site Progress/Variation Orders/Retention line items to also include: AR +
+    Aging (Finance is AP-only today), IPC as its own document type distinct from a plain AR Invoice
+    (submitted vs. certified amount), Back Charges/Material Recovery, the still-missing Business Partner
+    master-data fields (Payment Terms/Bank/IBAN/Credit Limit/Reconciliation Account/Withholding Tax flag),
+    Fiscal Year/Period management, a real Budget Check (replacing the `PassThroughBudgetCheckService` stub),
+    amount-conditioned approval matrices (prove on PO first), and a generic Statement pattern (Opening
+    Balance → Transactions → Running Balance → Aging) designed once and rolled out per party type. Exit
+    criteria expanded to require a real IPC submit→certify→bill→AR-post cycle, not just BOQ/progress/variation
+    mechanics.
+  - **New checkpoint inserted between Phase 3 and Phase 4** — Treasury & Cash Management (Petty Cash cycle,
+    Bank Reconciliation, Checks, LC/LG), Fixed Assets (explicitly *not* a simple asset register — must carry
+    a time-dependent WBS/Project cost-object assignment + distribution rules from its first slice, per the
+    audit's §8 deep-dive on how SAP FI-AA/Dynamics actually solve equipment moving between projects
+    mid-period), Equipment & Fleet usage/internal-hire cost allocation (kept explicitly distinct from Fixed
+    Assets' book value and Plant Maintenance's service scheduling), Plant/Equipment Maintenance, Inventory/
+    Warehouse Management, Cost Codes, WIP/Percentage-of-Completion revenue recognition, and Multi-Company/
+    Legal Entity structure (sequenced here rather than Phase 4+ because JV/Consortium accounting depends on
+    it).
+  - **Phase 4 (HR & Payroll)** expanded with Employee Financial Management (Salary Advances/Loans, Final
+    Settlement/EOS, Vacation Liability accrual, Air Ticket Eligibility/Encashment — contractually/legally
+    standard for a KSA expatriate-heavy construction workforce, not optional scope) and HR Document Expiry
+    Monitoring (Iqama/Visa/Passport) wired into the same alerting surface as Finance, reusing Phase 3's
+    generic Statement pattern for a per-employee ledger.
+  - Left deliberately later, unchanged: Multi-currency, Withholding Tax, Document Control/Drawings/RFIs/Site
+    Diary/HSE Incident Tracking, Notifications & Output Management, wiring the already-built ZATCA/Hijri
+    services. Left as open questions, not guessed into a phase: Real Estate/Site-Land Management and JV/
+    Consortium accounting specifics — both need a direct answer from the user before scoping.
+- No code changes in this entry — planning/documentation only, matching this file's own convention for audit/
+  roadmap checkpoints (see the 2026-07-15 "Comprehensive SAP/Dynamics architecture gap audit" and "Architecture
+  audit Part 2" entries below for the same pattern).
+- Files touched: `docs/architecture/06-roadmap.md` (Phase 3 rewritten/expanded, new "Checkpoint — Missing-
+  Features Audit & Build Sequencing" and "Checkpoint — Treasury, Fixed Assets & Equipment" sections added,
+  Phase 4 expanded), `PROGRESS.md` (this entry).
+- Next: resume implementation per the updated roadmap. The last completed implementation slice was AP Payment
+  Recording & Bank Accounts (2026-07-16 entry below), and Phase 3's WBS foundation (2026-07-15 entry further
+  below) is the most recent code in `Modules.ProjectManagement`. The next real build slice per the roadmap
+  above is `Modules.Construction`'s first piece — Customer Contracts and BOQ mapped onto WBS elements are the
+  natural starting point since Subcontracts/Site Progress/Variation Orders/Retention/IPC all reference them.
+
+### 2026-07-16 — AP Payment Recording & Bank Accounts built (closes ARCHITECTURE-AUDIT.md Part 2 §16, partially §15)
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — AP Payment Recording & Bank Accounts
+- Status: Completed
+- What changed: The user chose to close the audit's other Blocking finding ("part 2 and phase 3 go") before
+  starting Phase 3. Entered plan mode given the scope and got explicit plan approval before writing code.
+  Built `BankAccount` (flat master-data Business Object, mirrors `TaxCode`) and `Payment` (real Business
+  Object with a child `PaymentAllocation` collection, standard Draft→Submit→Approve→Post→Reverse lifecycle,
+  mirrors `APInvoice`) inside the existing `Modules.Finance` module — no new module scaffolding, matching the
+  roadmap's own pre-written "Cash/Bank" scope for Finance.
+  - **Posting mechanics**: `PaymentService.PostAsync` generates one real linked Journal Entry via the
+    existing `JournalEntryService.CreateSystemGeneratedAsync` — Debit each allocated invoice's own
+    `PayableAccountId` (not a single guessed AP-control account) + Credit the Bank Account's
+    `LinkedGLAccountId`, always balanced by construction.
+  - **Overpayment protection**: mirrors `GoodsReceiptNoteService`'s cumulative-received-vs-ordered pattern —
+    every other Posted, unreversed Payment's allocations against the same invoice are summed and a new
+    allocation is rejected if it would exceed the invoice's Gross Amount, both at Create (immediate feedback)
+    and re-validated at Post (defends against a race between two payments). A Reversed payment's allocations
+    don't count, releasing the amount back to outstanding.
+  - **PaymentMethod** is a new admin-configurable Lookup type (BankTransfer/Check/CashPayment/
+    OnlineTransfer, EN+AR seeded), not a hardcoded enum — same precedent as the earlier
+    SubcontractorTrade/SupplierTrade/ConsultantTrade split.
+  - `APInvoiceService` gained `GetOutstandingBalanceAsync` and a computed `APInvoiceDto.OutstandingBalance`
+    field (zero unless Posted) — the first time "paid vs. unpaid" has ever been visible in this system.
+  - `Modules.MasterData.Contracts.ILookupCatalog` (new) is the first cross-module Contracts publication of
+    Lookup data — built because `PaymentService` needed to validate `PaymentMethod` against the Lookup engine
+    from a different module, implemented by `EfLookupCatalog` wrapping the existing `ILookupRepository`.
+- Verification: full solution `dotnet test` after the change — 21 test projects, zero regressions (confirmed
+  the standing prediction that every existing test uses fakes and never touches the real DI/HTTP graph).
+  Generated and applied a new EF migration (`AddBankAccountAndPayment`) to both `erp_platform_dev` and
+  `erp_platform_test` — the code had compiled without it for a period but the physical tables didn't exist
+  yet; caught and closed before any live testing. Added 17 new unit tests (`BankAccountServiceTests`,
+  `PaymentServiceTests` — allocation validation, cumulative-overpayment rejection across two separate
+  payments, a second installment within the remaining balance succeeding, reversal releasing an allocation)
+  and 11 new integration tests against real PostgreSQL (`BankAccountPaymentPersistenceTests` — round-trip
+  with child allocations, status transitions/RowVersion, cascade delete). Live `curl` cycle: created and
+  approved a Bank Account, posted an AP Invoice (`FIN-AP-2026-000005`, 1000.00), created a Payment allocating
+  the full amount, drove it through Submit→Approve→Post, confirmed the generated Journal Entry was exactly
+  Dr Payable 1000/Cr Bank 1000 (balanced) and the invoice's outstanding balance dropped to 0.00; attempted a
+  second payment against the same invoice and confirmed a 400 rejection; reversed the payment and confirmed
+  the outstanding balance returned to 1000.00. Live Playwright pass (Chrome, headless, driven via a
+  standalone `playwright` install since no MCP browser tool was available in this session) in both English
+  and Arabic — Bank Accounts create, Payments create with the outstanding-invoices allocation grid, AP
+  Invoice detail's new Outstanding Balance field and Payments tab, correct RTL mirroring and Arabic
+  translation, zero browser console errors.
+- **Known operational gap surfaced during verification, not silently worked around**: the bootstrap `admin`
+  user seeds its role set once, the first time the `users` table is empty (`IdentitySeeder`). Roles
+  registered after that first boot — this slice's `Finance.BankAccount.*`/`Finance.Payment.*` — are never
+  retroactively granted. Worked around manually via `POST /api/v1/identity/users/{id}/roles` for this
+  verification session; a real fix (re-sync bootstrap admin's roles to the full currently-registered set on
+  every startup, or an admin UI for role assignment) is disclosed as deferred in `Modules.Finance/README.md`,
+  not fixed here since it's an Identity-module concern, not a Finance one.
+- `ARCHITECTURE-AUDIT.md` §16 marked Resolved, §15 marked Partially Resolved, with links to this entry; the
+  Part 2 summary table and `docs/architecture/06-roadmap.md`'s checkpoint section updated to match.
+- Files touched: `src/Modules/Modules.Finance/Domain/BankAccount.cs`, `Payment.cs`, `PaymentAllocation.cs`
+  (new); `Application/BankAccountDto.cs`, `IBankAccountRepository.cs`, `BankAccountSecurity.cs`,
+  `BankAccountWorkflow.cs`, `BankAccountService.cs`, `PaymentDto.cs`, `IPaymentRepository.cs`,
+  `PaymentSecurity.cs`, `PaymentWorkflow.cs`, `PaymentService.cs` (new); `APInvoiceService.cs`,
+  `APInvoiceDto.cs` (OutstandingBalance); `Infrastructure/FinanceDbContext.cs` (new tables),
+  `EfBankAccountRepository.cs`, `EfPaymentRepository.cs` (new), migration
+  `20260716175238_AddBankAccountAndPayment`; `Api/BankAccountsController.cs`, `PaymentsController.cs` (new),
+  `README.md`; `src/Modules/Modules.MasterData/Contracts/ILookupCatalog.cs`,
+  `Infrastructure/EfLookupCatalog.cs`, `LookupSeeder.cs` (PaymentMethod type) (new/modified);
+  `src/Gateway/Gateway.Api/Program.cs` (security/workflow/DI wiring); `tests/UnitTests/Modules.Finance.Tests/`
+  `BankAccountServiceTests.cs`, `PaymentServiceTests.cs`, `FakeBankAccountRepository.cs`,
+  `FakePaymentRepository.cs`, `FakeLookups.cs` (`FakeLookupCatalog`) (new); `tests/IntegrationTests/Modules.Finance.IntegrationTests/`
+  `BankAccountPaymentPersistenceTests.cs` (new), `TestDatabase.cs` (reset coverage); frontend
+  `src/Apps/Apps.Shell/src/api/bankAccountApi.ts`, `paymentApi.ts` (new), `apInvoiceApi.ts`
+  (OutstandingBalance); `pages/BankAccountsPage.tsx`, `PaymentsPage.tsx` (new), `APInvoicesPage.tsx`
+  (Outstanding Balance field + Payments tab); `App.tsx` (nav/routing); `i18n/content.ts` (`bank.*`/`pay.*`/
+  `nav.bankAccounts*`/`nav.payments*` keys, EN+AR); `ARCHITECTURE-AUDIT.md`, `docs/architecture/06-roadmap.md`
+  (Resolved notes).
+- Next: Phase 3 — `Modules.Construction` (Contracts, BOQ/WBS-linked cost posting, Subcontracts, Site
+  Progress/Measurement, Variation Orders, Retention) and/or Networks/Activities for `Modules.ProjectManagement`
+  — not yet started, per the user's "part 2 and phase 3" ordering.
 
 ### 2026-07-15 — Real Authentication & Identity built (closes ARCHITECTURE-AUDIT.md Part 1 §1 and §3)
 

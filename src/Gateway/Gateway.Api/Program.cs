@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Modules.Construction.Application;
 using Modules.Finance.Application;
 using Modules.Finance.Contracts;
 using Modules.Identity.Application;
@@ -15,6 +16,7 @@ using Modules.MasterData.Contracts;
 using Modules.MasterData.Infrastructure;
 using Modules.Procurement.Application;
 using Modules.ProjectManagement.Application;
+using Modules.ProjectManagement.Contracts;
 using Platform.Attachments;
 using Platform.Audit;
 using Platform.Configuration;
@@ -144,7 +146,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 ProjectSecurity.MaintainerRole, ProjectSecurity.ApproverRole,
                 LookupSecurity.AdministratorRole, IdentitySecurity.AdministratorRole,
                 BankAccountSecurity.MaintainerRole, BankAccountSecurity.ApproverRole,
-                PaymentSecurity.MaintainerRole, PaymentSecurity.ApproverRole },
+                PaymentSecurity.MaintainerRole, PaymentSecurity.ApproverRole,
+                ContractSecurity.MaintainerRole, ContractSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -163,7 +166,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 ProjectSecurity.MaintainerDuty, ProjectSecurity.ApproverDuty,
                 LookupSecurity.AdministratorDuty, IdentitySecurity.AdministratorDuty,
                 BankAccountSecurity.MaintainerDuty, BankAccountSecurity.ApproverDuty,
-                PaymentSecurity.MaintainerDuty, PaymentSecurity.ApproverDuty });
+                PaymentSecurity.MaintainerDuty, PaymentSecurity.ApproverDuty,
+                ContractSecurity.MaintainerDuty, ContractSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -196,6 +200,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         ProjectSecurity.MaintainerApproverConflict,
         BankAccountSecurity.MaintainerApproverConflict,
         PaymentSecurity.MaintainerApproverConflict,
+        ContractSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
@@ -253,6 +258,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         ProjectWorkflow.SubmitApprovalDefinition,
         BankAccountWorkflow.SubmitApprovalDefinition,
         PaymentWorkflow.SubmitApprovalDefinition,
+        ContractWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -564,6 +570,10 @@ builder.Services.AddScoped<ProjectService>(sp => new ProjectService(
     sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IBusinessPartnerLookup>()));
+// Modules.ProjectManagement.Contracts: the published, read-only lookup Modules.Construction depends on
+// instead of reaching into this module's Domain/Infrastructure/Application internals directly
+// (docs/architecture/01-architecture-foundation.md #3.2).
+builder.Services.AddScoped<IProjectLookup, Modules.ProjectManagement.Infrastructure.EfProjectLookup>();
 
 // Modules.Identity: the fifth real, persisted business module — real user authentication, replacing the
 // hardcoded actor literals every controller used before (`ARCHITECTURE-AUDIT.md` Part 1 §1). Own
@@ -574,6 +584,27 @@ builder.Services.AddDbContext<IdentityDbContext>(options => options.UseNpgsql(ma
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddSingleton<ITokenService>(_ => new JwtTokenService(jwtSigningKey));
+
+// Modules.Construction: the sixth real, persisted business module, Phase 3's commercial layer on top of
+// ProjectManagement's WBS backbone (docs/architecture/07-project-accounting-and-financial-architecture.md
+// §4). Own "construction" Postgres schema, same physical database as every other module's. Depends on
+// Modules.ProjectManagement.Contracts (IProjectLookup, to validate a Contract's Project and each BOQ line's
+// WBS element) and Modules.MasterData.Contracts (ILookupCatalog, for ContractType/UnitOfMeasure) only, never
+// on either module's own Domain/Infrastructure/Application directly.
+builder.Services.AddDbContext<Modules.Construction.Infrastructure.ConstructionDbContext>(options => options.UseNpgsql(masterDataConnectionString));
+builder.Services.AddScoped<IContractRepository, Modules.Construction.Infrastructure.EfContractRepository>();
+builder.Services.AddScoped<ContractService>(sp => new ContractService(
+    sp.GetRequiredService<IContractRepository>(),
+    new Modules.Construction.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>(),
+        new[] { new NumberRangeDefinition(ContractService.NumberRangeKey, "CON", "CONTR") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Construction.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IProjectLookup>(),
+    sp.GetRequiredService<ILookupCatalog>()));
 
 var app = builder.Build();
 

@@ -143,6 +143,24 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Identity.Tests", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Identity.IntegrationTests", "tests\IntegrationTests\Modules.Identity.IntegrationTests\Modules.Identity.IntegrationTests.csproj", "{0EBF6B0D-016E-426B-8CBE-E245791FB3B8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules.ProjectManagement", "Modules.ProjectManagement", "{A6A25841-FE2B-412D-B505-3DB4FA247980}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.ProjectManagement.Contracts", "src\Modules\Modules.ProjectManagement\Contracts\Modules.ProjectManagement.Contracts.csproj", "{A2D212FF-4166-4DF1-885F-28E800801F66}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules.Construction", "Modules.Construction", "{C3A6A757-F9E4-4D8E-8B1C-D9768C0A1C21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.Domain", "src\Modules\Modules.Construction\Domain\Modules.Construction.Domain.csproj", "{C3247722-8191-4451-8E49-02122412DB9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.Application", "src\Modules\Modules.Construction\Application\Modules.Construction.Application.csproj", "{7FBF59BB-08CD-4227-A163-60066D988CC8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.Infrastructure", "src\Modules\Modules.Construction\Infrastructure\Modules.Construction.Infrastructure.csproj", "{2B14F38E-8961-4001-8572-096434D38404}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.Api", "src\Modules\Modules.Construction\Api\Modules.Construction.Api.csproj", "{23E1F568-AE76-4A8B-8977-7F3ED9FEE222}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.Tests", "tests\UnitTests\Modules.Construction.Tests\Modules.Construction.Tests.csproj", "{0C803421-02A9-4E7A-AE87-46D5A46BAF91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.IntegrationTests", "tests\IntegrationTests\Modules.Construction.IntegrationTests\Modules.Construction.IntegrationTests.csproj", "{6A15833F-886D-4AF0-9EBE-B615734347D2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -368,6 +386,34 @@ Global
 		{0EBF6B0D-016E-426B-8CBE-E245791FB3B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0EBF6B0D-016E-426B-8CBE-E245791FB3B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0EBF6B0D-016E-426B-8CBE-E245791FB3B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2D212FF-4166-4DF1-885F-28E800801F66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2D212FF-4166-4DF1-885F-28E800801F66}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2D212FF-4166-4DF1-885F-28E800801F66}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2D212FF-4166-4DF1-885F-28E800801F66}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3247722-8191-4451-8E49-02122412DB9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3247722-8191-4451-8E49-02122412DB9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3247722-8191-4451-8E49-02122412DB9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3247722-8191-4451-8E49-02122412DB9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FBF59BB-08CD-4227-A163-60066D988CC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FBF59BB-08CD-4227-A163-60066D988CC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FBF59BB-08CD-4227-A163-60066D988CC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FBF59BB-08CD-4227-A163-60066D988CC8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B14F38E-8961-4001-8572-096434D38404}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B14F38E-8961-4001-8572-096434D38404}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B14F38E-8961-4001-8572-096434D38404}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B14F38E-8961-4001-8572-096434D38404}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23E1F568-AE76-4A8B-8977-7F3ED9FEE222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23E1F568-AE76-4A8B-8977-7F3ED9FEE222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23E1F568-AE76-4A8B-8977-7F3ED9FEE222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23E1F568-AE76-4A8B-8977-7F3ED9FEE222}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C803421-02A9-4E7A-AE87-46D5A46BAF91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C803421-02A9-4E7A-AE87-46D5A46BAF91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C803421-02A9-4E7A-AE87-46D5A46BAF91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C803421-02A9-4E7A-AE87-46D5A46BAF91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A15833F-886D-4AF0-9EBE-B615734347D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A15833F-886D-4AF0-9EBE-B615734347D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A15833F-886D-4AF0-9EBE-B615734347D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A15833F-886D-4AF0-9EBE-B615734347D2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{233429C3-B14A-4C2A-B3EF-E65C8EEB8D95} = {0AF46503-DB3B-4090-9D0D-4CA13E9ECD37}
@@ -433,5 +479,14 @@ Global
 		{68E5C6FC-D63B-4B8E-A858-C351AE4239BA} = {77FA8D77-91A4-44C5-B2DA-E95D5D546483}
 		{158B58BC-DE37-4779-BAB3-30A3AFFFC112} = {E42834AC-3E49-4525-9850-8995C362CF17}
 		{0EBF6B0D-016E-426B-8CBE-E245791FB3B8} = {2EFDDE05-5390-4BB4-9B47-FDA22F889FD6}
+		{A6A25841-FE2B-412D-B505-3DB4FA247980} = {9BE930DC-E61D-45CF-8506-BC9D59E5793E}
+		{A2D212FF-4166-4DF1-885F-28E800801F66} = {A6A25841-FE2B-412D-B505-3DB4FA247980}
+		{C3A6A757-F9E4-4D8E-8B1C-D9768C0A1C21} = {9BE930DC-E61D-45CF-8506-BC9D59E5793E}
+		{C3247722-8191-4451-8E49-02122412DB9D} = {C3A6A757-F9E4-4D8E-8B1C-D9768C0A1C21}
+		{7FBF59BB-08CD-4227-A163-60066D988CC8} = {C3A6A757-F9E4-4D8E-8B1C-D9768C0A1C21}
+		{2B14F38E-8961-4001-8572-096434D38404} = {C3A6A757-F9E4-4D8E-8B1C-D9768C0A1C21}
+		{23E1F568-AE76-4A8B-8977-7F3ED9FEE222} = {C3A6A757-F9E4-4D8E-8B1C-D9768C0A1C21}
+		{0C803421-02A9-4E7A-AE87-46D5A46BAF91} = {E42834AC-3E49-4525-9850-8995C362CF17}
+		{6A15833F-886D-4AF0-9EBE-B615734347D2} = {2EFDDE05-5390-4BB4-9B47-FDA22F889FD6}
 	EndGlobalSection
 EndGlobal

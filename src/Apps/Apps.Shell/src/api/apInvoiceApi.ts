@@ -18,6 +18,7 @@ export interface APInvoice {
   netAmount: number;
   taxAmount: number;
   grossAmount: number;
+  outstandingBalance: number;
   linkedJournalEntryId: string | null;
   createdAt: string;
   createdBy: string;

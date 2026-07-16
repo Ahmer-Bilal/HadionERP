@@ -381,7 +381,16 @@ whether entire modules a real SAP/Dynamics deployment ships are missing from the
 just missing from code. Same evidence standard as Part 1: every finding below cites the actual current
 Domain entity's field list, not a guess.
 
-## 15. Business Partner — missing master-data fields — **Missing, undisclosed**
+## 15. Business Partner — missing master-data fields — **Missing, undisclosed** — ⚠️ **PARTIALLY RESOLVED 2026-07-16**
+
+> §16 below is fully resolved — `BankAccount` master data and `Payment` documents now exist, and
+> `PaymentMethod` is a real admin-configurable Lookup type, not a hardcoded string. What's still missing is
+> the part of *this* finding that lives on `BusinessPartner` itself: a vendor has no default Payment Method,
+> no default Bank Account, no Payment Terms, no Credit Limit, and no Reconciliation Account field — every
+> Payment and every AP Invoice still requires the Bank Account/Payable Account to be picked by hand each
+> time, exactly as this finding originally described. See `Modules.Finance/README.md`'s "Bank Accounts & AP
+> Payment Recording" section and `PROGRESS.md`'s matching entry (2026-07-16) for what was built. Defaulting
+> those choices from the vendor master remains open, unassigned to a phase yet.
 
 **What SAP/Dynamics has**: on the vendor/customer master — Payment Terms (SAP T052 / Dynamics "Terms of
 payment"), a default Payment Method, bank account/IBAN details, a Credit Limit (customer-side), a
@@ -405,7 +414,21 @@ capability split across master data and transactional posting.
 
 ---
 
-## 16. AP Payment Recording & Cash/Bank Management — **Blocking** (the single biggest finding in this audit)
+## 16. AP Payment Recording & Cash/Bank Management — **Blocking** (the single biggest finding in this audit) — ✅ **RESOLVED 2026-07-16**
+
+> `Modules.Finance` now has real `BankAccount` master data and a `Payment` Business Object with the standard
+> Draft → Submit → Approve → Post → Reverse lifecycle. Posting a Payment generates a real linked Journal
+> Entry — Debit each allocated invoice's own Payable account, Credit the Bank Account's linked G/L account —
+> always balanced by construction. Cumulative overpayment protection (mirrors `GoodsReceiptNoteService`'s
+> received-vs-ordered pattern) rejects any allocation that would exceed an invoice's outstanding balance
+> across multiple payments; a reversed payment releases its allocation back to outstanding.
+> `APInvoiceService.GetOutstandingBalanceAsync` and the `APInvoiceDto.OutstandingBalance` field make "paid vs.
+> unpaid" visible for the first time. See `Modules.Finance/README.md`'s "Bank Accounts & AP Payment Recording"
+> section and `PROGRESS.md`'s matching entry (2026-07-16) for the full build and live verification evidence
+> (curl cycle: create → post → allocate → post → confirm balanced JE and zeroed outstanding balance → reject
+> overpayment → reverse → confirm outstanding restored; Playwright pass in English and Arabic). Bank
+> Reconciliation against an actual bank statement feed remains deferred (disclosed in the module README, not
+> silently dropped) — out of scope for "record that a payment happened."
 
 **What SAP/Dynamics has**: a complete AP cycle — Invoice → Payment Proposal/Run → Payment (clears the payable,
 credits a bank account) → Bank Reconciliation. House Bank master data (SAP FI-BL; Dynamics Cash and bank
@@ -554,8 +577,8 @@ question to the user before scoping, not worth guessing into the roadmap specula
 
 | # | Gap | Severity | Recommended phase |
 |---|---|---|---|
-| 15 | Business Partner master data (Payment Terms, Bank/IBAN, Credit Limit, Recon Account, WHT) | Missing | Phase 1 depth, with #16 |
-| 16 | AP Payment Recording & Cash/Bank Management | **Blocking** | Phase 1 depth, pre-production — highest-priority data-model gap in this audit |
+| 15 | Business Partner master data (Payment Terms, Bank/IBAN, Credit Limit, Recon Account, WHT) | ⚠️ Partially resolved 2026-07-16 (Bank Account/Payment Method now exist standalone; not yet defaulted from the vendor master) | Phase 1 depth, with #16 |
+| 16 | AP Payment Recording & Cash/Bank Management | ✅ Resolved 2026-07-16 | Phase 1 depth, pre-production — highest-priority data-model gap in this audit |
 | 17 | GL Document Type concept | Missing | Not urgent — revisit if document-shape count grows |
 | 18 | Profit Center & Internal Order | Missing (Internal Order likely subsumed by WBS) | Profit Center: Phase 4+. Internal Order: confirm against Phase 3's WBS cost depth |
 | 19 | Withholding Tax & Jurisdiction Code | Missing | WHT: Phase 1/4, after #16. Jurisdiction: low priority |

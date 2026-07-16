@@ -11,12 +11,15 @@ import { CostCentersPage } from "./pages/CostCentersPage";
 import { TaxCodesPage } from "./pages/TaxCodesPage";
 import { JournalEntriesPage } from "./pages/JournalEntriesPage";
 import { APInvoicesPage } from "./pages/APInvoicesPage";
+import { BankAccountsPage } from "./pages/BankAccountsPage";
+import { PaymentsPage } from "./pages/PaymentsPage";
 import { VendorPrequalificationsPage } from "./pages/VendorPrequalificationsPage";
 import { PurchaseRequisitionsPage } from "./pages/PurchaseRequisitionsPage";
 import { RequestsForQuotationPage } from "./pages/RequestsForQuotationPage";
 import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
 import { GoodsReceiptNotesPage } from "./pages/GoodsReceiptNotesPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
+import { ContractsPage } from "./pages/ContractsPage";
 import { LookupDataPage } from "./pages/LookupDataPage";
 import { UsersPage } from "./pages/UsersPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -28,7 +31,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "bank-accounts" | "payments" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "contracts" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -39,12 +42,15 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#tax-codes") return "tax-codes";
   if (window.location.hash === "#journal-entries") return "journal-entries";
   if (window.location.hash === "#ap-invoices") return "ap-invoices";
+  if (window.location.hash === "#bank-accounts") return "bank-accounts";
+  if (window.location.hash === "#payments") return "payments";
   if (window.location.hash === "#vendor-prequalifications") return "vendor-prequalifications";
   if (window.location.hash === "#purchase-requisitions") return "purchase-requisitions";
   if (window.location.hash === "#requests-for-quotation") return "requests-for-quotation";
   if (window.location.hash === "#purchase-orders") return "purchase-orders";
   if (window.location.hash === "#goods-receipt-notes") return "goods-receipt-notes";
   if (window.location.hash === "#projects") return "projects";
+  if (window.location.hash === "#contracts") return "contracts";
   if (window.location.hash === "#lookup-data") return "lookup-data";
   if (window.location.hash === "#lookup-country") return "lookup-country";
   if (window.location.hash === "#lookup-business-role-type") return "lookup-business-role-type";
@@ -281,6 +287,30 @@ function App() {
             },
           ],
         },
+        {
+          key: "bank-accounts",
+          label: t("nav.bankAccountsArea", language),
+          items: [
+            {
+              key: "all-bank-accounts",
+              label: t("nav.allBankAccounts", language),
+              href: "#bank-accounts",
+              isActive: page === "bank-accounts",
+            },
+          ],
+        },
+        {
+          key: "payments",
+          label: t("nav.paymentsArea", language),
+          items: [
+            {
+              key: "all-payments",
+              label: t("nav.allPayments", language),
+              href: "#payments",
+              isActive: page === "payments",
+            },
+          ],
+        },
       ],
     },
     {
@@ -367,6 +397,24 @@ function App() {
         },
       ],
     },
+    {
+      key: "construction",
+      label: t("nav.constructionModule", language),
+      areas: [
+        {
+          key: "contracts",
+          label: t("nav.contractsArea", language),
+          items: [
+            {
+              key: "all-contracts",
+              label: t("nav.allContracts", language),
+              href: "#contracts",
+              isActive: page === "contracts",
+            },
+          ],
+        },
+      ],
+    },
   ];
 
   const languageOptions = [
@@ -407,6 +455,10 @@ function App() {
             <JournalEntriesPage language={language} />
           ) : page === "ap-invoices" ? (
             <APInvoicesPage language={language} />
+          ) : page === "bank-accounts" ? (
+            <BankAccountsPage language={language} />
+          ) : page === "payments" ? (
+            <PaymentsPage language={language} />
           ) : page === "vendor-prequalifications" ? (
             <VendorPrequalificationsPage language={language} />
           ) : page === "purchase-requisitions" ? (
@@ -419,6 +471,8 @@ function App() {
             <GoodsReceiptNotesPage language={language} />
           ) : page === "projects" ? (
             <ProjectsPage language={language} />
+          ) : page === "contracts" ? (
+            <ContractsPage language={language} />
           ) : page === "lookup-data" ? (
             <LookupDataPage language={language} />
           ) : page === "lookup-country" ? (

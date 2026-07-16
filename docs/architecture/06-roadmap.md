@@ -151,12 +151,16 @@ specifically, per explicit user follow-up ("i also want other things which are m
 data... that sap/dynamic have in module 1 but we are missing"), separate from the cross-cutting platform
 findings above.
 
-- **Phase 1 depth, the highest-priority data-model gap in the whole audit**: AP Payment Recording & Cash/Bank
-  Management (§16) — there is currently no way anywhere in this system to record that an AP invoice was
-  actually paid (`APInvoice.Post()` only ever posts Debit Expense/Credit Payable; nothing ever debits Payable/
-  credits a bank account). Business Partner master data (§15 — no Payment Terms, Bank/IBAN, Credit Limit,
-  Reconciliation Account, Withholding Tax) is the same real-world capability's master-data half and should
-  land alongside it, not separately.
+- ✅ **Resolved 2026-07-16**: AP Payment Recording & Cash/Bank Management (§16, the highest-priority
+  data-model gap in the whole audit) — `Modules.Finance` now has `BankAccount` master data and a `Payment`
+  Business Object (Draft → Submit → Approve → Post → Reverse) whose `PostAsync` generates a real linked
+  Journal Entry (Debit each allocated invoice's own Payable account, Credit the Bank Account's linked G/L
+  account), with cumulative overpayment protection across multiple payments and a computed
+  `APInvoice.OutstandingBalance`. See `Modules.Finance/README.md`'s "Bank Accounts & AP Payment Recording"
+  section and `PROGRESS.md`'s matching entry. Business Partner master data (§15 — no default Payment Method/
+  Bank Account/Payment Terms/Credit Limit/Reconciliation Account/Withholding Tax *on the vendor master
+  itself*) is only partially resolved by this — Bank Account and Payment Method now exist as standalone
+  concepts, but nothing on `BusinessPartner` defaults them yet, so this remains open, unassigned to a phase.
 - **Phase 1/4 depth, lower urgency**: Withholding Tax as a distinct concept from VAT (§19, after §16 exists to
   withhold against); GL Document Type grouping (§17, not urgent until document-shape count grows); Profit
   Center (§18, Phase 4+).
@@ -180,18 +184,120 @@ None of the above (Part 1 or Part 2) blocks Phase 3 (Construction & Project Mana
 continuing — these are platform-hardening and new-module items layered onto or added alongside phases already
 in the roadmap, not new phases inserted ahead of Phase 3.
 
-## Phase 3 — Construction & Project Management
-- `Modules.Construction`: Contracts, BOQ/WBS, Subcontracts, Site Progress/Measurement, Variation Orders,
-  Retention
+## Checkpoint — Missing-Features Audit & Build Sequencing (added 2026-07-16)
+
+A second, wider audit (`HadionERP_Missing_Features_Audit_V1.1.md` at repo root — supersedes the earlier
+`V1.0` draft) was performed 2026-07-16, extending `ARCHITECTURE-AUDIT.md` with a construction-industry lens
+(BOQ/Subcontracts/IPC billing, Fixed Assets/Equipment cost allocation, Treasury, Employee Financial
+Management) and confirming §16 (AP Payment Recording) is now genuinely resolved. Read that file for the full
+evidence and tiering (§5, §9) before starting any item below — this section only records the **sequencing
+decision** made from it, so the next contributor doesn't have to re-derive an order from a 20-section audit.
+
+**The core sequencing call**: the audit's own §6 finding is that **Accounts Receivable is not usable without
+BOQ/measurement, and BOQ/measurement is not valuable without AR to bill against** — they're one real-world
+capability (a construction company gets paid via Interim Payment Certificates measured against a BOQ, not a
+plain AR invoice), not two backlog items on different phases. Phase 3 below is expanded to build both
+together, rather than shipping Construction first and bolting AR on later. Everything else the audit flagged
+(Treasury, Fixed Assets, Employee Financial Management, Multi-Company, etc.) is real but sequenced *after*
+Phase 3, not folded into it — Phase 3 is already large; adding unrelated Finance/HR depth to it would blur
+its own exit criteria.
+
+- **Phase 3 (expanded below)**: Construction module + the AR/IPC/Statement/Fiscal-Period/Budget-Check depth
+  needed to actually bill and control a project, since none of it is separable from "can this company invoice
+  a customer for work done."
+- **New checkpoint between Phase 3 and Phase 4** (added below): Treasury & Cash Management, Fixed Assets
+  (built with time-dependent WBS cost-object assignment from day one per the audit's §8 deep-dive — not a
+  simple asset register), Equipment & Fleet cost allocation, Plant Maintenance, Inventory/Warehouse
+  Management, Cost Codes, WIP/Percentage-of-Completion revenue recognition, Multi-Company/Legal Entity. These
+  depend on real WBS cost postings (Phase 3) existing first, and are grouped together because several of them
+  share the same WBS-facing interface (see the audit's §8.5).
+- **Phase 4 (expanded below)**: HR & Payroll gets a wider scope than the original roadmap line — Employee
+  Financial Management (Salary Advances/Loans, EOS, Vacation Liability, Ticket Encashment — legally mandated
+  or contractually standard for a KSA expatriate construction workforce, not "nice to have") and HR
+  document-expiry monitoring (Iqama/Visa/Passport) wired into the same alerting surface Finance uses,
+  reusing Phase 3's generic Statement pattern for the per-employee financial ledger.
+- **Deliberately left later, not urgent yet**: Multi-currency, Withholding Tax, Document Control/Drawings/
+  RFIs/Site Diary/HSE Incident Tracking, Notifications & Output Management, and wiring the already-built
+  ZATCA/Hijri services — all real gaps, none blocking the phases above.
+- **Open questions, not guessed into a phase**: Real Estate/Site-Land Management, and Joint Venture/
+  Consortium accounting (which needs Multi-Company to exist first) — both need a direct answer from the user
+  before scoping, per the audit's own recommendation.
+
+## Phase 3 — Construction, Project Accounting & Accounts Receivable
+- `Modules.Construction`: Customer Contracts (value, type — Lump Sum/Unit Price/Cost Plus, advance %,
+  defects liability period), Bill of Quantities (BOQ) mapped onto WBS elements, Subcontracts (retention %,
+  mobilization advance, back-charges — a distinct document type from a standard PO), Site Progress/
+  Measurement against BOQ lines, Variation Orders with their own approval chain, Retention (withheld %,
+  released after defects-liability period, on both the AR and AP side)
 - `Modules.ProjectManagement`: scheduling, resource/equipment allocation, cost roll-up into Finance
+- **Finance depth, elevated into this phase 2026-07-16** (see checkpoint above for why these aren't
+  deferred): Accounts Receivable / Customer Invoice + Aging — `Modules.Finance` is AP-only today; **IPC
+  (Interim Payment Certificate)** as its own document type distinct from a plain AR Invoice (submitted amount
+  vs. consultant-certified amount is a real distinction, not extra fields on an invoice); Back Charges/
+  Material Recovery (a negative line item inside IPC Management, linking a cost event to a subcontract's next
+  payment cycle); Business Partner master-data fields still missing (§15 of `ARCHITECTURE-AUDIT.md`) —
+  Payment Terms, default Payment Method, Bank/IBAN, Credit Limit, Reconciliation Account, Withholding Tax
+  flag, one-time-vendor flag; Fiscal Year/Period management (open/close/lock — a Journal Entry can currently
+  post to any date forever); real Budget Check (`PassThroughBudgetCheckService` is a literal pass-through
+  stub today despite already being called in the PO/PR flow); amount-conditioned approval matrices (prove
+  once on Purchase Order via the existing `AttributeConstraints` primitive, then apply to AP Invoice/Journal
+  Entry/Purchase Requisition the same way); a generic **Statement pattern** (Opening Balance → Transactions →
+  Running Balance → Aging, parameterized per party type) designed now so it isn't retrofitted per module
+  later — this phase rolls it out for Customer and Supplier first.
 - **Exit criteria**: a project can be set up with a BOQ, subcontracted, progress-measured on site, and
-  variation orders flow through approval into cost and (if applicable) revenue recognition in Finance.
+  variation orders flow through approval into cost; an Interim Payment Certificate can be submitted,
+  certified, and billed to the customer through a real AR posting with aging visible on that customer's
+  Statement.
+
+## Checkpoint — Treasury, Fixed Assets & Equipment (added 2026-07-16, after Phase 3)
+Depends on Phase 3's real WBS cost postings existing. See `HadionERP_Missing_Features_Audit_V1.1.md` §7-8 for
+full detail; summarized here for sequencing only.
+
+- **Treasury & Cash Management**: Petty Cash custodians (site offices run on physical float, not just bank
+  transfers) with a real advance → spend → settle → replenish cycle and Cash Counts; Bank Reconciliation
+  against `BankAccount`/`Payment` (currently referenced only in a mockup, no domain object exists); Check
+  Management (Issued → Cleared → Bounced/Cancelled, common in KSA/GCC construction payment terms); Letter of
+  Credit and Letter of Guarantee tracking (import-heavy procurement and performance/advance/retention bonds).
+- **Fixed Assets — not a simple asset register**: must carry a **time-dependent** WBS/Project cost-object
+  assignment (an effective-dated row, not a static foreign key) plus distribution rules for an asset serving
+  multiple projects at once, modeled on SAP FI-AA's Time-Dependent Data tab / Dynamics's FA Allocation Key —
+  because equipment moving between projects mid-month is normal monthly operation for this business, not an
+  edge case. Building a naive static-FK version now would need a breaking rework later; build the
+  time-dependent version from the first slice.
+- **Equipment & Fleet** (distinct from Fixed Assets' book value and Plant Maintenance's service schedule):
+  fuel/operator cost, inter-project transfers, rental-in/out, and — the part with no home today — usage/
+  internal-hire cost allocation to whichever project actually used the equipment that period, so a project's
+  Actual Cost isn't understated by company-owned equipment usage.
+- **Plant/Equipment Maintenance**: service schedules, breakdown/repair tickets — pairs naturally with Fixed
+  Assets since both reference the same equipment master.
+- **Inventory/Warehouse Management**: on-hand quantity, goods movements, site material reservation/issue —
+  `Item.cs`'s own doc comment already presupposes this exists; GRN today never increments any stock balance.
+- **Cost Codes** distinct from the generic `CostCenter` — most construction ERPs cross a dedicated cost-code
+  structure (e.g. CSI MasterFormat) with WBS/Project for real job costing.
+- **WIP/Percentage-of-Completion revenue recognition** — depends on real WBS cost postings (this checkpoint
+  and Phase 3) existing first; referenced conceptually in doc 07 but has zero implementation today.
+- **Multi-Company/Legal Entity structure** — no `Company` entity exists; `"C001"` is hardcoded in ~15 places.
+  Needed here (rather than left to Phase 4+) because Joint Venture/Consortium accounting — a real construction
+  pattern for large contracts — depends on it existing first.
 
 ## Phase 4 — HR & Payroll
-- `Modules.HR`: employee lifecycle, org structure, leave, Saudization/Nitaqat tracking
+- `Modules.HR`: employee lifecycle, org structure, leave, Saudization/Nitaqat tracking; **Document Expiry
+  Monitoring** (Passport/Visa/Iqama/Medical Insurance/Certifications) as a first-class, proactively-alerting
+  capability feeding the same alerts surface Finance uses, not a file attachment with a date field — an
+  expired Iqama can legally stop an employee working a site; **Exit Clearance/Asset Return** tied to Final
+  Settlement below, spanning HR/Equipment/Payroll
 - `Modules.Payroll`: payroll run, WPS file export, GOSI integration, EOSB calculation, GL posting of payroll
+- **Employee Financial Management, elevated into this phase 2026-07-16** (see checkpoint above): Salary
+  Advances/Employee Loans (common across construction blue-collar workforces, own approval + repayment
+  schedule deducted from future runs); Business Trip Advances/Expense Claims/Reimbursements; a generic
+  Deductions engine (loan repayment, advance recovery, disciplinary, GOSI); Final Settlement/End of Service
+  Benefits (legally mandated in KSA, not optional); Vacation Liability monthly accrual (a real GL liability,
+  not just an HR leave-balance number); Air Ticket Eligibility/Ticket Encashment (standard GCC expatriate
+  benefit — this workforce is majority expatriate); a per-employee Statement reusing Phase 3's generic
+  Statement pattern
 - ZATCA e-invoicing Phase 2 (XML/UBL clearance integration) generalized across AR
-- **Exit criteria**: a full payroll cycle runs, generates a compliant WPS file, and posts to GL.
+- **Exit criteria**: a full payroll cycle runs (including advances/deductions/EOS where applicable), generates
+  a compliant WPS file, and posts to GL.
 
 ## Phase 5 — Reporting, Analytics & Mobile
 - `Modules.Reporting`: statutory reports (VAT return, ZATCA audit file, GOSI/MHRSD reports), management

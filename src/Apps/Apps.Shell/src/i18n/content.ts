@@ -275,6 +275,54 @@ type TranslationKey =
   | "ap.columnNetAmount"
   | "ap.columnTaxAmount"
   | "ap.linkedJournalEntry"
+  | "ap.columnOutstandingBalance"
+  | "nav.bankAccountsArea"
+  | "nav.allBankAccounts"
+  | "bank.heading"
+  | "bank.newHeading"
+  | "bank.emptyState"
+  | "bank.actionNew"
+  | "bank.actionCreate"
+  | "bank.actionBack"
+  | "bank.actionSubmit"
+  | "bank.actionApprove"
+  | "bank.actionReject"
+  | "bank.columnAccountCode"
+  | "bank.columnAccountName"
+  | "bank.columnBankName"
+  | "bank.columnStatus"
+  | "bank.fieldAccountCode"
+  | "bank.fieldAccountName"
+  | "bank.fieldAccountNameArabic"
+  | "bank.fieldBankName"
+  | "bank.fieldIban"
+  | "bank.fieldLinkedGLAccount"
+  | "nav.paymentsArea"
+  | "nav.allPayments"
+  | "pay.heading"
+  | "pay.newHeading"
+  | "pay.emptyState"
+  | "pay.actionNew"
+  | "pay.actionCreate"
+  | "pay.actionBack"
+  | "pay.actionSubmit"
+  | "pay.actionApprove"
+  | "pay.actionReject"
+  | "pay.actionPost"
+  | "pay.actionReverse"
+  | "pay.columnDocumentNumber"
+  | "pay.columnAmount"
+  | "pay.columnStatus"
+  | "pay.columnInvoice"
+  | "pay.columnOutstandingBalance"
+  | "pay.fieldVendor"
+  | "pay.fieldBankAccount"
+  | "pay.fieldPaymentMethod"
+  | "pay.fieldPaymentDate"
+  | "pay.fieldReference"
+  | "pay.fieldAllocatedAmount"
+  | "pay.tabAllocations"
+  | "pay.noOutstandingInvoices"
   | "nav.procurementModule"
   | "nav.vendorPrequalificationsArea"
   | "nav.allVendorPrequalifications"
@@ -287,6 +335,9 @@ type TranslationKey =
   | "nav.projectManagementModule"
   | "nav.projectsArea"
   | "nav.allProjects"
+  | "nav.constructionModule"
+  | "nav.contractsArea"
+  | "nav.allContracts"
   | "nav.lookupDataArea"
   | "nav.allLookupTypes"
   | "nav.lookupCountries"
@@ -460,6 +511,37 @@ type TranslationKey =
   | "proj.columnProjectName"
   | "proj.columnStatus"
   | "proj.tabWbsElements"
+  | "con.heading"
+  | "con.newHeading"
+  | "con.emptyState"
+  | "con.selectHint"
+  | "con.selectProjectFirstHint"
+  | "con.actionNew"
+  | "con.actionCreate"
+  | "con.actionBack"
+  | "con.actionSubmit"
+  | "con.actionApprove"
+  | "con.actionReject"
+  | "con.actionAddBoqLine"
+  | "con.actionRemoveBoqLine"
+  | "con.fieldProject"
+  | "con.fieldContractType"
+  | "con.fieldPaymentTerms"
+  | "con.fieldAdvancePaymentPercentage"
+  | "con.fieldDefectsLiabilityPeriodMonths"
+  | "con.fieldBoqCode"
+  | "con.fieldBoqDescription"
+  | "con.fieldBoqDescriptionArabic"
+  | "con.fieldBoqUnitOfMeasure"
+  | "con.fieldBoqQuantity"
+  | "con.fieldBoqRate"
+  | "con.fieldBoqAmount"
+  | "con.fieldBoqWbsElement"
+  | "con.columnDocumentNumber"
+  | "con.columnProject"
+  | "con.columnContractValue"
+  | "con.columnStatus"
+  | "con.tabBoqLines"
   | "lookup.hubHeading"
   | "lookup.newTypeHeading"
   | "lookup.columnCode"
@@ -802,6 +884,56 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "ap.columnNetAmount": { en: "Net", ar: "الصافي" },
   "ap.columnTaxAmount": { en: "Tax", ar: "الضريبة" },
   "ap.linkedJournalEntry": { en: "Linked Journal Entry", ar: "قيد اليومية المرتبط" },
+  "ap.columnOutstandingBalance": { en: "Outstanding Balance", ar: "الرصيد المستحق" },
+
+  "nav.bankAccountsArea": { en: "Bank Accounts", ar: "الحسابات البنكية" },
+  "nav.allBankAccounts": { en: "All Bank Accounts", ar: "جميع الحسابات البنكية" },
+  "bank.heading": { en: "Bank Accounts", ar: "الحسابات البنكية" },
+  "bank.newHeading": { en: "New Bank Account", ar: "حساب بنكي جديد" },
+  "bank.emptyState": { en: "No bank accounts yet.", ar: "لا توجد حسابات بنكية حتى الآن." },
+  "bank.actionNew": { en: "New", ar: "جديد" },
+  "bank.actionCreate": { en: "Create", ar: "إنشاء" },
+  "bank.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "bank.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "bank.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "bank.actionReject": { en: "Reject", ar: "رفض" },
+  "bank.columnAccountCode": { en: "Account Code", ar: "رمز الحساب" },
+  "bank.columnAccountName": { en: "Account Name", ar: "اسم الحساب" },
+  "bank.columnBankName": { en: "Bank Name", ar: "اسم البنك" },
+  "bank.columnStatus": { en: "Status", ar: "الحالة" },
+  "bank.fieldAccountCode": { en: "Account Code", ar: "رمز الحساب" },
+  "bank.fieldAccountName": { en: "Account Name", ar: "اسم الحساب" },
+  "bank.fieldAccountNameArabic": { en: "Account Name (Arabic)", ar: "اسم الحساب (عربي)" },
+  "bank.fieldBankName": { en: "Bank Name", ar: "اسم البنك" },
+  "bank.fieldIban": { en: "IBAN", ar: "رقم الآيبان" },
+  "bank.fieldLinkedGLAccount": { en: "Linked G/L Account", ar: "حساب دفتر الأستاذ المرتبط" },
+
+  "nav.paymentsArea": { en: "Payments", ar: "المدفوعات" },
+  "nav.allPayments": { en: "All Payments", ar: "جميع المدفوعات" },
+  "pay.heading": { en: "Payments", ar: "المدفوعات" },
+  "pay.newHeading": { en: "New Payment", ar: "دفعة جديدة" },
+  "pay.emptyState": { en: "No payments yet.", ar: "لا توجد مدفوعات حتى الآن." },
+  "pay.actionNew": { en: "New", ar: "جديد" },
+  "pay.actionCreate": { en: "Create", ar: "إنشاء" },
+  "pay.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "pay.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "pay.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "pay.actionReject": { en: "Reject", ar: "رفض" },
+  "pay.actionPost": { en: "Post", ar: "ترحيل" },
+  "pay.actionReverse": { en: "Reverse", ar: "عكس القيد" },
+  "pay.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "pay.columnAmount": { en: "Amount", ar: "المبلغ" },
+  "pay.columnStatus": { en: "Status", ar: "الحالة" },
+  "pay.columnInvoice": { en: "AP Invoice", ar: "فاتورة المورّد" },
+  "pay.columnOutstandingBalance": { en: "Outstanding Balance", ar: "الرصيد المستحق" },
+  "pay.fieldVendor": { en: "Vendor", ar: "المورّد" },
+  "pay.fieldBankAccount": { en: "Bank Account", ar: "الحساب البنكي" },
+  "pay.fieldPaymentMethod": { en: "Payment Method", ar: "طريقة الدفع" },
+  "pay.fieldPaymentDate": { en: "Payment Date", ar: "تاريخ الدفع" },
+  "pay.fieldReference": { en: "Reference", ar: "المرجع" },
+  "pay.fieldAllocatedAmount": { en: "Allocated Amount", ar: "المبلغ المخصص" },
+  "pay.tabAllocations": { en: "Allocations", ar: "التخصيصات" },
+  "pay.noOutstandingInvoices": { en: "This vendor has no outstanding Posted invoices.", ar: "لا توجد فواتير مرحّلة مستحقة لهذا المورّد." },
 
   "nav.procurementModule": { en: "Procurement", ar: "المشتريات" },
   "nav.vendorPrequalificationsArea": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
@@ -814,6 +946,9 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.allGoodsReceiptNotes": { en: "All Goods Receipt Notes", ar: "جميع إشعارات استلام البضائع" },
   "nav.projectManagementModule": { en: "Project Management", ar: "إدارة المشاريع" },
   "nav.projectsArea": { en: "Projects", ar: "المشاريع" },
+  "nav.constructionModule": { en: "Construction", ar: "الإنشاءات" },
+  "nav.contractsArea": { en: "Contracts", ar: "العقود" },
+  "nav.allContracts": { en: "All Contracts", ar: "جميع العقود" },
   "nav.allProjects": { en: "All Projects", ar: "جميع المشاريع" },
   "nav.lookupDataArea": { en: "Lookup Data", ar: "بيانات القوائم" },
   "nav.allLookupTypes": { en: "All Lookup Types", ar: "جميع أنواع القوائم" },
@@ -999,6 +1134,37 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "proj.columnProjectName": { en: "Project Name", ar: "اسم المشروع" },
   "proj.columnStatus": { en: "Status", ar: "الحالة" },
   "proj.tabWbsElements": { en: "WBS Elements", ar: "عناصر هيكل تجزئة العمل" },
+  "con.heading": { en: "Contracts", ar: "العقود" },
+  "con.newHeading": { en: "New Contract", ar: "عقد جديد" },
+  "con.emptyState": { en: "No contracts yet.", ar: "لا توجد عقود حتى الآن." },
+  "con.selectHint": { en: "Select a contract from the list to see its details.", ar: "اختر عقدًا من القائمة لعرض تفاصيله." },
+  "con.selectProjectFirstHint": { en: "Select a project above to build the BOQ against its WBS elements.", ar: "اختر مشروعًا أعلاه لبناء جدول الكميات وفق عناصر هيكل تجزئة العمل الخاصة به." },
+  "con.actionNew": { en: "New", ar: "جديد" },
+  "con.actionCreate": { en: "Create", ar: "إنشاء" },
+  "con.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "con.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "con.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "con.actionReject": { en: "Reject", ar: "رفض" },
+  "con.actionAddBoqLine": { en: "Add BOQ Line", ar: "إضافة بند جدول كميات" },
+  "con.actionRemoveBoqLine": { en: "Remove", ar: "إزالة" },
+  "con.fieldProject": { en: "Project", ar: "المشروع" },
+  "con.fieldContractType": { en: "Contract Type", ar: "نوع العقد" },
+  "con.fieldPaymentTerms": { en: "Payment Terms", ar: "شروط الدفع" },
+  "con.fieldAdvancePaymentPercentage": { en: "Advance Payment %", ar: "نسبة الدفعة المقدمة" },
+  "con.fieldDefectsLiabilityPeriodMonths": { en: "Defects Liability Period (months)", ar: "فترة ضمان العيوب (بالأشهر)" },
+  "con.fieldBoqCode": { en: "Code", ar: "الرمز" },
+  "con.fieldBoqDescription": { en: "Description", ar: "الوصف" },
+  "con.fieldBoqDescriptionArabic": { en: "Description (Arabic)", ar: "الوصف (عربي)" },
+  "con.fieldBoqUnitOfMeasure": { en: "Unit of Measure", ar: "وحدة القياس" },
+  "con.fieldBoqQuantity": { en: "Quantity", ar: "الكمية" },
+  "con.fieldBoqRate": { en: "Rate", ar: "السعر" },
+  "con.fieldBoqAmount": { en: "Amount", ar: "المبلغ" },
+  "con.fieldBoqWbsElement": { en: "WBS Element", ar: "عنصر هيكل تجزئة العمل" },
+  "con.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "con.columnProject": { en: "Project", ar: "المشروع" },
+  "con.columnContractValue": { en: "Contract Value", ar: "قيمة العقد" },
+  "con.columnStatus": { en: "Status", ar: "الحالة" },
+  "con.tabBoqLines": { en: "BOQ Lines", ar: "بنود جدول الكميات" },
   "lookup.hubHeading": { en: "Lookup Data", ar: "بيانات القوائم" },
   "lookup.newTypeHeading": { en: "Create a new lookup type", ar: "إنشاء نوع قائمة جديد" },
   "lookup.columnCode": { en: "Code", ar: "الرمز" },

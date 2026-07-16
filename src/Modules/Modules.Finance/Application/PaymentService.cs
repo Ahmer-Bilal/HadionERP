@@ -144,6 +144,16 @@ public sealed class PaymentService
         return (dtos, total);
     }
 
+    /// <summary>Every payment with at least one allocation against <paramref name="apInvoiceId"/> — backs
+    /// the "Payments applied" read-only list on the AP Invoice detail page. Includes every status (Draft
+    /// through Reversed), not just Posted, so the page can show the full paper trail, not just what
+    /// currently affects the outstanding balance.</summary>
+    public async Task<IReadOnlyList<PaymentDto>> ListByInvoiceAsync(Guid apInvoiceId, CancellationToken cancellationToken = default)
+    {
+        var items = await _repository.ListByInvoiceAsync(apInvoiceId, cancellationToken);
+        return items.Select(ToDto).ToList();
+    }
+
     public async Task<PaymentDto> SubmitAsync(Guid id, string actor, CancellationToken cancellationToken = default)
     {
         RequireAuthorization(actor, PaymentSecurity.MaintainPrivilegeKey);

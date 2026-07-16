@@ -29,8 +29,11 @@
     <ProjectReference Include="..\..\Modules\Modules.Procurement\Infrastructure\Modules.Procurement.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.ProjectManagement\Api\Modules.ProjectManagement.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.ProjectManagement\Infrastructure\Modules.ProjectManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.ProjectManagement\Contracts\Modules.ProjectManagement.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.Identity\Api\Modules.Identity.Api.csproj" />
     <ProjectReference Include="..\..\Modules\Modules.Identity\Infrastructure\Modules.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.Construction\Api\Modules.Construction.Api.csproj" />
+    <ProjectReference Include="..\..\Modules\Modules.Construction\Infrastructure\Modules.Construction.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

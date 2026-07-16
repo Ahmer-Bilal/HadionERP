@@ -19,6 +19,8 @@ import { listGLAccounts } from "../api/glAccountApi";
 import type { GLAccount } from "../api/glAccountApi";
 import { listTaxCodes } from "../api/taxCodeApi";
 import type { TaxCode } from "../api/taxCodeApi";
+import { listPaymentsForInvoice } from "../api/paymentApi";
+import type { Payment } from "../api/paymentApi";
 
 interface APInvoicesPageProps {
   language: SupportedLanguageCode;
@@ -56,6 +58,7 @@ export function APInvoicesPage({ language }: APInvoicesPageProps) {
   const [vendors, setVendors] = useState<BusinessPartner[]>([]);
   const [accounts, setAccounts] = useState<GLAccount[]>([]);
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
+  const [invoicePayments, setInvoicePayments] = useState<Payment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -95,6 +98,11 @@ export function APInvoicesPage({ language }: APInvoicesPageProps) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (view.kind !== "details") { setInvoicePayments([]); return; }
+    listPaymentsForInvoice(view.invoice.id).then((result) => setInvoicePayments(result.items)).catch(() => setInvoicePayments([]));
+  }, [view]);
 
   const vendorLabel = (id: string) => {
     const vendor = vendors.find((v) => v.id === id);
@@ -243,39 +251,75 @@ export function APInvoicesPage({ language }: APInvoicesPageProps) {
         <h1>{invoice.documentNumber} — {invoice.vendorInvoiceNumber}</h1>
         <ActionPane actions={actions} ariaLabel={t("aria.actionToolbar", language)} />
         {error && <p style={{ color: "var(--pi-danger)" }}>{error}</p>}
-        <FastTabs tabs={[{
-          key: "general",
-          title: t("status.tabGeneral", language),
-          defaultExpanded: true,
-          content: (
-            <dl style={{ maxInlineSize: "32rem" }}>
-              <dt>{t("ap.columnVendor", language)}</dt>
-              <dd>{vendorLabel(invoice.vendorId)}</dd>
-              <dt>{t("ap.columnVendorInvoiceNumber", language)}</dt>
-              <dd>{invoice.vendorInvoiceNumber}</dd>
-              <dt>{t("ap.columnInvoiceDate", language)}</dt>
-              <dd><bdi dir="ltr">{invoice.invoiceDate}</bdi></dd>
-              <dt>{t("ap.fieldExpenseAccount", language)}</dt>
-              <dd><bdi dir="ltr">{accountLabel(invoice.expenseAccountId)}</bdi></dd>
-              <dt>{t("ap.fieldPayableAccount", language)}</dt>
-              <dd><bdi dir="ltr">{accountLabel(invoice.payableAccountId)}</bdi></dd>
-              <dt>{t("ap.columnNetAmount", language)}</dt>
-              <dd><bdi dir="ltr">{invoice.netAmount.toFixed(2)}</bdi></dd>
-              <dt>{t("ap.columnTaxAmount", language)}</dt>
-              <dd><bdi dir="ltr">{invoice.taxAmount.toFixed(2)}</bdi></dd>
-              <dt>{t("ap.columnGrossAmount", language)}</dt>
-              <dd><bdi dir="ltr">{invoice.grossAmount.toFixed(2)}</bdi></dd>
-              <dt>{t("ap.columnStatus", language)}</dt>
-              <dd>{translateStatus(invoice.status, language)}</dd>
-              {invoice.linkedJournalEntryId && (
-                <>
-                  <dt>{t("ap.linkedJournalEntry", language)}</dt>
-                  <dd><bdi dir="ltr">{invoice.linkedJournalEntryId}</bdi></dd>
-                </>
-              )}
-            </dl>
-          ),
-        }]} />
+        <FastTabs tabs={[
+          {
+            key: "general",
+            title: t("status.tabGeneral", language),
+            defaultExpanded: true,
+            content: (
+              <dl style={{ maxInlineSize: "32rem" }}>
+                <dt>{t("ap.columnVendor", language)}</dt>
+                <dd>{vendorLabel(invoice.vendorId)}</dd>
+                <dt>{t("ap.columnVendorInvoiceNumber", language)}</dt>
+                <dd>{invoice.vendorInvoiceNumber}</dd>
+                <dt>{t("ap.columnInvoiceDate", language)}</dt>
+                <dd><bdi dir="ltr">{invoice.invoiceDate}</bdi></dd>
+                <dt>{t("ap.fieldExpenseAccount", language)}</dt>
+                <dd><bdi dir="ltr">{accountLabel(invoice.expenseAccountId)}</bdi></dd>
+                <dt>{t("ap.fieldPayableAccount", language)}</dt>
+                <dd><bdi dir="ltr">{accountLabel(invoice.payableAccountId)}</bdi></dd>
+                <dt>{t("ap.columnNetAmount", language)}</dt>
+                <dd><bdi dir="ltr">{invoice.netAmount.toFixed(2)}</bdi></dd>
+                <dt>{t("ap.columnTaxAmount", language)}</dt>
+                <dd><bdi dir="ltr">{invoice.taxAmount.toFixed(2)}</bdi></dd>
+                <dt>{t("ap.columnGrossAmount", language)}</dt>
+                <dd><bdi dir="ltr">{invoice.grossAmount.toFixed(2)}</bdi></dd>
+                {invoice.status === "Posted" && (
+                  <>
+                    <dt>{t("ap.columnOutstandingBalance", language)}</dt>
+                    <dd><bdi dir="ltr">{invoice.outstandingBalance.toFixed(2)}</bdi></dd>
+                  </>
+                )}
+                <dt>{t("ap.columnStatus", language)}</dt>
+                <dd>{translateStatus(invoice.status, language)}</dd>
+                {invoice.linkedJournalEntryId && (
+                  <>
+                    <dt>{t("ap.linkedJournalEntry", language)}</dt>
+                    <dd><bdi dir="ltr">{invoice.linkedJournalEntryId}</bdi></dd>
+                  </>
+                )}
+              </dl>
+            ),
+          },
+          {
+            key: "payments",
+            title: t("pay.heading", language),
+            content: invoicePayments.length === 0 ? (
+              <p>{t("pay.emptyState", language)}</p>
+            ) : (
+              <table className="bp-table">
+                <thead>
+                  <tr>
+                    <th>{t("pay.columnDocumentNumber", language)}</th>
+                    <th>{t("pay.fieldPaymentDate", language)}</th>
+                    <th>{t("pay.fieldAllocatedAmount", language)}</th>
+                    <th>{t("pay.columnStatus", language)}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoicePayments.map((payment) => (
+                    <tr key={payment.id}>
+                      <td><bdi dir="ltr">{payment.documentNumber}</bdi></td>
+                      <td><bdi dir="ltr">{payment.paymentDate}</bdi></td>
+                      <td><bdi dir="ltr">{payment.allocations.find((a) => a.apInvoiceId === invoice.id)?.allocatedAmount.toFixed(2) ?? "—"}</bdi></td>
+                      <td>{translateStatus(payment.status, language)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ),
+          },
+        ]} />
       </section>
     );
   }

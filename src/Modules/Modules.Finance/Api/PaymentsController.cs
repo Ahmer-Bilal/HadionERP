@@ -18,8 +18,14 @@ public sealed class PaymentsController : PlatformApiController
     public PaymentsController(PaymentService service) => _service = service;
 
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] Guid? apInvoiceId, CancellationToken cancellationToken)
     {
+        if (apInvoiceId is { } invoiceId)
+        {
+            var forInvoice = await _service.ListByInvoiceAsync(invoiceId, cancellationToken);
+            return Ok(new PagedResult<PaymentDto>(forInvoice, forInvoice.Count, 0, forInvoice.Count));
+        }
+
         ODataQuery query;
         try { query = ODataQuery.Parse(Request.Query); }
         catch (ArgumentException ex) { return BadRequestError(ex.Message); }

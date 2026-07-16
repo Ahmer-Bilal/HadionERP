@@ -110,6 +110,67 @@ actually built today.
   accounts and vendors, and post/reverse a GL journal and an AP invoice end-to-end with full audit trail,
   exactly as docs/architecture/06-roadmap.md's Phase 1 exit criteria states.
 
+## What's built (Bank Accounts & AP Payment Recording — closes ARCHITECTURE-AUDIT.md Part 2 §15/§16)
+
+The audit's single biggest data-model gap: before this slice, nothing anywhere in this codebase could ever
+record that an `APInvoice` was actually paid. `APInvoice.Post()` only ever posted Debit Expense / Credit
+Payable — nothing ever debited Payable and credited a bank account.
+
+- **Domain**: `BankAccount` — a flat master-data Business Object mirroring `TaxCode`'s shape (no parent
+  hierarchy, stops at Approved — master data, not a financial document). `AccountCode`/`AccountName`/
+  `AccountNameArabic`/`BankName`/`Iban`/`LinkedGLAccountId` (the real Asset/Bank G/L account a payment
+  against this account credits, validated `IsPostable`/`IsActive` the same way `APInvoiceService` validates
+  its own account references) /`IsActive`.
+  `Payment` — a real Business Object, the standard Draft → Submit → Approve → Post → Reverse lifecycle
+  (`APInvoice`/`JournalEntry` are the direct template). `VendorId`/`BankAccountId`/`PaymentDate`/
+  `PaymentMethod` (an admin-configurable Lookup code, type `PaymentMethod` — not a hardcoded enum, same
+  precedent as `SubcontractorTrade`/`SupplierTrade`/`ConsultantTrade`) /`Reference`. Owns a child
+  `PaymentAllocation` collection (`APInvoiceId`/`AllocatedAmount`) — one payment can settle several invoices,
+  and one invoice can be paid across several installments. `Amount` is computed from the allocations, never
+  stored, frozen once Posted (allocations can only be added while Draft).
+- **Application**: `PaymentService.PostAsync` generates one real linked Journal Entry via the existing
+  `JournalEntryService.CreateSystemGeneratedAsync` — **Debit each allocated invoice's own
+  `PayableAccountId`** (not a single guessed AP-control account) **+ Credit the Bank Account's
+  `LinkedGLAccountId`**, always balanced by construction. Cumulative overpayment protection mirrors
+  `GoodsReceiptNoteService`'s cumulative-received-vs-ordered pattern: before a Payment can be created or
+  Posted, every other *Posted, unreversed* Payment's allocations against the same invoice are summed and the
+  new allocation is rejected if it would exceed the invoice's Gross Amount. A Reversed payment's allocations
+  don't count — reversing releases the amount back to outstanding. `APInvoiceService` gained
+  `GetOutstandingBalanceAsync(invoiceId)` (Gross Amount minus every Posted-and-unreversed allocation against
+  it) — surfaced as a computed `OutstandingBalance` field on `APInvoiceDto` (zero unless the invoice is
+  Posted).
+- **Api**: `BankAccountsController` at `api/v1/finance/bank-accounts` (Create/Get/List/Update +
+  submit/approve/reject, mirrors `TaxCodesController`). `PaymentsController` at
+  `api/v1/finance/payments` (Create/Get/List + submit/approve/reject/post/reverse, mirrors
+  `APInvoicesController`; `GET ?apInvoiceId={id}` filters to every payment allocated against one invoice —
+  backs the AP Invoice detail page's "Payments applied" list).
+- **Frontend**: `BankAccountsPage.tsx` (flat list/create/details, mirrors `TaxCodesPage.tsx`).
+  `PaymentsPage.tsx` (list/create/details — the create form picks a Vendor, Bank Account, and Payment Method,
+  then shows that vendor's outstanding Posted invoices in a grid with an amount field per row, mirrors
+  `APInvoicesPage.tsx`/`GoodsReceiptNotesPage.tsx`'s create-with-line-grid shape). `APInvoicesPage.tsx`'s
+  detail view gained an Outstanding Balance field and a read-only Payments tab. Own nav areas under Finance
+  ("Bank Accounts", "Payments").
+- Verified end-to-end: 17 new unit tests (`BankAccountServiceTests`/`PaymentServiceTests` — GL account
+  validation, duplicate account code rejection, allocation validation, cumulative-overpayment rejection
+  across two separate payments, a second installment within the remaining balance succeeding, a reversed
+  payment releasing its allocation for reuse) + 11 new integration tests against real PostgreSQL
+  (`BankAccountPaymentPersistenceTests` — round-trip with child allocations, status transitions and
+  RowVersion, cascade delete of allocations). Live `curl` exercise: created and approved a Bank Account,
+  posted an AP Invoice (`FIN-AP-2026-000005`, 1000.00), created a Payment allocating the full amount,
+  drove it through Submit → Approve → Post, confirmed the generated Journal Entry was exactly Dr Payable
+  1000 / Cr Bank 1000 (balanced) and the invoice's `outstandingBalance` dropped to 0; attempted a second
+  payment against the same invoice and confirmed a 400 rejection ("exceeds outstanding balance 0.00");
+  reversed the payment and confirmed `outstandingBalance` returned to 1000. Live Playwright pass in both
+  English and Arabic (Bank Accounts create, Payments create with the outstanding-invoices allocation grid,
+  AP Invoice detail's Outstanding Balance/Payments tab, RTL layout, zero console errors).
+- **Known operational gap surfaced during verification**: the bootstrap `admin` user (`IdentitySeeder`)
+  seeds its role set once, the first time the `users` table is empty. Roles registered *after* that first
+  boot — like this slice's `Finance.BankAccount.*`/`Finance.Payment.*` — are never retroactively granted to
+  an already-seeded admin. Worked around manually for this verification via
+  `POST /api/v1/identity/users/{id}/roles`; a real fix (e.g. re-syncing the bootstrap admin's roles to the
+  full currently-registered set on every startup, or an admin UI for role assignment) is deferred — flagged
+  here rather than silently worked around.
+
 ## Modules.Finance.Contracts (added Phase 2, for Procurement's Purchase Order)
 
 A second published Contracts package alongside `Modules.MasterData.Contracts` — same "thin, dependency-free
@@ -128,7 +189,9 @@ placeholder, and swapping it for a real one later only touches that one class's 
 
 - Document Splitting, Parallel Ledgers, Controlling objects beyond a flat Cost Center reference, Budget
   Control (see `Modules.Finance.Contracts.IBudgetCheckService` above — the contract exists, the real budget
-  data behind it doesn't yet), Results Analysis/Settlement to CO-PA, AR/Cash-Bank — all real, all in
+  data behind it doesn't yet), Results Analysis/Settlement to CO-PA, AR (customer receipts — Cash/Bank
+  management itself is now built, see the Bank Accounts & AP Payment Recording section above; AR is the
+  mirror-image "customer paid us" flow, separately still unbuilt) — all real, all in
   docs/architecture/07-project-accounting-and-financial-architecture.md, all genuinely later work. Phase 1's
   exit bar (GL journal + AP invoice, both post/reverse-able with full audit trail) is now met; the full
   module vision in that document is not, and isn't meant to be yet.
@@ -148,5 +211,7 @@ placeholder, and swapping it for a real one later only touches that one class's 
 - G/L Account/Cost Center hierarchy cycle validation still doesn't exist (see Modules.MasterData/README.md's
   own deferred item) — a cyclic parent chain would affect any future roll-up reporting Finance builds on
   top of the chart, not anything in this slice today.
-- Real authentication: both Finance controllers hardcode `"system/ui"`/`"system/approver"`, same deferred
-  item as every Modules.MasterData controller.
+- No duplicate-payment-reference check and no bank statement reconciliation — a Payment is recorded as an
+  internal fact (this platform paid this invoice from this bank account), not reconciled against an actual
+  bank statement feed. Real for the audit's exit bar (record that a payment happened), not for a production
+  treasury/reconciliation process.

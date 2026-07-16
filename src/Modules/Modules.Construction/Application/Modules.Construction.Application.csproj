@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\Modules.Construction.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules.MasterData\Contracts\Modules.MasterData.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules.ProjectManagement\Contracts\Modules.ProjectManagement.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Platform\Platform.Core\Platform.Core.csproj" />
+    <ProjectReference Include="..\..\..\Platform\Platform.Audit\Platform.Audit.csproj" />
+    <ProjectReference Include="..\..\..\Platform\Platform.Workflow\Platform.Workflow.csproj" />
+    <ProjectReference Include="..\..\..\Platform\Platform.Security\Platform.Security.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

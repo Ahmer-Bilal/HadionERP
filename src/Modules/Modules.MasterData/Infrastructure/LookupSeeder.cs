@@ -35,6 +35,9 @@ public static class LookupSeeder
         // Contracts publication the moment a real consumer outside this module needs it" reasoning this
         // module's own README already anticipated.
         await SeedTypeAsync(dbContext, "PaymentMethod", "Payment Method", "طريقة الدفع", PaymentMethods, cancellationToken);
+        // Backs Modules.Construction.Domain.Contract.ContractType — same cross-module ILookupCatalog
+        // validation pattern as PaymentMethod above.
+        await SeedTypeAsync(dbContext, "ContractType", "Contract Type", "نوع العقد", ContractTypes, cancellationToken);
     }
 
     private static async Task SeedTypeAsync(
@@ -114,6 +117,13 @@ public static class LookupSeeder
         ("Check", "Check", "شيك"),
         ("CashPayment", "Cash Payment", "دفع نقدي"),
         ("OnlineTransfer", "Online Transfer", "تحويل إلكتروني"),
+    };
+
+    private static readonly (string, string, string?)[] ContractTypes =
+    {
+        ("LumpSum", "Lump Sum", "مبلغ مقطوع"),
+        ("UnitPrice", "Unit Price", "سعر الوحدة"),
+        ("CostPlus", "Cost Plus", "التكلفة زائد الربح"),
     };
 
     /// <summary>Matches docs/architecture/06-roadmap.md's own Phase 2 example list verbatim (Electrical/
