@@ -249,6 +249,44 @@ its own exit criteria.
   certified, and billed to the customer through a real AR posting with aging visible on that customer's
   Statement.
 
+### Construction commercial-process sequencing (added 2026-07-16, per `construction-commercial-processes-spec.md`)
+
+`Contract`+BOQ (2026-07-16) and `Subcontract` (2026-07-16, retention %/mobilization advance %/back-charges)
+are built. A detailed spec covering everything else in this phase —
+`src/Modules/Modules.Construction/construction-commercial-processes-spec.md` — was reviewed and its open
+design questions resolved before any further Construction code gets written; read that file for full
+FIDIC-style process detail (the IPC deduction waterfall, the two-party measurement certification workflow,
+the Client↔Main Contractor↔Subcontractor billing hierarchy). This section only records the sequencing and
+decisions, so the next session doesn't have to re-read the whole spec to know what's already settled.
+
+**Adopted build order** (the spec's own §7, unchanged): Site Progress/Measurement → IPC → Retention (already
+satisfied, flat % — see below) → Variation Orders → Extension of Time/Claims (new document type, not
+previously named anywhere in this roadmap) → a `Subcontract` rework pass to retrofit polymorphic
+Measurement/IPC usage plus two small additive fields (`SubcontractLine.MainContractBoqLineId?`,
+`Subcontract.PaymentLinkageType`).
+
+**Resolved, not to be re-litigated**:
+- **Measurement/IPC are polymorphic over "commercial document" from day one** (Contract OR Subcontract, not
+  `ContractId` alone) — a Subcontract needs its own independent measurement/billing cycle against the main
+  contractor, on its own schedule, per the spec's §6c Client↔Main Contractor↔Subcontractor analysis.
+  Building Contract-only first and retrofitting later would mean reworking every measurement/IPC table.
+- **`IsBillingElement` becomes load-bearing on Measurement lines** once that slice is built — the first
+  real enforcement of a WBS flag that's existed since Phase 3's WBS foundation but never been checked
+  anywhere. When Measurement lands, also retrofit the same check onto `Contract.AddBoqLine`/
+  `Subcontract.AddLine` (both currently accept any WBS element in the project, unrestricted) — a small
+  breaking validation change to make deliberately at that point, not silently now.
+- **Retention stays a flat percentage** on `Contract`/`Subcontract` (already built) — tiered retention rules
+  (e.g. 10% until 50% complete, then 5%) are a real enhancement but separable, deferred until an actual
+  Retention/IPC slice needs it.
+
+**Left open, decide when that slice actually starts** (not guessed now):
+- Whether IPC certification raises an AR invoice immediately or a separate WIP/unbilled-revenue step first —
+  depends on how Finance's still-nonexistent AR/Customer Invoice gets designed.
+- Variation Order workflow speed — simple Draft→Approved (matches every other module's first-cut BO shape)
+  vs. the industry-real two-speed Instructed→Priced→Approved. Recommend starting simple.
+- Extension of Time/Claims as its own document type (the spec's strong recommendation, not folded into
+  Variation Order) — accepted in principle, timing/scope to confirm when Variation Orders are reached.
+
 ## Checkpoint — Treasury, Fixed Assets & Equipment (added 2026-07-16, after Phase 3)
 Depends on Phase 3's real WBS cost postings existing. See `HadionERP_Missing_Features_Audit_V1.1.md` §7-8 for
 full detail; summarized here for sequencing only.

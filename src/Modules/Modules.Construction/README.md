@@ -133,9 +133,16 @@ and does not define its own project-cost structure. See
 ## Deferred (disclosed, not hidden)
 
 - **Site Progress/Measurement, Variation Orders, Retention (as a real withholding mechanic), IPC (Interim
-  Payment Certificate)** — the roadmap's other named pieces of this module. Site Progress/Variation Orders
-  reference a BOQ line or WBS element the way Subcontracts do; IPC billing needs Finance's still-open AR
-  gap closed first. Not started.
+  Payment Certificate), Extension of Time/Claims** — the roadmap's other named pieces of this module,
+  sequenced per `construction-commercial-processes-spec.md` (a detailed FIDIC-style process spec reviewed
+  and adopted 2026-07-16 — read it before starting any of these). Build order: Site Progress/Measurement →
+  IPC → Retention → Variation Orders → Extension of Time/Claims → a `Subcontract` rework pass. Three design
+  decisions were resolved in advance (see `docs/architecture/06-roadmap.md`'s "Construction commercial-
+  process sequencing" section for the full list): Measurement/IPC will be polymorphic over "commercial
+  document" (Contract or Subcontract) from day one, not `ContractId`-only; `IsBillingElement` will finally
+  become an enforced WBS flag (retrofitted onto `Contract.AddBoqLine`/`Subcontract.AddLine` at that point);
+  Retention stays a flat percentage rather than tiered rules. IPC's Finance-posting shape and Variation
+  Order's workflow speed are deliberately left open until those slices actually start. Not started.
 - **Retention/Mobilization Advance are commercial terms only, not yet mechanically enforced**:
   `Subcontract.RetentionPercentage`/`MobilizationAdvancePercentage` are stored and shown but nothing
   actually withholds a percentage from a Payment yet — `Modules.Finance.Payment` has no concept of a

@@ -59,6 +59,47 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 
 ## Entry Log (newest first)
 
+### 2026-07-16 — Construction commercial-process spec reviewed, open decisions resolved, roadmap sequenced
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 3 — Construction, Project Accounting & Accounts Receivable
+- Status: Completed (this checkpoint is documentation/planning only — no code changes)
+- What changed: After the Subcontracts slice (previous entry, same day), the user pointed at an untracked
+  file — `src/Modules/Modules.Construction/construction-commercial-processes-spec.md`, a detailed
+  FIDIC-style spec from another session/tool per this repo's own multi-agent workflow — and asked to "check
+  the spec and apply." The spec covers everything left in `Modules.Construction` (Site Progress/Measurement,
+  IPC, Retention, Variation Orders, and a new Extension-of-Time/Claims document type), plus a note that
+  `Subcontract` should eventually get its own independent Measurement/IPC cycle. Given the size (5+ future
+  slices) and that the spec's own §8 explicitly says several decisions must not be guessed silently, asked
+  the user how far to go this pass; the user chose to resolve the open design questions now and update the
+  roadmap, with no code written yet.
+  - **Resolved and recorded** (see `docs/architecture/06-roadmap.md`'s new "Construction commercial-process
+    sequencing" subsection for the full text): Measurement/IPC will be polymorphic over "commercial
+    document" (Contract or Subcontract) from day one, not `ContractId`-only — a Subcontract needs its own
+    independent billing cycle against the main contractor, and retrofitting this after a Contract-only build
+    would mean reworking every measurement/IPC table; `IsBillingElement` will finally become an enforced WBS
+    flag once Measurement is built, retrofitted onto `Contract.AddBoqLine`/`Subcontract.AddLine` at that
+    point (both currently accept any WBS element, unrestricted); Retention stays a flat percentage on
+    `Contract`/`Subcontract` rather than tiered rules, which are a real but separable enhancement.
+  - **Left explicitly open, not guessed**: whether IPC certification raises an AR invoice immediately or a
+    separate WIP/unbilled-revenue step first (depends on Finance's still-nonexistent AR/Customer Invoice
+    design); Variation Order workflow speed (simple Draft→Approved vs. the industry-real two-speed
+    Instructed→Priced→Approved — recommended starting simple); Extension of Time/Claims as its own document
+    type (accepted in principle per the spec's recommendation, timing to confirm when Variation Orders are
+    reached).
+  - Adopted the spec's own §7 build order: Site Progress/Measurement → IPC → Retention (already satisfied,
+    flat) → Variation Orders → Extension of Time/Claims → a `Subcontract` rework pass (retrofit polymorphic
+    Measurement/IPC usage + two small additive fields, `SubcontractLine.MainContractBoqLineId?` and
+    `Subcontract.PaymentLinkageType`).
+  - Committed the spec file itself (previously untracked) — it's now an adopted, referenced design document,
+    same tier as `HadionERP_Missing_Features_Audit_V1.1.md` at repo root.
+- Files touched: `docs/architecture/06-roadmap.md` (new subsection under Phase 3),
+  `src/Modules/Modules.Construction/README.md` (Deferred section extended),
+  `src/Modules/Modules.Construction/construction-commercial-processes-spec.md` (committed, not authored this
+  session), `PROGRESS.md` (this entry).
+- Next: Site Progress/Measurement is the next real implementation slice per the newly-adopted order —
+  polymorphic over Contract/Subcontract from the start, enforcing `IsBillingElement` on its lines.
+
 ### 2026-07-16 — Modules.Construction slice 2: Subcontracts (retention/mobilization advance/back-charges) built, tested, live-verified
 
 - Agent: Claude Sonnet 5
