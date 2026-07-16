@@ -17,6 +17,9 @@ public sealed class ConstructionDbContext : DbContext
 {
     public DbSet<Contract> Contracts => Set<Contract>();
     internal DbSet<BoqLine> BoqLines => Set<BoqLine>();
+    public DbSet<Subcontract> Subcontracts => Set<Subcontract>();
+    internal DbSet<SubcontractLine> SubcontractLines => Set<SubcontractLine>();
+    internal DbSet<BackCharge> BackCharges => Set<BackCharge>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
 
@@ -83,6 +86,85 @@ public sealed class ConstructionDbContext : DbContext
             entity.Property<Guid>("ContractId").HasColumnName("contract_id");
 
             entity.Ignore(e => e.Amount);
+        });
+
+        modelBuilder.Entity<Subcontract>(entity =>
+        {
+            entity.ToTable("subcontracts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.ContractId).HasColumnName("contract_id");
+            entity.Property(e => e.SubcontractorId).HasColumnName("subcontractor_id");
+            entity.Property(e => e.RetentionPercentage).HasColumnName("retention_percentage").HasColumnType("numeric(5,2)");
+            entity.Property(e => e.MobilizationAdvancePercentage).HasColumnName("mobilization_advance_percentage").HasColumnType("numeric(5,2)");
+            entity.Property(e => e.DefectsLiabilityPeriodMonths).HasColumnName("defects_liability_period_months");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("SubcontractId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.HasMany(e => e.BackCharges)
+                .WithOne()
+                .HasForeignKey("SubcontractId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.BackCharges)
+                .HasField("_backCharges")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+            entity.Ignore(e => e.SubcontractValue);
+            entity.Ignore(e => e.TotalBackCharges);
+            entity.Ignore(e => e.NetPayableValue);
+        });
+
+        modelBuilder.Entity<SubcontractLine>(entity =>
+        {
+            entity.ToTable("subcontract_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.DescriptionArabic).HasColumnName("description_arabic").HasMaxLength(500);
+            entity.Property(e => e.UnitOfMeasure).HasColumnName("unit_of_measure").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Quantity).HasColumnName("quantity").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.Rate).HasColumnName("rate").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.WbsElementId).HasColumnName("wbs_element_id");
+            entity.Property<Guid>("SubcontractId").HasColumnName("subcontract_id");
+
+            entity.Ignore(e => e.Amount);
+        });
+
+        modelBuilder.Entity<BackCharge>(entity =>
+        {
+            entity.ToTable("back_charges");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Amount).HasColumnName("amount").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.DateIncurred).HasColumnName("date_incurred");
+            entity.Property<Guid>("SubcontractId").HasColumnName("subcontract_id");
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

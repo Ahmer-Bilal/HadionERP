@@ -44,7 +44,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice (both post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording (2026-07-16). AR, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-16 |
 | Phase 2 — Procurement | **Exit criteria met** — full procure-to-pay cycle (BusinessRoles/Vendor Prequal → PR → RFQ → PO → GRN) built, tested, and live-verified, with a working 3-way match against AP closing the loop. Real Budget Control enforcement and a real line-by-line invoice match remain deferred Finance/Procurement depth, not required for Phase 2's exit bar | 2026-07-15 |
 | **Checkpoint** — UI/Visual Density Pass | **Paused by explicit user instruction** — teal identity (design-tokens.css) + `Platform.UI.SplitView` are live and retrofitted on `PurchaseOrdersPage`/`BusinessPartnersPage`, but the user judged this insufficient to compete visually with Fiori/Dynamics (color tokens + one layout mechanic, no icons/status pills/KPIs/avatars — see `feedback_visual_richness_gap` in memory) and told the AI to stop touching it and move to roadmap phases instead. Left as-is, not reverted. Resume only when the user explicitly asks for the visual pass again, with real surface richness this time | 2026-07-15 |
-| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s opening slice (Customer Contract + BOQ mapped onto WBS elements) built, tested, and live-verified 2026-07-16. Subcontracts/Site Progress/Variation Orders/Retention/IPC, the AR/Fiscal-Period/Budget-Check depth this phase was expanded to include, and Networks/Activities for ProjectManagement all remain not started | 2026-07-16 |
+| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, and its Subcontracts slice (retention %/mobilization advance %/back-charges) built, tested, and live-verified 2026-07-16. Site Progress/Variation Orders/real Retention withholding/IPC, the AR/Fiscal-Period/Budget-Check depth this phase was expanded to include, and Networks/Activities for ProjectManagement all remain not started | 2026-07-16 |
 | **Checkpoint** — Lookup Data / Admin Panel | **Completed** — a real, admin-configurable picklist engine (`LookupType`/`LookupValue`, `LookupService`, `LookupsController`) replaced the hardcoded `BusinessRoleType`/`AddressType` enums and unvalidated `Country`/`UnitOfMeasure` free text; a genuine multi-page Admin Panel (`LookupDataPage.tsx`, inline-editable SAP-style grids, one nav entry per type) lets an administrator add/edit/deactivate/delete lookup values and even define brand-new lookup types, with in-use delete protection. Live-verified end-to-end, EN+AR | 2026-07-15 |
 | **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, resolved) and AP Payment Recording (§16, now also resolved — see below) | 2026-07-15 |
 | **Checkpoint** — Real Authentication & Identity | **Completed** — closes audit §1/§3. `Modules.Identity` (JWT bearer auth, persisted Users, global default-deny) replaced every hardcoded actor literal solution-wide; role assignment now runs real Segregation of Duties conflict checking for the first time ever (block → override-with-reason → succeed, live-verified). Live-verified end-to-end, EN+AR, zero regressions (22 test projects) | 2026-07-15 |
@@ -58,6 +58,90 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-16 — Modules.Construction slice 2: Subcontracts (retention/mobilization advance/back-charges) built, tested, live-verified
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 3 — Construction, Project Accounting & Accounts Receivable
+- Status: In Progress — this slice (Subcontracts) is complete; Site Progress/Measurement, Variation
+  Orders, real Retention withholding, and IPC billing remain not started
+- What changed: Continued Phase 3 per the prior session's own "Next" note — Subcontracts was the natural
+  second `Modules.Construction` slice, since the roadmap names it as "a distinct document type from a
+  standard PO" specifically because of retention %/mobilization advance/back-charges, none of which a plain
+  Procurement PO models. First committed the prior session's outstanding work (AP Payment Recording/Bank
+  Accounts + the Contract+BOQ slice + the roadmap restructuring — all had accumulated uncommitted since the
+  last real commit), then entered plan mode given the scope (new Business Object, several design decisions:
+  Subcontract-to-Contract relationship, how to model retention/back-charges, whether it posts anywhere) and
+  got explicit plan approval before writing code.
+  - **Built `Subcontract : BusinessObject`** inside the existing `Modules.Construction` module (no new
+    module scaffolding — the csproj already referenced `Modules.MasterData.Contracts`/
+    `Modules.ProjectManagement.Contracts`). References `ProjectId` directly (validated Approved via
+    `IProjectLookup`, same as `Contract`) rather than nesting under a Contract; an optional `ContractId`
+    gives back-to-back traceability when the subcontract's scope corresponds to the main Customer Contract
+    (validated same-project + Approved when supplied, via `IContractRepository` injected directly since
+    `Contract` lives in this same module — no cross-module lookup needed). `SubcontractorId` validated via
+    `IBusinessPartnerLookup` against a narrower eligible-role set than Procurement's own
+    `PurchaseOrderService.VendorEligibleRoles` — only the **`Subcontractor`** role specifically qualifies,
+    not any vendor-family role. Carries `RetentionPercentage?`/`MobilizationAdvancePercentage?` (0-100) and
+    `DefectsLiabilityPeriodMonths?` (>=0) as commercial terms — stored and shown, **not yet wired to any
+    actual withholding mechanics** (disclosed, same "stored but not yet mechanically enforced" state
+    `Contract.AdvancePaymentPercentage` was already in). Owns a child `SubcontractLine` collection (same
+    shape as `BoqLine`) and a child `BackCharge` collection (Description/Amount/DateIncurred) — back charges
+    are **only addable once the Subcontract is Approved** (a live-execution event, not a Draft-time line
+    item), enforced in the domain itself. `SubcontractValue`/`TotalBackCharges`/`NetPayableValue` all
+    computed, never entered by hand. Stops at Approved like `Contract` — no Post/Reverse, no budget check at
+    Submit (same precedent: neither document posts to Finance or consumes budget until Payment/IPC exists
+    against it).
+  - **`SubcontractService`**, `SubcontractSecurity`/`SubcontractWorkflow` mirror `ContractService`/
+    `ContractSecurity`/`ContractWorkflow`'s shape closely — one Any-quorum Maintainer/Approver step,
+    `Construction.Subcontract.Maintain`/`.Approve` privilege keys, one SoD conflict rule. New
+    `AddBackChargeAsync` method (Maintainer-authorized, Approved-only, audited via
+    `IAuditRecorder.RecordFieldUpdate` — the same pattern `BusinessPartnerService` uses for adding an
+    Address/Contact post-creation).
+  - Number range key `CON-SUBCONTRACT` → `CON-SUBCON-2026-000001`.
+- Verified: full solution `dotnet test` after the change — 23 test projects, zero regressions. Added 30 new
+  unit tests (`SubcontractTests` domain-level — retention/mobilization % range validation, defects liability
+  >= 0, `AddLine`/`AddBackCharge` lifecycle gating and computed-value correctness; `SubcontractServiceTests`
+  — WBS-must-belong-to-project rejection, Project-must-be-Approved rejection, Subcontractor-must-be-
+  Approved/-hold-the-role rejections, optional-Contract-must-be-same-project/-Approved rejections, unknown
+  UnitOfMeasure rejection, back-charge rejected before Approved / accepted after, SoD/security denial) and 3
+  new integration tests against real PostgreSQL (`SubcontractPersistenceTests` — round-trip with lines and
+  back charges, cascade delete of both child collections, RowVersion increments across real transitions).
+  Generated and applied a new EF migration (`AddSubcontract`) to both `erp_platform_dev` and
+  `erp_platform_test`. Live `curl` cycle: created and approved a Project with WBS elements and an Approved
+  Subcontractor Business Partner, confirmed a line referencing an unknown WBS element and a
+  non-Subcontractor vendor (an Approved Supplier-only partner) are both correctly rejected with 400, created
+  a real Subcontract with two lines (confirmed `SubcontractValue` computed correctly: 100×50 + 20×200 =
+  9,000), confirmed a back-charge attempt is correctly rejected with 409 before Approval, drove it through
+  Submit→Approve, then added a back-charge and confirmed `NetPayableValue` dropped from 9,000 to 8,500.
+  **Same known operational gap as every module-adding session before this one**: the bootstrap `admin`
+  user's roles aren't retroactively synced when new roles get registered — worked around manually via
+  `POST /api/v1/identity/users/{id}/roles` with an explicit SoD override reason (granting a fourth
+  Maintainer+Approver pair to the same admin account correctly triggers the same-actor conflict rule by
+  design, since admin already holds every other module's pair). Live Playwright pass (standalone
+  `playwright` install in the scratchpad, no MCP browser tool available in this session, same deviation as
+  every prior verification session) — screenshots, zero console errors — on `SubcontractsPage.tsx`'s list, a
+  full UI-driven create→submit→approve→add-back-charge cycle, and the detail view's three FastTabs
+  (General/Lines/Back Charges), in both English and Arabic, full RTL mirroring confirmed including the new
+  "Subcontracts" nav area alongside "Contracts" under "Construction."
+- Files touched: `src/Modules/Modules.Construction/Domain/Subcontract.cs`, `SubcontractLine.cs`,
+  `BackCharge.cs` (new); `Application/SubcontractDto.cs`, `ISubcontractRepository.cs`,
+  `SubcontractSecurity.cs`, `SubcontractWorkflow.cs`, `SubcontractService.cs` (new);
+  `Infrastructure/EfSubcontractRepository.cs` (new), `ConstructionDbContext.cs` (new tables), migration
+  `20260716194809_AddSubcontract`; `Api/SubcontractsController.cs` (new); `README.md` (Subcontracts section
+  added); `src/Gateway/Gateway.Api/Program.cs` (security/workflow/SoD/number-range/DI wiring);
+  `tests/UnitTests/Modules.Construction.Tests/SubcontractTests.cs`, `SubcontractServiceTests.cs`,
+  `FakeSubcontractRepository.cs`, `FakeBusinessPartnerLookup.cs` (new);
+  `tests/IntegrationTests/Modules.Construction.IntegrationTests/SubcontractPersistenceTests.cs` (new),
+  `TestDatabase.cs` (reset coverage); frontend `src/Apps/Apps.Shell/src/api/subcontractApi.ts` (new),
+  `pages/SubcontractsPage.tsx` (new), `App.tsx` (nav/routing), `i18n/content.ts` (`sub.*`/
+  `nav.subcontracts*` keys, EN+AR).
+- Next: Site Progress/Measurement (progress against BOQ lines) and Variation Orders are the next named
+  Construction pieces per the roadmap's dependency order. In parallel or after, Finance's AR gap (no
+  Customer Invoice at all today) needs closing before IPC billing can exist, and real Retention withholding
+  needs AR/IPC to exist first per `docs/architecture/07-project-accounting-and-financial-architecture.md`
+  §4's own framing. Also still open: Fiscal Year/Period management, real Budget Check, amount-conditioned
+  approval matrices, and the generic Statement pattern design.
 
 ### 2026-07-16 — Modules.Construction slice 1: Customer Contract + BOQ mapped onto WBS elements built, tested, live-verified
 

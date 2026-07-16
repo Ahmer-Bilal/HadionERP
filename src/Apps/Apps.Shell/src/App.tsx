@@ -20,6 +20,7 @@ import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
 import { GoodsReceiptNotesPage } from "./pages/GoodsReceiptNotesPage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ContractsPage } from "./pages/ContractsPage";
+import { SubcontractsPage } from "./pages/SubcontractsPage";
 import { LookupDataPage } from "./pages/LookupDataPage";
 import { UsersPage } from "./pages/UsersPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -31,7 +32,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "bank-accounts" | "payments" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "contracts" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "bank-accounts" | "payments" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "contracts" | "subcontracts" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -51,6 +52,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#goods-receipt-notes") return "goods-receipt-notes";
   if (window.location.hash === "#projects") return "projects";
   if (window.location.hash === "#contracts") return "contracts";
+  if (window.location.hash === "#subcontracts") return "subcontracts";
   if (window.location.hash === "#lookup-data") return "lookup-data";
   if (window.location.hash === "#lookup-country") return "lookup-country";
   if (window.location.hash === "#lookup-business-role-type") return "lookup-business-role-type";
@@ -413,6 +415,18 @@ function App() {
             },
           ],
         },
+        {
+          key: "subcontracts",
+          label: t("nav.subcontractsArea", language),
+          items: [
+            {
+              key: "all-subcontracts",
+              label: t("nav.allSubcontracts", language),
+              href: "#subcontracts",
+              isActive: page === "subcontracts",
+            },
+          ],
+        },
       ],
     },
   ];
@@ -473,6 +487,8 @@ function App() {
             <ProjectsPage language={language} />
           ) : page === "contracts" ? (
             <ContractsPage language={language} />
+          ) : page === "subcontracts" ? (
+            <SubcontractsPage language={language} />
           ) : page === "lookup-data" ? (
             <LookupDataPage language={language} />
           ) : page === "lookup-country" ? (

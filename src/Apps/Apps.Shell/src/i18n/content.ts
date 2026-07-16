@@ -338,6 +338,8 @@ type TranslationKey =
   | "nav.constructionModule"
   | "nav.contractsArea"
   | "nav.allContracts"
+  | "nav.subcontractsArea"
+  | "nav.allSubcontracts"
   | "nav.lookupDataArea"
   | "nav.allLookupTypes"
   | "nav.lookupCountries"
@@ -542,6 +544,47 @@ type TranslationKey =
   | "con.columnContractValue"
   | "con.columnStatus"
   | "con.tabBoqLines"
+  | "sub.heading"
+  | "sub.newHeading"
+  | "sub.emptyState"
+  | "sub.selectHint"
+  | "sub.selectProjectFirstHint"
+  | "sub.backChargeRequiresApprovedHint"
+  | "sub.actionNew"
+  | "sub.actionCreate"
+  | "sub.actionBack"
+  | "sub.actionSubmit"
+  | "sub.actionApprove"
+  | "sub.actionReject"
+  | "sub.actionAddLine"
+  | "sub.actionRemoveLine"
+  | "sub.actionAddBackCharge"
+  | "sub.fieldProject"
+  | "sub.fieldContract"
+  | "sub.fieldSubcontractor"
+  | "sub.fieldRetentionPercentage"
+  | "sub.fieldMobilizationAdvancePercentage"
+  | "sub.fieldDefectsLiabilityPeriodMonths"
+  | "sub.fieldTotalBackCharges"
+  | "sub.fieldNetPayableValue"
+  | "sub.fieldLineCode"
+  | "sub.fieldLineDescription"
+  | "sub.fieldLineDescriptionArabic"
+  | "sub.fieldLineUnitOfMeasure"
+  | "sub.fieldLineQuantity"
+  | "sub.fieldLineRate"
+  | "sub.fieldLineAmount"
+  | "sub.fieldLineWbsElement"
+  | "sub.fieldBackChargeDescription"
+  | "sub.fieldBackChargeAmount"
+  | "sub.fieldBackChargeDate"
+  | "sub.columnDocumentNumber"
+  | "sub.columnProject"
+  | "sub.columnSubcontractor"
+  | "sub.columnSubcontractValue"
+  | "sub.columnStatus"
+  | "sub.tabLines"
+  | "sub.tabBackCharges"
   | "lookup.hubHeading"
   | "lookup.newTypeHeading"
   | "lookup.columnCode"
@@ -949,6 +992,8 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.constructionModule": { en: "Construction", ar: "الإنشاءات" },
   "nav.contractsArea": { en: "Contracts", ar: "العقود" },
   "nav.allContracts": { en: "All Contracts", ar: "جميع العقود" },
+  "nav.subcontractsArea": { en: "Subcontracts", ar: "عقود الباطن" },
+  "nav.allSubcontracts": { en: "All Subcontracts", ar: "جميع عقود الباطن" },
   "nav.allProjects": { en: "All Projects", ar: "جميع المشاريع" },
   "nav.lookupDataArea": { en: "Lookup Data", ar: "بيانات القوائم" },
   "nav.allLookupTypes": { en: "All Lookup Types", ar: "جميع أنواع القوائم" },
@@ -1165,6 +1210,47 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "con.columnContractValue": { en: "Contract Value", ar: "قيمة العقد" },
   "con.columnStatus": { en: "Status", ar: "الحالة" },
   "con.tabBoqLines": { en: "BOQ Lines", ar: "بنود جدول الكميات" },
+  "sub.heading": { en: "Subcontracts", ar: "عقود الباطن" },
+  "sub.newHeading": { en: "New Subcontract", ar: "عقد باطن جديد" },
+  "sub.emptyState": { en: "No subcontracts yet.", ar: "لا توجد عقود باطن حتى الآن." },
+  "sub.selectHint": { en: "Select a subcontract from the list to see its details.", ar: "اختر عقد باطن من القائمة لعرض تفاصيله." },
+  "sub.selectProjectFirstHint": { en: "Select a project above to build the scope of work against its WBS elements.", ar: "اختر مشروعًا أعلاه لبناء نطاق العمل وفق عناصر هيكل تجزئة العمل الخاصة به." },
+  "sub.backChargeRequiresApprovedHint": { en: "Back charges can only be recorded once the subcontract is Approved.", ar: "لا يمكن تسجيل خصومات الاسترداد إلا بعد اعتماد عقد الباطن." },
+  "sub.actionNew": { en: "New", ar: "جديد" },
+  "sub.actionCreate": { en: "Create", ar: "إنشاء" },
+  "sub.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "sub.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "sub.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "sub.actionReject": { en: "Reject", ar: "رفض" },
+  "sub.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "sub.actionRemoveLine": { en: "Remove", ar: "إزالة" },
+  "sub.actionAddBackCharge": { en: "Add Back Charge", ar: "إضافة خصم استرداد" },
+  "sub.fieldProject": { en: "Project", ar: "المشروع" },
+  "sub.fieldContract": { en: "Contract", ar: "العقد" },
+  "sub.fieldSubcontractor": { en: "Subcontractor", ar: "المقاول من الباطن" },
+  "sub.fieldRetentionPercentage": { en: "Retention %", ar: "نسبة الاحتجاز" },
+  "sub.fieldMobilizationAdvancePercentage": { en: "Mobilization Advance %", ar: "نسبة دفعة التهيئة" },
+  "sub.fieldDefectsLiabilityPeriodMonths": { en: "Defects Liability Period (months)", ar: "فترة ضمان العيوب (بالأشهر)" },
+  "sub.fieldTotalBackCharges": { en: "Total Back Charges", ar: "إجمالي خصومات الاسترداد" },
+  "sub.fieldNetPayableValue": { en: "Net Payable Value", ar: "صافي المبلغ المستحق" },
+  "sub.fieldLineCode": { en: "Code", ar: "الرمز" },
+  "sub.fieldLineDescription": { en: "Description", ar: "الوصف" },
+  "sub.fieldLineDescriptionArabic": { en: "Description (Arabic)", ar: "الوصف (عربي)" },
+  "sub.fieldLineUnitOfMeasure": { en: "Unit of Measure", ar: "وحدة القياس" },
+  "sub.fieldLineQuantity": { en: "Quantity", ar: "الكمية" },
+  "sub.fieldLineRate": { en: "Rate", ar: "السعر" },
+  "sub.fieldLineAmount": { en: "Amount", ar: "المبلغ" },
+  "sub.fieldLineWbsElement": { en: "WBS Element", ar: "عنصر هيكل تجزئة العمل" },
+  "sub.fieldBackChargeDescription": { en: "Description", ar: "الوصف" },
+  "sub.fieldBackChargeAmount": { en: "Amount", ar: "المبلغ" },
+  "sub.fieldBackChargeDate": { en: "Date Incurred", ar: "تاريخ التكبد" },
+  "sub.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "sub.columnProject": { en: "Project", ar: "المشروع" },
+  "sub.columnSubcontractor": { en: "Subcontractor", ar: "المقاول من الباطن" },
+  "sub.columnSubcontractValue": { en: "Subcontract Value", ar: "قيمة عقد الباطن" },
+  "sub.columnStatus": { en: "Status", ar: "الحالة" },
+  "sub.tabLines": { en: "Lines", ar: "البنود" },
+  "sub.tabBackCharges": { en: "Back Charges", ar: "خصومات الاسترداد" },
   "lookup.hubHeading": { en: "Lookup Data", ar: "بيانات القوائم" },
   "lookup.newTypeHeading": { en: "Create a new lookup type", ar: "إنشاء نوع قائمة جديد" },
   "lookup.columnCode": { en: "Code", ar: "الرمز" },

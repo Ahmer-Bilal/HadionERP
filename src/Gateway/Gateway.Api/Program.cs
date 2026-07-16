@@ -147,7 +147,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 LookupSecurity.AdministratorRole, IdentitySecurity.AdministratorRole,
                 BankAccountSecurity.MaintainerRole, BankAccountSecurity.ApproverRole,
                 PaymentSecurity.MaintainerRole, PaymentSecurity.ApproverRole,
-                ContractSecurity.MaintainerRole, ContractSecurity.ApproverRole },
+                ContractSecurity.MaintainerRole, ContractSecurity.ApproverRole,
+                SubcontractSecurity.MaintainerRole, SubcontractSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -167,7 +168,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 LookupSecurity.AdministratorDuty, IdentitySecurity.AdministratorDuty,
                 BankAccountSecurity.MaintainerDuty, BankAccountSecurity.ApproverDuty,
                 PaymentSecurity.MaintainerDuty, PaymentSecurity.ApproverDuty,
-                ContractSecurity.MaintainerDuty, ContractSecurity.ApproverDuty });
+                ContractSecurity.MaintainerDuty, ContractSecurity.ApproverDuty,
+                SubcontractSecurity.MaintainerDuty, SubcontractSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -201,6 +203,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         BankAccountSecurity.MaintainerApproverConflict,
         PaymentSecurity.MaintainerApproverConflict,
         ContractSecurity.MaintainerApproverConflict,
+        SubcontractSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
@@ -259,6 +262,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         BankAccountWorkflow.SubmitApprovalDefinition,
         PaymentWorkflow.SubmitApprovalDefinition,
         ContractWorkflow.SubmitApprovalDefinition,
+        SubcontractWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -604,6 +608,26 @@ builder.Services.AddScoped<ContractService>(sp => new ContractService(
     sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IProjectLookup>(),
+    sp.GetRequiredService<ILookupCatalog>()));
+
+// Subcontract: the next Phase 3 slice on top of Contract — references the same IProjectLookup/
+// ILookupCatalog, plus IContractRepository directly (same module, no cross-module lookup needed) for the
+// optional back-to-back ContractId traceability check, and IBusinessPartnerLookup (already registered
+// above under Modules.MasterData.Contracts) to validate the subcontractor.
+builder.Services.AddScoped<ISubcontractRepository, Modules.Construction.Infrastructure.EfSubcontractRepository>();
+builder.Services.AddScoped<SubcontractService>(sp => new SubcontractService(
+    sp.GetRequiredService<ISubcontractRepository>(),
+    sp.GetRequiredService<IContractRepository>(),
+    new Modules.Construction.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>(),
+        new[] { new NumberRangeDefinition(SubcontractService.NumberRangeKey, "CON", "SUBCON") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Construction.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IProjectLookup>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>(),
     sp.GetRequiredService<ILookupCatalog>()));
 
 var app = builder.Build();
