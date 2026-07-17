@@ -3,7 +3,7 @@ using Platform.Core;
 namespace Modules.Finance.Domain;
 
 /// <summary>
-/// One payment made to a vendor — closes `ARCHITECTURE-AUDIT.md` Part 2 §16, the single biggest data-model
+/// One payment made to a vendor — closes `MISSING-FEATURES-AUDIT.md` Part 2 §16, the single biggest data-model
 /// gap the audit found: before this class existed, nothing anywhere in this codebase could ever record
 /// that an <see cref="APInvoice"/> was actually paid. Same Draft → Submit → Approve → Post → Reverse
 /// lifecycle as <see cref="APInvoice"/>/<see cref="JournalEntry"/>; Posting a payment generates a real

@@ -20,7 +20,7 @@ public sealed class APInvoiceService
     /// enum type) this platform can raise an AP invoice against — deliberately excludes Client (an
     /// AR-invoiced counterparty, not a payable one), JointVenturePartner (a relationship, not a commercial
     /// vendor), and GovernmentAuthority (no commercial relationship at all, per
-    /// docs/architecture/06-roadmap.md's Phase 2 design).</summary>
+    /// ROADMAP.md's Phase 2 design).</summary>
     private static readonly HashSet<string> PayableEligibleRoles = new(StringComparer.OrdinalIgnoreCase)
     {
         "Supplier", "Subcontractor", "Consultant", "RentalCompany", "Manufacturer", "ManpowerSupplier", "TestingLaboratory",
@@ -134,7 +134,7 @@ public sealed class APInvoiceService
         return (dtos, total);
     }
 
-    /// <summary>How much of this invoice's Gross Amount is still unpaid — closes `ARCHITECTURE-AUDIT.md`
+    /// <summary>How much of this invoice's Gross Amount is still unpaid — closes `MISSING-FEATURES-AUDIT.md`
     /// Part 2 §16 (before <c>Payment</c> existed, this question was simply unanswerable anywhere in the
     /// system). Gross Amount minus every *Posted, unreversed* Payment's allocation against it — a Draft/
     /// Submitted/Approved payment's allocations don't count yet (proposals, not real ledger effects), and a

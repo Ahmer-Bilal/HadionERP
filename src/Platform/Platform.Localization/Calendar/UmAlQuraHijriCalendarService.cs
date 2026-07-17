@@ -5,7 +5,7 @@ namespace Platform.Localization.Calendar;
 /// <summary>
 /// Wraps .NET's built-in <see cref="UmAlQuraCalendar"/> — a table-based calendar licensed from the Saudi
 /// government (not an astronomical approximation), which is exactly the "Hijri (Umm al-Qura)" calendar
-/// docs/architecture/03-platform-services.md #1.2 calls for. Using the built-in .NET type means no
+/// docs/architecture/04-platform-services.md #1.2 calls for. Using the built-in .NET type means no
 /// external dependency and no home-grown conversion math to get subtly wrong.
 ///
 /// Supported range is 1900-04-30 through 2077-11-16 (Gregorian) — the range .NET's implementation ships

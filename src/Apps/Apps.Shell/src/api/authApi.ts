@@ -21,7 +21,7 @@ const BASE_PATH = "/api/v1/identity/auth";
 const TOKEN_STORAGE_KEY = "hadionerp.auth.token";
 
 // Module-level cache + localStorage persistence across reloads — a disclosed simplification (not httpOnly-
-// cookie-grade XSS hardening), see ARCHITECTURE-AUDIT.md Part 1 §1's own stated scope boundary for this pass.
+// cookie-grade XSS hardening), see MISSING-FEATURES-AUDIT.md Part 1 §1's own stated scope boundary for this pass.
 let cachedToken: string | null = localStorage.getItem(TOKEN_STORAGE_KEY);
 
 export function getToken(): string | null {

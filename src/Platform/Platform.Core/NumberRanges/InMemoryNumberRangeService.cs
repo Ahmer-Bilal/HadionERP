@@ -6,7 +6,7 @@ namespace Platform.Core.NumberRanges;
 /// Reference implementation of <see cref="INumberRangeService"/> that counts in memory, per
 /// (range, company, fiscal year). This is what proves the kernel's numbering contract works in Phase 0
 /// tests; a real deployment swaps this for a database-backed implementation behind the same interface
-/// (Dependency Inversion, per docs/architecture/01-architecture-foundation.md §1) — module/BO code never
+/// (Dependency Inversion, per docs/architecture/01-overview.md §1) — module/BO code never
 /// changes when that swap happens.
 /// </summary>
 public sealed class InMemoryNumberRangeService : INumberRangeService

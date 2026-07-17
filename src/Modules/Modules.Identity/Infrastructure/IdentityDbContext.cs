@@ -5,7 +5,7 @@ namespace Modules.Identity.Infrastructure;
 
 /// <summary>
 /// This module's own Postgres schema ("identity") — same physical database as every other module, schema-
-/// per-module is the boundary (docs/architecture/01-architecture-foundation.md #3.2), same pattern as
+/// per-module is the boundary (docs/architecture/01-overview.md #3.2), same pattern as
 /// every other module's own DbContext.
 /// </summary>
 public sealed class IdentityDbContext : DbContext

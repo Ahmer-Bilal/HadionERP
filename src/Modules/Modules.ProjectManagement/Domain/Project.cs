@@ -3,7 +3,7 @@ using Platform.Core;
 namespace Modules.ProjectManagement.Domain;
 
 /// <summary>
-/// The Project Definition (docs/architecture/07-project-accounting-and-financial-architecture.md §4) —
+/// The Project Definition (docs/architecture/07-integrated-project-controlling.md §4) —
 /// Phase 3's opening slice, the generic cost/schedule backbone every later project-based module
 /// (Modules.Construction's Contracts/BOQ/Subcontracts, Procurement's future WBS-aware PO lines, Payroll's
 /// future labor-cost postings) references instead of inventing its own "which project does this belong to"

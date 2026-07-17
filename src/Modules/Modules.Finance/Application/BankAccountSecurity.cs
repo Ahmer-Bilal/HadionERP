@@ -36,5 +36,5 @@ public static class BankAccountSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both create/maintain and approve a Bank Account " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

@@ -4,7 +4,7 @@ namespace Modules.Procurement.Domain;
 
 /// <summary>
 /// One vendor's qualification to act in a specific <see cref="RoleType"/>+<see cref="Trade"/> combination —
-/// the first Phase 2 Business Object (docs/architecture/06-roadmap.md), and the reason
+/// the first Phase 2 Business Object (ROADMAP.md), and the reason
 /// Modules.MasterData.Domain.BusinessRole allows the same role type twice with a different trade (a
 /// Subcontractor–Electrical prequalification is entirely separate from a Subcontractor–Concrete one on the
 /// same company). <see cref="RoleType"/> is a plain string, not a shared enum reference, because

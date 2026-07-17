@@ -5,7 +5,7 @@ namespace Platform.Api;
 
 /// <summary>
 /// The base controller every module's API controller inherits. Establishes the shared conventions from
-/// docs/architecture/04-data-and-api.md #2 so every endpoint across every module behaves the same way:
+/// docs/architecture/05-data-and-api.md #2 so every endpoint across every module behaves the same way:
 /// the same route-prefix pattern, the same error-envelope shape, the same paged-result helper. A module's
 /// controller inherits this and gets the conventions for free; it doesn't reimplement them.
 ///
@@ -19,7 +19,7 @@ public abstract class PlatformApiController : ControllerBase
 {
     /// <summary>The real logged-in user's username, resolved from the validated JWT's name claim — replaces
     /// what every controller used to hardcode as <c>"system/ui"</c>/<c>"system/approver"</c>
-    /// (`ARCHITECTURE-AUDIT.md` Part 1 §1). This is the exact string every Application-layer service's
+    /// (`MISSING-FEATURES-AUDIT.md` Part 1 §1). This is the exact string every Application-layer service's
     /// existing <c>actor: string</c> parameter already expects; no service-layer code changes when a
     /// controller switches from a hardcoded literal to this property. Throws if called from an action that
     /// doesn't actually require authentication — every action does by default (see the global

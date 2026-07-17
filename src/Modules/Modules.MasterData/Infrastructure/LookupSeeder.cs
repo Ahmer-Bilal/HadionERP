@@ -21,7 +21,7 @@ public static class LookupSeeder
         await SeedTypeAsync(dbContext, "Country", "Country", "الدولة", Countries, cancellationToken);
         await SeedTypeAsync(dbContext, "UnitOfMeasure", "Unit of Measure", "وحدة القياس", UnitsOfMeasure, cancellationToken);
         // Trade is split into one lookup type PER role family, not one flat undifferentiated list —
-        // docs/architecture/06-roadmap.md's own Phase 2 design is explicit that a Subcontractor's trades
+        // ROADMAP.md's own Phase 2 design is explicit that a Subcontractor's trades
         // (Electrical/Concrete/Steel Structure/...) are a different real-world taxonomy from a Supplier's
         // (Steel/Cement/MEP Materials/...) or a Consultant's (Structural/Architectural/MEP Design/...) —
         // mixing all three into one list would offer a Consultant "Earthworks" as a suggestion, which is
@@ -30,7 +30,7 @@ public static class LookupSeeder
         await SeedTypeAsync(dbContext, "SubcontractorTrade", "Subcontractor Trade", "تخصص مقاول الباطن", SubcontractorTrades, cancellationToken);
         await SeedTypeAsync(dbContext, "SupplierTrade", "Supplier Trade", "تخصص المورد", SupplierTrades, cancellationToken);
         await SeedTypeAsync(dbContext, "ConsultantTrade", "Consultant Trade", "تخصص الاستشاري", ConsultantTrades, cancellationToken);
-        // Backs Modules.Finance.Domain.Payment.PaymentMethod (`ARCHITECTURE-AUDIT.md` Part 2 §16) —
+        // Backs Modules.Finance.Domain.Payment.PaymentMethod (`MISSING-FEATURES-AUDIT.md` Part 2 §16) —
         // validated cross-module via the new Modules.MasterData.Contracts.ILookupCatalog, same "add a real
         // Contracts publication the moment a real consumer outside this module needs it" reasoning this
         // module's own README already anticipated.
@@ -126,7 +126,7 @@ public static class LookupSeeder
         ("CostPlus", "Cost Plus", "التكلفة زائد الربح"),
     };
 
-    /// <summary>Matches docs/architecture/06-roadmap.md's own Phase 2 example list verbatim (Electrical/
+    /// <summary>Matches ROADMAP.md's own Phase 2 example list verbatim (Electrical/
     /// Concrete/Mechanical/Steel Structure/Earthworks), expanded with the rest of a real construction
     /// subcontract package.</summary>
     private static readonly (string, string, string?)[] SubcontractorTrades =

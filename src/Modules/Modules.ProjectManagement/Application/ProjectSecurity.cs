@@ -35,5 +35,5 @@ public static class ProjectSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both define and release a Project " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

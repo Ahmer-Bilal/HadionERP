@@ -41,7 +41,7 @@ public sealed class EfLookupRepository : ILookupRepository
     public void RemoveValue(LookupValue lookupValue) => _dbContext.LookupValues.Remove(lookupValue);
 
     /// <summary>Each retrofitted lookup type maps to the one column it now backs — see
-    /// docs/architecture and <c>Modules.MasterData/README.md</c>'s Lookup Data section for which fields
+    /// <c>docs/module/master-data.md</c>'s Lookup Data section for which fields
     /// are wired. A lookup type with no wired consumer (a brand-new admin-created one, or a seeded type not
     /// yet referenced by any field) always reports false — nothing blocks deleting its values.</summary>
     public async Task<bool> IsValueInUseAsync(string lookupTypeCode, string valueCode, CancellationToken cancellationToken = default)

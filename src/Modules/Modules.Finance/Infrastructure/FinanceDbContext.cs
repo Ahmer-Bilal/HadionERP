@@ -9,7 +9,7 @@ namespace Modules.Finance.Infrastructure;
 
 /// <summary>
 /// This module's own Postgres schema ("finance") — physically enforcing the module-boundary rule from
-/// docs/architecture/01-architecture-foundation.md §3.2 at the database level, same as
+/// docs/architecture/01-overview.md §3.2 at the database level, same as
 /// Modules.MasterData's own "masterdata" schema. Owns its own copies of the generic kernel-port
 /// implementations (WorkflowInstance persistence, number range counters) rather than sharing MasterData's
 /// tables — see <see cref="NumberRangeCounterEntity"/>'s doc comment for why.

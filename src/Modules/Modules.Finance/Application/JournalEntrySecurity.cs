@@ -39,5 +39,5 @@ public static class JournalEntrySecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both create/maintain and approve/post a Journal Entry " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

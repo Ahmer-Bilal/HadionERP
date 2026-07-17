@@ -5,7 +5,7 @@ namespace Platform.Api;
 
 /// <summary>
 /// Parses the OData-style query parameters ($filter, $select, $orderby, $top, $skip, $count) from a
-/// request's query string into a typed object (docs/architecture/04-data-and-api.md #2.1). This is the
+/// request's query string into a typed object (docs/architecture/05-data-and-api.md #2.1). This is the
 /// standard input every List Report endpoint receives — consistent, predictable, and matches what
 /// integrators expect coming from SAP/Dynamics backgrounds.
 ///

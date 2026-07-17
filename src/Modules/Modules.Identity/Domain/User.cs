@@ -2,7 +2,7 @@ namespace Modules.Identity.Domain;
 
 /// <summary>
 /// A real, logged-in user — replaces the hardcoded actor literals (<c>"system/ui"</c>, <c>"system/approver"</c>)
-/// every controller used before this module existed (see `ARCHITECTURE-AUDIT.md` Part 1 §1). <see cref="Username"/>
+/// every controller used before this module existed (see `MISSING-FEATURES-AUDIT.md` Part 1 §1). <see cref="Username"/>
 /// is the same <c>actor: string</c> value every Application-layer service across every module already
 /// accepts — no Application service changes when this module was added, only what *produces* that string
 /// changes (a real authenticated identity instead of a controller constant).

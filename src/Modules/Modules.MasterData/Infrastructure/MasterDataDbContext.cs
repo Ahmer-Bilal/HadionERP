@@ -11,7 +11,7 @@ namespace Modules.MasterData.Infrastructure;
 
 /// <summary>
 /// This module's own Postgres schema ("masterdata") — physically enforcing the module-boundary rule
-/// from docs/architecture/01-architecture-foundation.md #3.2 at the database level, not just in
+/// from docs/architecture/01-overview.md #3.2 at the database level, not just in
 /// application code (every module owns its own schema).
 /// </summary>
 public sealed class MasterDataDbContext : DbContext
@@ -70,7 +70,7 @@ public sealed class MasterDataDbContext : DbContext
             entity.Property(e => e.TaxRegistrationNumber).HasColumnName("tax_registration_number").HasMaxLength(50);
 
             // ExtensionFieldBag doesn't expose its internals — it exists specifically so extensions can
-            // add fields without a schema migration (docs/architecture/04-data-and-api.md #1.3) — so it's
+            // add fields without a schema migration (docs/architecture/05-data-and-api.md #1.3) — so it's
             // persisted as its own JSON serialization, not decomposed into columns.
             entity.Property(e => e.ExtensionFields)
                 .HasColumnName("extension_data")

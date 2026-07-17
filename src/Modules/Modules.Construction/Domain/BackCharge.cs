@@ -3,7 +3,7 @@ namespace Modules.Construction.Domain;
 /// <summary>
 /// A negative line item recorded against an Approved <see cref="Subcontract"/> — a cost recovery/damage
 /// deduction (rework, delay, material recovery) against what the subcontractor is ultimately owed, per
-/// docs/architecture/06-roadmap.md's Phase 3 scope ("Subcontracts... back-charges — a distinct document
+/// ROADMAP.md's Phase 3 scope ("Subcontracts... back-charges — a distinct document
 /// type from a standard PO"). Not yet wired to any actual Payment deduction (`Modules.Finance.Payment` has
 /// no concept of a Subcontract or its back-charges) — that integration is a later slice, once IPC/Payment
 /// against Subcontracts exists; today this only reduces the computed <see cref="Subcontract.NetPayableValue"/>

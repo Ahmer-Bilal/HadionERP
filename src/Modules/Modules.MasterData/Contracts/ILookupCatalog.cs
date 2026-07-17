@@ -4,7 +4,7 @@ namespace Modules.MasterData.Contracts;
 /// The published, read-only view of one admin-configurable Lookup value another module (Finance's
 /// `PaymentService`, validating `PaymentMethod`) may depend on — same Contracts-package rule as
 /// <see cref="IGLAccountLookup"/>. Built the moment a real cross-module consumer needed it, per
-/// `Modules.MasterData/README.md`'s own Deferred note ("add `ILookupCatalog` the same way
+/// `docs/module/master-data.md`'s own Deferred note ("add `ILookupCatalog` the same way
 /// `IBusinessPartnerLookup`/`IItemLookup` exist once a module outside MasterData actually needs to read a
 /// lookup type") — not built speculatively ahead of a real need.
 /// </summary>

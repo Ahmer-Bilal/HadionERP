@@ -2,7 +2,7 @@ namespace Platform.Core.NumberRanges;
 
 /// <summary>
 /// Assigns human-facing document numbers, scoped per company/branch/fiscal year, per the naming
-/// convention in docs/architecture/05-engineering-standards.md §2:
+/// convention in docs/architecture/06-engineering-standards.md §2:
 /// "{ModuleAbbrev}-{DocAbbrev}-{Year}-{Seq}", e.g. PROC-PO-2026-000123.
 ///
 /// This is a platform service (Platform.Core), not something each module reimplements — Business

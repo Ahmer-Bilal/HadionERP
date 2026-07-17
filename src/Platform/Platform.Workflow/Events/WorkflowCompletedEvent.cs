@@ -6,7 +6,7 @@ namespace Platform.Workflow.Events;
 /// The Application layer that started the workflow listens for this to drive the underlying Business
 /// Object's own transition (e.g. call bo.Transition(Approve, ...) — the workflow engine itself never
 /// touches a Business Object directly, keeping Platform.Workflow decoupled from every module's domain
-/// types, per docs/architecture/01-architecture-foundation.md #1).</summary>
+/// types, per docs/architecture/01-overview.md #1).</summary>
 public sealed record WorkflowCompletedEvent(
     Guid EventId,
     DateTimeOffset OccurredAt,

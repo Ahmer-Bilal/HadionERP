@@ -2,7 +2,7 @@ namespace Platform.Audit;
 
 /// <summary>
 /// The kind of change an <see cref="AuditEntry"/> records — the four categories named in
-/// docs/architecture/03-platform-services.md #5 ("every create/update/status-transition/delete-attempt").
+/// docs/architecture/04-platform-services.md #5 ("every create/update/status-transition/delete-attempt").
 /// </summary>
 public enum AuditAction
 {

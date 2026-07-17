@@ -9,7 +9,7 @@ namespace Platform.Core.Tests;
 /// Proves the Phase 0 platform kernel exit criteria end-to-end on a demo BO with no business meaning:
 /// create → number → submit → approve → post → reverse, with domain events at each step, extension
 /// fields, relations, and the "no hard delete past Draft" rule all working — before any real module
-/// exists. See docs/architecture/06-roadmap.md, Phase 0.
+/// exists. See ROADMAP.md, Phase 0.
 /// </summary>
 public class PhaseZeroExitCriteriaTests
 {

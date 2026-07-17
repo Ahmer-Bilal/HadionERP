@@ -6,7 +6,7 @@ namespace Platform.Api;
 
 /// <summary>
 /// Requires an <c>Idempotency-Key</c> header on POST/state-transition endpoints
-/// (docs/architecture/04-data-and-api.md #2.2: "required on all POST/state-transition endpoints — critical
+/// (docs/architecture/05-data-and-api.md #2.2: "required on all POST/state-transition endpoints — critical
 /// for financial documents where a retried network call must never double-post"). Apply to any endpoint
 /// whose execution must not be repeated if the network retries it.
 ///

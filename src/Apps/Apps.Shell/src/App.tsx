@@ -30,7 +30,7 @@ import { t } from "./i18n/content";
 import { LANGUAGE_NAMES } from "./i18n/languageNames";
 
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
-// navigable screen exists (two is easy to hand-wire; see Platform.UI/README.md for the same
+// navigable screen exists (two is easy to hand-wire; see docs/architecture/02-business-object-model.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
 type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "bank-accounts" | "payments" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "contracts" | "subcontracts" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
 
@@ -82,7 +82,7 @@ function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  // Real authentication (ARCHITECTURE-AUDIT.md Part 1 §1) — nothing past this point renders until a real
+  // Real authentication (MISSING-FEATURES-AUDIT.md Part 1 §1) — nothing past this point renders until a real
   // session exists. isLoading covers the brief /auth/me confirmation on first load (see AuthContext);
   // rendering nothing rather than a flash of the login form avoids a jarring flicker for an already-valid
   // session surviving a reload.

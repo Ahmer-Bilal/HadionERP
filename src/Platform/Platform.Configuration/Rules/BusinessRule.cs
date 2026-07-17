@@ -1,7 +1,7 @@
 namespace Platform.Configuration.Rules;
 
 /// <summary>
-/// One row of a decision table (docs/architecture/04-data-and-api.md #3.3: "rules that are naturally
+/// One row of a decision table (docs/architecture/05-data-and-api.md #3.3: "rules that are naturally
 /// declarative... expressed in a rules table interpreted at runtime, not compiled into module code") —
 /// e.g. tax determination, posting-account determination, or a validation rule. Several rules can share
 /// the same <paramref name="RuleKey"/>, each covering a different <paramref name="Condition"/>

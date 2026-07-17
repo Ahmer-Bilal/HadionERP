@@ -3,7 +3,7 @@ using System.Security.Claims;
 namespace Platform.Security;
 
 /// <summary>
-/// Mints and validates the bearer token a real login produces (`ARCHITECTURE-AUDIT.md` Part 1 §1) — kept
+/// Mints and validates the bearer token a real login produces (`MISSING-FEATURES-AUDIT.md` Part 1 §1) — kept
 /// storage/module-agnostic here (no dependency on any module's <c>User</c> type, only a bare username and
 /// role set) for the same "kernel defines the port, a module implements it" reason as
 /// <see cref="IActorRoleAssignmentStore"/> and <c>Platform.Core.NumberRanges.INumberRangeService</c>. The

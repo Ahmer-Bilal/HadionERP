@@ -36,5 +36,5 @@ public static class RequestForQuotationSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both run and approve a Request for Quotation " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

@@ -1,178 +1,103 @@
-# 02 — Business Object Model, Record Form Standard, Navigation & UI
+# 02 — Business Object Model
 
-> **Correction note (2026-07-13)**: the first draft of this doc used "Object Page" and "List Report" for the
-> UI standard. Those are **SAP Fiori/UI5** terms, not Dynamics 365 terms — an inconsistency, since the UI/
-> navigation layer of this platform is explicitly modeled on **Dynamics 365 Finance & Operations**, while
-> SAP is the reference for the financial/project data model (see
-> [doc 07](07-project-accounting-and-financial-architecture.md)). §2–3 below are rewritten to use Dynamics
-> 365's actual, documented UI vocabulary: **Workspace**, **Navigation Pane**, **List Page**, **Details
-> (Master) form**, **Action Pane**, **FastTabs**. Sources: Microsoft Learn — see links in §2.
+Every document type in this system — a Project, a Contract, a BOQ line, a Purchase Order, a Journal Entry —
+is a **Business Object**, and every Business Object follows the same underlying rules regardless of which
+module it lives in. This document defines those rules once, so no module has to redefine them, and so a
+developer or an AI agent moving between modules already knows the shape of whatever they're looking at.
 
-Every business entity in the platform — a Purchase Order, a Journal Entry, a Subcontract, a Payroll Run — is
-a **Business Object (BO)**. BOs are the unit of design in this platform: one shape, generated tooling, one UI
-pattern, one lifecycle. This is the single most important standard in the whole architecture — get this
-right once and every module reuses it. The BO's structural shape (header/status/number range/lifecycle) is
-itself SAP-influenced — SAP's document header + status + number range ("Nummernkreis") pattern is a
-70-year-proven shape for enterprise documents — while its on-screen rendering follows Dynamics conventions.
+## The lifecycle every Business Object follows
 
-## 1. Business Object Base Model
+A Business Object always starts in Draft, moves to Submitted when its owner believes it's ready, and to
+Approved once whoever holds the required approval role has signed off — this three-step
+Draft→Submit→Approve lifecycle is the baseline every object in the system uses, down to the master-data-
+shaped ones like Business Partner or GL Account. A Business Object that represents an actual financial
+posting — a Journal Entry, an AP Payment — continues past Approved into Post and, if the posting needs to
+be undone, Reverse. Posting is never edited or deleted after the fact; correcting a posted document always
+means reversing it and, if needed, posting a new correct one, so the audit trail stays a complete and
+honest history of what actually happened rather than a record of what it was edited to look like
+afterward.
 
-Every BO is composed of the same structural parts (`Platform.Core.BusinessObject<T>`):
+Not every object needs the Post/Reverse extension — a Contract, a Project, a Business Partner are
+organizational or commercial-agreement objects, not journal-posting documents, and correctly stop at
+Approved. Deciding whether a new object type needs Post/Reverse comes down to one question: does approving
+this object, by itself, represent money actually moving? If yes, it needs Post/Reverse. If it's an
+agreement or a plan that only *causes* money to move once something else references it, Approved is the
+right stopping point.
 
-| Part | Purpose |
-|---|---|
-| **Header** | Identity (BO number from a Number Range), key attributes, status, owning company/branch, dates |
-| **Lines/Items** | 0..n child collections (e.g. PO Lines), each with their own status where relevant |
-| **Status** | Current lifecycle state — see FSM below — always platform-typed, never a free-text field |
-| **Number Range** | Document numbering rule (per company/branch/fiscal year), configured not coded |
-| **Extension Fields** | Named, typed custom fields (JSONB-backed) added by extensions without schema migration of core tables |
-| **Attachments** | Files linked via `Platform.Core.Attachment`, virus-scanned, stored in blob storage |
-| **Comments/Notes** | Threaded internal notes, independent of workflow comments |
-| **Change Log** | Field-level before/after history — surfaced from `Platform.Audit` |
-| **Workflow Instance** | Link to the running (or completed) approval workflow instance, if the BO type has one configured |
-| **Print/Output** | One or more registered report layouts (e.g. PO print, ZATCA invoice XML) |
-| **Relations** | Typed links to other BOs (e.g. PO → PR it was created from, GRN → PO) — drives "Related Objects" navigation |
+## Computed values are never entered by hand
 
-Every BO class implements `IBusinessObject`, giving it, for free, from the kernel:
-- CRUD via a generic repository
-- Optimistic concurrency (RowVersion)
-- Soft lifecycle (no hard deletes for anything posted — see §2)
-- Audit trail hook-in
-- Workflow hook-in
-- Extension field storage
-- Standard REST endpoints (List Report + Object Page CRUD, per `Platform.Api` conventions)
+Any total or aggregate value on a Business Object — a Contract's `ContractValue`, a Subcontract's
+`NetPayableValue`, a Journal Entry's balanced-or-not check — is always computed from its own child lines,
+never typed in directly by whoever is creating the document. This is a hard rule, not a style preference:
+the moment a header total can be entered independently of its lines, the two can drift apart, and nothing
+in the system can then tell you which one is actually correct. A header value should always be able to be
+deleted and regenerated from its lines and come back identical.
 
-### 1.1 Standard BO Lifecycle (Finite State Machine)
+## Security and Workflow — registered per object, never assumed
 
-All BOs use the **same** state machine shape; not every BO uses every state, but no BO invents new state
-names:
+Every Business Object registers its own Security (at minimum a Maintainer duty for create/edit/submit;
+where the document carries real financial or compliance weight, a separate Approver duty, plus the
+Segregation-of-Duties conflict rule between the two, since the same person creating and approving the same
+document is the textbook SoD violation every audit checks for first) and its own Workflow (at minimum a
+single Any-quorum approval step; a genuinely multi-step review — the way Vendor Prequalification runs five
+independent departmental reviews — is only justified when the real-world process actually has that many
+independent reviewers, not added by default for objects that don't need it).
 
-```
-Draft ──submit──▶ Submitted ──▶ InApproval ──approve──▶ Approved ──post──▶ Posted/Active
-  │                                  │                                         │
-  │                               reject                                    reverse/cancel
-  ▼                                  ▼                                         ▼
-Deleted (draft only,             Rejected ──resubmit──▶ Draft            Cancelled / Reversed
- hard delete allowed)
-```
+## How Business Objects reference each other — the WBS/BOQ/Cost Code chain
 
-Rules:
-- **Draft** is the only state where hard delete is allowed. Everything past Draft is corrected by
-  **reversal**, never edited-in-place and never deleted — this is what makes the Audit Framework
-  trustworthy and is standard SAP/Dynamics financial discipline.
-- **Posted/Active → Reversed** always creates a new BO instance (a reversal document) linked via
-  Relations to the original; the original is marked `Reversed`, its financial/quantity effect is negated,
-  never edited.
-- Every transition is a **guarded command** (`ISubmit`, `IApprove`, `IPost`, `IReverse`) — the guard checks
-  are business rules living in the Domain layer, and every transition emits a domain event
-  (`{BOName}{Transition}Event`) automatically, which is what lets Workflow, Audit, and other modules react
-  without coupling.
+This is the mechanism worth understanding precisely, since it's the backbone of how a project's cost
+structure actually gets built up across several different documents, potentially owned by different
+modules.
 
-## 2. Record Form Standard (Dynamics 365 F&O pattern)
+A **WBS Element** (Project Management) is the root reference point. It is not itself a cost — it's the
+address that cost and revenue get posted *to*. Each WBS element carries three flags deciding its role:
+whether it can hold a plan, whether real cost/actuals can post directly to it (an account-assignment
+element), and whether it can be billed. A parent element in the hierarchy is often planning-only, rolling
+up its children's numbers; a leaf element is usually the one that actually receives cost.
 
-Every BO gets exactly one **List Page** and one **Details (Master) form**, generated from BO metadata by
-`tools/object-page-gen` (tool name kept; output changed — renaming the CLI is a later cleanup, not a
-functional change). Individually hand-built pages require a documented architecture exception.
+A **BOQ Line** (Construction, living inside a Contract or a Subcontract) doesn't describe scope in free
+text — it holds a real foreign key to a specific WBS Element belonging to the same project the Contract or
+Subcontract itself references. This is what makes the earlier-mentioned cross-project rejection possible: a
+BOQ line's `WbsElementId` must resolve to an element inside that same project's own hierarchy, checked
+against Project Management's `IProjectLookup`, not against a copy of the data Construction keeps itself. A
+BOQ line's `Amount` (`Quantity × Rate`) is the planned revenue value that, once the still-to-be-built
+Results Analysis run exists, becomes part of that WBS element's planned revenue.
 
-Per Microsoft's own current guidance, the List Page and Details Master form are **merged into a single
-scrolling form** (this became the recommended pattern from release 10.0.25 onward, replacing the older
-"navigate to a separate details page" flow, precisely to cut the extra round trip between list and detail).
-We adopt the merged pattern as the default for new BOs.
+A **Cost Code** — not yet built, scoped in `MISSING-FEATURES-AUDIT.md` §18 and the roadmap's Phase 3–4
+checkpoint — is a different dimension from a WBS element, not a replacement for one. A WBS element answers
+*which project and which part of it* a cost belongs to; a Cost Code answers *what kind* of cost it is —
+material, labor, subcontract, equipment, overhead — independent of which project it's on. The two are
+meant to be used together: a real cost line (a Goods Issue, a Timesheet entry, a Subcontract payment)
+should carry both a `WbsElementId` and a `CostCodeId`, so a company can ask "how much labor cost across all
+projects this month" (group by Cost Code) exactly as easily as "how much did Project X cost" (group by WBS
+element) from the same underlying data, rather than needing two separate systems to answer two versions of
+the same question. When Cost Codes are built, every future cost-producing document — Goods Issue, Timesheet
+Line, Equipment Usage Log, Subcontract payment line — should carry a Cost Code reference from day one,
+because retrofitting this dimension onto historical cost data after the fact is far more expensive than
+including it from the start.
 
-### 2.1 Merged List + Details form (entry point to any BO type)
+**Material Master Data** (an Item, in Master Data) sits one level further out again — it doesn't belong to
+any project or carry any cost-code assignment itself, because it's shared reference data: a "20mm rebar"
+Item is the same reference record whether Project A or Project B is using it. An Item only becomes
+project-specific and cost-code-specific at the moment it's actually consumed — a future `GoodsIssue` line
+(see `07-integrated-project-controlling.md` §2) is what carries the `MaterialId`, the `WbsElementId` it's
+being issued against, and the `CostCodeId` classifying it as material cost, all three together. The Item
+itself never carries any of those three references — it's reused across every project that ever consumes
+it, and the linking happens on the transactional document, not the master data.
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│ Navigation Pane (left, persistent) │ Action Pane (command bar)  │
-│                                     │  New | Edit | Submit |     │
-│                                     │  Approve/Reject | Post |   │
-│                                     │  Cancel | Print | Options  │
-├───────────────────────────────────────────────────────────────┤
-│ Filter pane (collapsible)  │  Grid: sortable/filterable list,    │
-│                             │  status column, saved views        │
-├───────────────────────────────────────────────────────────────┤
-│ Selected record — FastTabs (vertically stacked, collapsible,      │
-│ several open at once, NOT the old fixed horizontal tab strip):    │
-│  • General          (header fields)                                │
-│  • Lines            (child grid, e.g. PO lines)                    │
-│  • Financial dimensions (Cost Center / WBS / Profit Center / etc.  │
-│    — see doc 07 §6, Controlling objects)                           │
-│  • Attachments (document handling)                                 │
-│  • Related documents (source doc → this → next, via Relations)     │
-│  • Workflow history (approval timeline)                            │
-│  • Change history (audit trail, field-level diff)                  │
-│  • Notes                                                            │
-└───────────────────────────────────────────────────────────────┘
-```
+The general principle underneath all of this: **master data and planning objects (Item, WBS Element, Cost
+Code) never reference each other directly** — they're independent dimensions. **Transactional documents
+(BOQ Line, Goods Issue, Timesheet Line) are what actually link them together**, by carrying foreign keys to
+whichever combination of dimensions that specific transaction actually needs. This is the same pattern SAP
+itself uses (a WBS element, a cost element/G-L account, and a material are three independent master
+objects; a real posting document is what ties a specific combination of them together for one transaction),
+and it's why no dimension in this system should ever be modeled as a field *on* another dimension — always
+as a reference living on the transactional document that connects them.
 
-- The **Action Pane** is a single command bar at the top of the form; its buttons apply to the whole
-  record (not to one FastTab) and are **driven by the current FSM state + the user's security role/
-  privilege** — never hard-coded per screen. Adding a new transition to a BO surfaces its button everywhere
-  automatically. This matches Microsoft's own definition: "Actions on the Action Pane should be related to
-  the whole [record], not a specific section of it."
-- **FastTabs**, not tabs: several can be expanded simultaneously, the form scrolls vertically through them —
-  this is a deliberate Microsoft UX change (replacing the older "Panorama" control) and we inherit it rather
-  than reinventing a tab strip.
-- Header KPIs (e.g. PO "Total Value", "Received %", "Invoiced %") render as a summary strip above the
-  FastTabs, declared in BO metadata (`[HeaderKpi]` attribute) the same way regardless of which FastTab is
-  open.
+## Extending this model
 
-*Ref: [Details Master form pattern](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/user-interface/details-master-form-pattern),
-[Simple List and Details form pattern](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/user-interface/simple-list-details-form-pattern),
-[User interface elements](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/fin-ops/get-started/user-interface-elements)*
-
-### 2.2 Workspaces (role-based landing pages)
-
-A **Workspace** is a role-oriented landing page (e.g. "Project Manager Workspace", "AP Clerk Workspace")
-combining KPI tiles and embedded lists (e.g. "My Approvals", "Projects Over Budget", "Overdue Invoices").
-Per Microsoft's current workspace form pattern, workspace content sections are also FastTabs — stacked
-vertically and collapsible — for the same consistency reason as record forms.
-
-*Ref: [Workspace form pattern](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/user-interface/workspace-form-pattern),
-[Build operational workspaces](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/user-interface/build-workspaces)*
-
-## 3. Navigation Model
-
-```
-App Shell (Apps.Shell)
- └─ Navigation Pane: Modules → Areas → menu items (persistent left nav, Dynamics 365 pattern)
-     └─ Workspace          role-based landing page, reached from a module/area entry
-         └─ List + Details form   merged grid+record view per BO type (§2.1)
-             ├─ Drill-down          click a linked field (e.g. vendor name on a PO) to open that
-             │                      record's own List+Details form — hyperlink navigation, not a
-             │                      Fiori-style quick-view popover, matching actual Dynamics behavior
-             └─ Quick Create        modal dialog to create a related record without leaving the page
-```
-
-- **Navigation Pane structure**: Modules (e.g. Procurement) → Areas (e.g. Purchase orders) → menu items
-  (e.g. "All purchase orders", "Purchase order workspace") — this is the actual Dynamics 365 F&O navigation
-  concept, not a flat tile launchpad.
-- **Deep linking**: every List+Details form URL is shareable/bookmarkable and reproduces the exact filtered/
-  selected record state.
-- **Global search** is federated across modules via each module's registered search provider — not a giant
-  shared index owned by one module.
-- We keep one SAP-flavored addition on top of this Dynamics-accurate base: a **stable intent id** per
-  navigable target (`{BusinessObject}-{action}?key={id}`), resolved by an `Apps.Shell` router, so modules
-  never hardcode routes to each other. This is a defensible deviation from pure Dynamics form-name
-  navigation, needed because our modules are independently deployable (doc 01 §3) — Dynamics F&O is a single
-  deployable unit and doesn't have this problem, so it doesn't need this indirection; we do.
-
-*Ref: [Navigation concepts](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/user-interface/page-navigation),
-[Page layout in the web client](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/user-interface/page-layout)*
-
-## 4. UI Framework
-
-- **Stack**: React 18 + TypeScript, built against `Platform.UI` — an in-house design system, not a grab-bag
-  of third-party components, so bilingual/RTL and record-form behavior is consistent everywhere.
-- **Design tokens**: color, spacing, typography defined once; **theme-able** (light/dark, and per-tenant
-  branding) without code changes.
-- **Bilingual & RTL**: every component is authored logical-direction-aware (`start`/`end`, not `left`/`right`)
-  so flipping `dir="rtl"` for Arabic requires zero component-level changes. Arabic is a first-class layout
-  direction, not a mirrored afterthought.
-- **Accessibility**: WCAG 2.1 AA baseline (keyboard nav, ARIA roles, contrast) enforced by automated checks
-  in CI, because government/enterprise procurement in KSA increasingly requires it.
-- **Responsiveness**: List+Details form templates adapt from desktop (site engineers/accountants at
-  desks) down to tablet (site supervisors in the field); a native-feeling mobile shell is a Phase 5+ concern
-  (see Roadmap), not a v1 requirement.
-- **Micro-frontend packaging**: each `Apps.X` is independently buildable/deployable and composed at runtime
-  by `Apps.Shell`, so a Construction-module release never forces a redeploy of Finance's frontend.
+A new Business Object type should default to everything above unless there's a specific, disclosed reason
+to differ — and if it does differ, the module's own doc in `docs/module/` should say so explicitly, the
+way Construction's docs disclose that a Contract deliberately allows more than one per project. Silent
+deviation from this model is what makes a codebase inconsistent across modules built by different
+contributors at different times; a disclosed, reasoned deviation is a legitimate design decision.

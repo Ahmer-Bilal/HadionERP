@@ -16,7 +16,7 @@ public sealed record APInvoiceSummary(
 /// <summary>Read-only lookup Procurement calls for the 3-way match check (Ordered vs Received vs Invoiced) —
 /// implemented in Modules.Finance.Infrastructure, registered in Gateway.Api's DI container. Same dependency
 /// direction as <see cref="IBudgetCheckService"/>: Procurement depends on this published Contracts package,
-/// Finance never depends on Procurement (docs/architecture/01-architecture-foundation.md §3.2's module
+/// Finance never depends on Procurement (docs/architecture/01-overview.md §3.2's module
 /// graph — Finance is upstream of Procurement).</summary>
 public interface IAPInvoiceLookup
 {

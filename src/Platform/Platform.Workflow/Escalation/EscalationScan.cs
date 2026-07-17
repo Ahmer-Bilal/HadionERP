@@ -2,7 +2,7 @@ namespace Platform.Workflow.Escalation;
 
 /// <summary>
 /// Pure query over a set of instances — finds ones whose current step has run longer than its
-/// configured <see cref="WorkflowStepDefinition.ServiceLevelHours"/> (docs/architecture/03-platform-services.md
+/// configured <see cref="WorkflowStepDefinition.ServiceLevelHours"/> (docs/architecture/04-platform-services.md
 /// #4, "SLA timers with escalation"). Deliberately just a query, not a scheduler: the actual "run this
 /// every N minutes and notify someone" job is a hosted background service (Gateway.Api concern), not
 /// built yet — this is the logic that job will call, kept independently testable in the meantime.

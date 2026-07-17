@@ -28,7 +28,7 @@ type ViewState =
   | { kind: "details"; prequalification: VendorPrequalification };
 
 // Excludes GovernmentAuthority — Modules.Procurement.Application.VendorPrequalificationService rejects it
-// outright ("not prequalified at all", per docs/architecture/06-roadmap.md).
+// outright ("not prequalified at all", per ROADMAP.md).
 const QUALIFIABLE_ROLE_TYPES = [
   "Client", "Supplier", "Subcontractor", "Consultant", "JointVenturePartner",
   "RentalCompany", "Manufacturer", "ManpowerSupplier", "TestingLaboratory",

@@ -14,7 +14,7 @@ namespace Modules.MasterData.Application;
 /// module's own domain comments already reference ("new-partner onboarding is a real fraud/compliance
 /// control point"), and literally the worked example in <see cref="Duty"/>'s own doc comment ("Create
 /// Vendor" vs. "Approve Vendor Payment"). <see cref="MaintainerApproverConflict"/> registers that as a
-/// real, checkable SoD rule — see <c>Modules.MasterData/README.md</c> for what enforcing it against a
+/// real, checkable SoD rule — see <c>docs/module/master-data.md</c> for what enforcing it against a
 /// real role *assignment* would still need (an admin UI to assign roles doesn't exist yet, so there's
 /// nowhere to check the rule against at assignment time; the rule and the engine that checks it are both
 /// real and tested today).
@@ -54,5 +54,5 @@ public static class BusinessPartnerSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both create/maintain and approve a Business Partner " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

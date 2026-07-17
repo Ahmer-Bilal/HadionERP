@@ -5,7 +5,7 @@ namespace Modules.MasterData.Domain;
 /// <summary>
 /// One Cost Center — the "who owns this cost/revenue organizationally" Controlling object every journal
 /// line can carry alongside the G/L Account
-/// (docs/architecture/07-project-accounting-and-financial-architecture.md #1, #4), and the third of the
+/// (docs/architecture/07-integrated-project-controlling.md #1, #4), and the third of the
 /// Phase 1 Master Data pieces. Follows the standard Business Object lifecycle (Draft → Submit → Approve),
 /// same control-point reasoning as Business Partner/G/L Account/Item: a miscoded or duplicate cost center
 /// pollutes every posting that references it afterward.

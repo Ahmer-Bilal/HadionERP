@@ -4,7 +4,7 @@ namespace Modules.Procurement.Application;
 
 /// <summary>Same module-owned Workflow configuration pattern as <see cref="RequestForQuotationWorkflow"/> —
 /// one Any-quorum step. The Finance budget check (<c>PurchaseOrderService.SubmitAsync</c>) runs before this
-/// workflow starts, matching docs/architecture/01-architecture-foundation.md §3.2's own example ("Procurement
+/// workflow starts, matching docs/architecture/01-overview.md §3.2's own example ("Procurement
 /// asks Finance's IBudgetCheckService before releasing a PO") — a PO that fails budget never reaches an
 /// approver at all.</summary>
 public static class PurchaseOrderWorkflow

@@ -2,7 +2,8 @@
 
 **Product:** HadionERP, by hAdisHere — created by aHmAr
 **Category:** Enterprise ERP for Construction & Finance companies operating in the Kingdom of Saudi Arabia
-**Status:** Architecture baseline v1.0 — no business modules implemented yet
+**Status:** Architecture baseline v1.0, as originally approved 2026-07-13 — not updated per phase; see
+`PROGRESS.md` for current build status
 **Owner:** Chief Architect
 **Date:** 2026-07-13
 
@@ -26,7 +27,7 @@ interchangeably:
 - **SAP S/4HANA** is the reference for **financial architecture and project accounting** — the Universal
   Journal, Document Splitting, Parallel Ledgers, Controlling objects, WBS/Network project structure, and
   Results Analysis/Settlement for percentage-of-completion revenue recognition. See
-  [doc 07](docs/architecture/07-project-accounting-and-financial-architecture.md) for the full,
+  [doc 07](docs/architecture/07-integrated-project-controlling.md) for the full,
   source-checked detail. Project accounting is this platform's highest-priority capability, which is why
   this reference is followed at full rigor rather than simplified.
 - **Dynamics 365 Finance & Operations** is the reference for **UI, navigation, and day-to-day usability** —
@@ -50,8 +51,8 @@ These are the rules every future design decision is checked against:
    Centers, Projects, Employees live in `Modules.MasterData`; every transactional module *references* them,
    never duplicates or owns them.
 3. **Business rules are configuration, not code.** Approval matrices, number ranges, tax rules, posting
-   rules, validation rules are data driven by the [Configuration Strategy](docs/architecture/04-data-and-api.md)
-   and the [Workflow Engine](docs/architecture/03-platform-services.md), not `if` statements shipped in a
+   rules, validation rules are data driven by the [Configuration Strategy](docs/architecture/05-data-and-api.md)
+   and the [Workflow Engine](docs/architecture/04-platform-services.md), not `if` statements shipped in a
    release.
 4. **The UI is templated, not hand-built per screen.** Every business object gets a **List Report** and an
    **Object Page** generated from its metadata, per the
@@ -68,13 +69,19 @@ These are the rules every future design decision is checked against:
 
 | Doc | Contents |
 |---|---|
-| [01 — Architecture Foundation](docs/architecture/01-architecture-foundation.md) | Layered architecture, full repo folder structure, module boundaries & dependency rules |
+| [01 — Overview](docs/architecture/01-overview.md) | Layered architecture, technology stack, why the two reference products (SAP/Dynamics) are used for different concerns |
 | [02 — Business Object Model & UI](docs/architecture/02-business-object-model.md) | BO base model, lifecycle state machine, Object Page standard, Navigation model, UI framework |
-| [03 — Platform Services](docs/architecture/03-platform-services.md) | Localization, Security, Event architecture, Workflow engine, Audit framework |
-| [04 — Data & API](docs/architecture/04-data-and-api.md) | Database strategy, API architecture, Configuration strategy |
-| [05 — Engineering Standards](docs/architecture/05-engineering-standards.md) | Coding standards, naming conventions, Extension/plugin model |
-| [06 — Roadmap](docs/architecture/06-roadmap.md) | Phased development roadmap, team shape, milestones |
-| [07 — Project Accounting & Financial Architecture](docs/architecture/07-project-accounting-and-financial-architecture.md) | **SAP-referenced, source-checked**: Universal Journal, Document Splitting, Parallel Ledgers, WBS/Networks, Results Analysis & Settlement to CO-PA |
+| [03 — Module Boundaries](docs/architecture/03-module-boundaries.md) | Which module owns which data/decisions, and the end-to-end business process across modules |
+| [04 — Platform Services](docs/architecture/04-platform-services.md) | Localization, Security, Event architecture, Workflow engine, Audit framework |
+| [05 — Data & API](docs/architecture/05-data-and-api.md) | Database strategy, API architecture, Configuration strategy |
+| [06 — Engineering Standards](docs/architecture/06-engineering-standards.md) | Coding standards, naming conventions, Extension/plugin model |
+| [07 — Integrated Project Controlling](docs/architecture/07-integrated-project-controlling.md) | **SAP-referenced, source-checked**: Universal Journal, Document Splitting, Parallel Ledgers, WBS/Networks, Results Analysis & Settlement to CO-PA |
+| [08 — Cost Code Design](docs/architecture/08-cost-code-design.md) | Cost code structure and how it integrates with WBS/Controlling |
+| [09 — Navigation & UI Standard](docs/architecture/09-navigation-and-ui-standard.md) | Nav Pane structure, module/area conventions per screen |
+
+Phased development roadmap, team shape, and milestones live in [`ROADMAP.md`](ROADMAP.md) at repo root, not
+under `docs/architecture/` — see that file for why. Per-module scope and status live under
+[`docs/module/`](docs/module/), one file per business module.
 
 ## 4. Key Technology Decisions (ADR summary)
 
@@ -85,14 +92,14 @@ These are the rules every future design decision is checked against:
 | ADR-3 | Frontend | **React 18 + TypeScript**, in-house Design System (`Platform.UI`) implementing the Dynamics 365 F&O record-form pattern (Workspace / Navigation Pane / merged List+Details form / Action Pane / FastTabs) | Component reuse across templates; large hiring pool; matches the explicit Dynamics-for-UI reference (§1.1) |
 | ADR-4 | API style | **REST, OData-inspired query conventions**, OpenAPI contract-first | Predictable, tool-friendly, matches SAP/Dynamics developer expectations |
 | ADR-5 | Messaging/events | **RabbitMQ** on-prem, pluggable to Azure Service Bus/Kafka in cloud | Outbox-pattern reliability without forcing a cloud vendor on-prem-only clients |
-| ADR-6 | Workflow engine | **Revised 2026-07-13**: hand-built approval-routing engine behind `IWorkflowEngine`, not Elsa Workflows | Actual Phase 0 need (condition-based multi-step routing, quorum, delegation, SLA) doesn't require a full BPMN engine; Elsa remains adoptable later behind the same interface if genuine BPMN complexity (cross-system gateways/sub-processes) arises — see `src/Platform/Platform.Workflow/README.md` |
+| ADR-6 | Workflow engine | **Revised 2026-07-13**: hand-built approval-routing engine behind `IWorkflowEngine`, not Elsa Workflows | Actual Phase 0 need (condition-based multi-step routing, quorum, delegation, SLA) doesn't require a full BPMN engine; Elsa remains adoptable later behind the same interface if genuine BPMN complexity (cross-system gateways/sub-processes) arises — see [doc 04](docs/architecture/04-platform-services.md) |
 | ADR-7 | Reporting | In-house report/print layout engine (QuestPDF-based) + Metabase/Power BI embed for analytics | Statutory documents (ZATCA invoices, WPS files) must be pixel/schema exact; analytics can use off-the-shelf BI |
 | ADR-8 | Identity | **OpenID Connect / SAML2 SSO**, internal IdP built on Duende IdentityServer or Azure AD B2C | Enterprise SSO expectation, supports on-prem and cloud KSA customers |
 | ADR-9 | Deployment | Containerized (Docker/Kubernetes), Infra-as-Code (Terraform), **KSA-region hosting** for data residency | PDPL / NDMO data residency requirements for financial and HR data |
 | ADR-10 | Localization baseline | **Arabic (RTL) + English (LTR)** first-class from day one, Hijri+Gregorian dual calendar, ZATCA e-invoicing native | Legal requirement, not an afterthought |
-| ADR-11 | Finance ledger design | **Single Universal-Journal-style line-item store** (not siloed GL/AP/AR/Asset tables), with rule-based Document Splitting | Eliminates GL-vs-Controlling reconciliation by construction, per SAP's ACDOCA model — see [doc 07](docs/architecture/07-project-accounting-and-financial-architecture.md) §1–2 |
-| ADR-12 | Accounting principles | **Parallel Ledgers**: one posting, multiple simultaneous bases (IFRS leading ledger + Saudi statutory/Zakat non-leading ledger) | Avoids the common Excel-bridge workaround between IFRS and local statutory books — [doc 07](docs/architecture/07-project-accounting-and-financial-architecture.md) §3 |
-| ADR-13 | Project cost/revenue backbone | **WBS elements as Controlling objects** (owned by ProjectManagement), with Results Analysis (cost-based POC, IFRS 15 cost-recognized fallback) + Settlement to CO-PA run by Finance | This is the platform's highest-priority capability; full SAP Project System rigor chosen over a simplified project-cost model — [doc 07](docs/architecture/07-project-accounting-and-financial-architecture.md) §4–5 |
+| ADR-11 | Finance ledger design | **Single Universal-Journal-style line-item store** (not siloed GL/AP/AR/Asset tables), with rule-based Document Splitting | Eliminates GL-vs-Controlling reconciliation by construction, per SAP's ACDOCA model — see [doc 07](docs/architecture/07-integrated-project-controlling.md) §1–2 |
+| ADR-12 | Accounting principles | **Parallel Ledgers**: one posting, multiple simultaneous bases (IFRS leading ledger + Saudi statutory/Zakat non-leading ledger) | Avoids the common Excel-bridge workaround between IFRS and local statutory books — [doc 07](docs/architecture/07-integrated-project-controlling.md) §3 |
+| ADR-13 | Project cost/revenue backbone | **WBS elements as Controlling objects** (owned by ProjectManagement), with Results Analysis (cost-based POC, IFRS 15 cost-recognized fallback) + Settlement to CO-PA run by Finance | This is the platform's highest-priority capability; full SAP Project System rigor chosen over a simplified project-cost model — [doc 07](docs/architecture/07-integrated-project-controlling.md) §4–5 |
 
 These are defaults for the architecture, not commitments the user is locked into — each is revisited in its
 detail doc with the trade-offs considered.
@@ -102,9 +109,13 @@ detail doc with the trade-offs considered.
 ```
 erp-platform/
 ├── ARCHITECTURE.md                 ← this file
-├── CLAUDE.md                       ← project-level agent instructions (points back here)
+├── ROADMAP.md                      ← phased development roadmap (current plan)
+├── PROGRESS.md                     ← append-only log of what's actually been built
+├── MISSING-FEATURES-AUDIT.md       ← consolidated gap audit vs. SAP/Dynamics
+├── AGENTS.md                       ← project-level agent instructions (points back here)
 ├── docs/
-│   └── architecture/                ← detailed architecture docs (see Document Map)
+│   ├── architecture/                ← detailed architecture docs (see Document Map)
+│   └── module/                      ← per-module scope & status, one file per business module
 ├── src/
 │   ├── Platform/                   ← cross-cutting kernel (security, localization, workflow, events, audit, UI, config)
 │   ├── Modules/                    ← business modules (MasterData, Finance, Procurement, ProjectManagement, Construction, HR, Payroll)
@@ -115,14 +126,14 @@ erp-platform/
 └── tools/                          ← code generators (BO scaffolding, Object Page scaffolding)
 ```
 
-Full, module-by-module detail is in
-[01 — Architecture Foundation](docs/architecture/01-architecture-foundation.md).
+Full, module-by-module detail is in [01 — Overview](docs/architecture/01-overview.md); current build status
+of each module is in `PROGRESS.md`'s Phase Status Summary, not here.
 
 ## 6. Explicitly Out of Scope (for this baseline)
 
-- No business modules, entities, or screens are implemented yet.
 - No cloud provider is locked in — architecture is cloud-agnostic with a KSA-residency constraint.
 - No commercial licensing/pricing model is defined here — this is a technical architecture only.
 
-Next step once this baseline is approved: scaffold `Platform.Core` (Business Object base classes, lifecycle
-state machine, number ranges) per Phase 0 of the [Roadmap](docs/architecture/06-roadmap.md).
+This document describes the architecture baseline as originally approved (2026-07-13); it is not updated
+per phase. For what has actually been built since, see `PROGRESS.md`; for what's planned next, see
+`ROADMAP.md`.

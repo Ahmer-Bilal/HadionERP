@@ -2,7 +2,7 @@ namespace Platform.Events.Outbox;
 
 /// <summary>
 /// One staged, not-yet-published integration event — the outbox pattern's whole point
-/// (docs/architecture/03-platform-services.md #3): staging happens in the same transaction as the
+/// (docs/architecture/04-platform-services.md #3): staging happens in the same transaction as the
 /// business change (once a real database exists — this in-memory version proves the mechanism first),
 /// so an event is never lost even if the bus is briefly unavailable when the relay tries to publish it.
 /// </summary>

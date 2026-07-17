@@ -3,7 +3,7 @@ namespace Platform.Security;
 /// <summary>
 /// The registered set of Roles/Duties/Privileges for a tenant, and the resolution from a principal's
 /// assigned Role keys down to its effective Privilege grants. In production this catalog is populated
-/// from configuration (docs/architecture/04-data-and-api.md #3), not code — security administrators
+/// from configuration (docs/architecture/05-data-and-api.md #3), not code — security administrators
 /// maintain Roles/Duties through an admin UI, they are not hard-coded per module.
 /// </summary>
 public interface ISecurityCatalog

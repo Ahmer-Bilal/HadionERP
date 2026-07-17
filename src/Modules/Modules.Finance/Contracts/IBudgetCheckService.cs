@@ -8,11 +8,11 @@ namespace Modules.Finance.Contracts;
 public sealed record BudgetCheckResult(bool Allowed, string? Reason);
 
 /// <summary>
-/// The synchronous cross-module contract call docs/architecture/01-architecture-foundation.md §3.2 names as
+/// The synchronous cross-module contract call docs/architecture/01-overview.md §3.2 names as
 /// its own worked example: "Procurement asks Finance's <c>IBudgetCheckService</c> before releasing a PO."
 /// Implemented in Modules.Finance.Infrastructure, registered in Gateway.Api's DI container — Procurement
 /// depends on this Contracts package only, never on Finance's own Domain/Infrastructure/Application
-/// internals (docs/architecture/01-architecture-foundation.md §3.2 rule 2).
+/// internals (docs/architecture/01-overview.md §3.2 rule 2).
 /// </summary>
 public interface IBudgetCheckService
 {

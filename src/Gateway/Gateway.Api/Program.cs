@@ -34,7 +34,7 @@ using Platform.Workflow.Delegation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Real authentication (`ARCHITECTURE-AUDIT.md` Part 1 §1) — every request needs a valid bearer token by
+// Real authentication (`MISSING-FEATURES-AUDIT.md` Part 1 §1) — every request needs a valid bearer token by
 // default (the global AuthorizeFilter below) except AuthController.Login, the one endpoint that produces a
 // token in the first place. Signing key comes from .NET User Secrets in Development (never a committed
 // file — see HOW-TO-RUN.md), same handling as ConnectionStrings:Default.
@@ -104,7 +104,7 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 
-// Platform.Localization: in-memory reference implementation for now (docs/architecture/03-platform-services.md #1.4
+// Platform.Localization: in-memory reference implementation for now (docs/architecture/04-platform-services.md #1.4
 // calls for a database-managed translation store later — same swap-behind-an-interface pattern as everywhere else).
 builder.Services.AddSingleton(_ =>
 {
@@ -175,9 +175,9 @@ builder.Services.AddSingleton<Platform.Security.IAuthorizationService, Authoriza
 
 // Platform.Security's Segregation of Duties engine: one real conflict rule is registered —
 // BusinessPartnerSecurity.MaintainerApproverConflict, the "Create Vendor vs. Approve Vendor Payment"
-// example from docs/architecture/03-platform-services.md #2.2. Not yet checked against a real role
+// example from docs/architecture/04-platform-services.md #2.2. Not yet checked against a real role
 // *assignment* anywhere (there is no role-assignment admin surface in this application yet — see
-// Modules.MasterData/README.md's deferred list) but the rule and the engine that checks it are both real
+// docs/module/master-data.md's deferred list) but the rule and the engine that checks it are both real
 // and tested; a future module registers its own conflict rules into this same list.
 builder.Services.AddSingleton<ISodExceptionLog, InMemorySodExceptionLog>();
 builder.Services.AddSingleton<ISodEngine>(sp =>
@@ -208,7 +208,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
 
 // Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
 // "system/ui"/"system/approver" to fixed role sets (a temporary stand-in disclosed in
-// `ARCHITECTURE-AUDIT.md` Part 1 §1). Real authentication now exists (see the JWT/AddAuthentication setup
+// `MISSING-FEATURES-AUDIT.md` Part 1 §1). Real authentication now exists (see the JWT/AddAuthentication setup
 // above and Modules.Identity below) — this resolves a REAL logged-in username's assigned roles from the
 // database instead. Scoped, not Singleton, since it now depends on a scoped DbContext.
 builder.Services.AddScoped<IActorRoleAssignmentStore, EfActorRoleAssignmentStore>();
@@ -283,14 +283,14 @@ builder.Services.AddSingleton<IIntegrationEventPublisher, IntegrationEventPublis
 builder.Services.AddSingleton<OutboxRelay>();
 
 // Platform.Audit: the permanent, hash-chained, append-only change log
-// (docs/architecture/03-platform-services.md #5). The log is append-only by contract and (in a real
+// (docs/architecture/04-platform-services.md #5). The log is append-only by contract and (in a real
 // deployment) by DB-role hardening; InMemoryAuditLog proves the chain mechanics first. A real module's
 // Application layer calls IAuditRecorder at each lifecycle transition; nothing here needs to change when
 // that module is built.
 builder.Services.AddSingleton<IAuditLog, InMemoryAuditLog>();
 builder.Services.AddSingleton<IAuditRecorder, AuditRecorder>();
 
-// Platform.Configuration: the multi-level override hierarchy (docs/architecture/04-data-and-api.md #3).
+// Platform.Configuration: the multi-level override hierarchy (docs/architecture/05-data-and-api.md #3).
 // Two real, permanent settings registered here — a module registers its own the same way when built.
 builder.Services.AddSingleton<IConfigurationCatalog>(_ =>
 {
@@ -330,7 +330,7 @@ builder.Services.AddScoped<LookupService>();
 builder.Services.AddScoped<IBusinessPartnerRepository, EfBusinessPartnerRepository>();
 builder.Services.AddScoped<IWorkflowInstanceRepository, EfWorkflowInstanceRepository>();
 // Platform.Attachments: file bytes are stored in Postgres via Modules.MasterData's own DbContext for now
-// (see Platform.Attachments/README.md's "Deferred" section on real blob storage) — scoped, same lifetime
+// (see MISSING-FEATURES-AUDIT.md §14 on real blob storage) — scoped, same lifetime
 // as the DbContext it depends on.
 builder.Services.AddScoped<IAttachmentRepository, EfAttachmentRepository>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
@@ -348,7 +348,7 @@ builder.Services.AddScoped<ITaxCodeRepository, EfTaxCodeRepository>();
 builder.Services.AddScoped<TaxCodeService>();
 // Modules.MasterData.Contracts: the published, read-only lookups Modules.Finance depends on instead of
 // reaching into this module's Domain/Infrastructure/Application internals directly
-// (docs/architecture/01-architecture-foundation.md #3.2).
+// (docs/architecture/01-overview.md #3.2).
 builder.Services.AddScoped<IGLAccountLookup, EfGLAccountLookup>();
 builder.Services.AddScoped<IBusinessPartnerLookup, EfBusinessPartnerLookup>();
 builder.Services.AddScoped<ITaxCodeLookup, EfTaxCodeLookup>();
@@ -368,7 +368,7 @@ builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeServi
 
 // Modules.Finance: the second real, persisted business module. Own "finance" Postgres schema in the same
 // physical database as MasterData's — schema-per-module is the boundary being enforced, not one database
-// per module (docs/architecture/01-architecture-foundation.md #3.2). Depends on
+// per module (docs/architecture/01-overview.md #3.2). Depends on
 // Modules.MasterData.Contracts only for cross-module lookups (IGLAccountLookup/ICostCenterLookup above),
 // never on Modules.MasterData.Domain/Infrastructure/Application directly.
 builder.Services.AddDbContext<Modules.Finance.Infrastructure.FinanceDbContext>(options => options.UseNpgsql(masterDataConnectionString));
@@ -412,7 +412,7 @@ builder.Services.AddScoped<Modules.Finance.Application.APInvoiceService>(sp => n
     sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>(),
     sp.GetRequiredService<Modules.Finance.Application.IPaymentRepository>()));
 
-// Bank Accounts & Payments — closes ARCHITECTURE-AUDIT.md Part 2 §16 ("no way anywhere in this system to
+// Bank Accounts & Payments — closes MISSING-FEATURES-AUDIT.md Part 2 §16 ("no way anywhere in this system to
 // record that an AP invoice was actually paid"). Both live in Modules.Finance (same reasoning as JournalEntry/
 // APInvoice — real SAP/Dynamics keep House Bank/Payment documents in Finance, not a separate module).
 builder.Services.AddScoped<Modules.Finance.Application.IBankAccountRepository, Modules.Finance.Infrastructure.EfBankAccountRepository>();
@@ -449,7 +449,7 @@ builder.Services.AddScoped<Modules.Finance.Application.PaymentService>(sp => new
     sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
 
 // Modules.Finance.Contracts: the published, synchronous cross-module contract call
-// docs/architecture/01-architecture-foundation.md §3.2 names as its own worked example ("Procurement asks
+// docs/architecture/01-overview.md §3.2 names as its own worked example ("Procurement asks
 // Finance's IBudgetCheckService before releasing a PO"). PassThroughBudgetCheckService always allows for now
 // — Budget Control itself is deferred Finance depth (PROGRESS.md), not built yet — see that class's own doc
 // comment for why this is disclosed rather than faking enforcement against numbers that don't exist.
@@ -576,11 +576,11 @@ builder.Services.AddScoped<ProjectService>(sp => new ProjectService(
     sp.GetRequiredService<IBusinessPartnerLookup>()));
 // Modules.ProjectManagement.Contracts: the published, read-only lookup Modules.Construction depends on
 // instead of reaching into this module's Domain/Infrastructure/Application internals directly
-// (docs/architecture/01-architecture-foundation.md #3.2).
+// (docs/architecture/01-overview.md #3.2).
 builder.Services.AddScoped<IProjectLookup, Modules.ProjectManagement.Infrastructure.EfProjectLookup>();
 
 // Modules.Identity: the fifth real, persisted business module — real user authentication, replacing the
-// hardcoded actor literals every controller used before (`ARCHITECTURE-AUDIT.md` Part 1 §1). Own
+// hardcoded actor literals every controller used before (`MISSING-FEATURES-AUDIT.md` Part 1 §1). Own
 // "identity" Postgres schema, same physical database as every other module. UserService's constructor
 // dependencies (IAuditRecorder/IAuthorizationService/IActorRoleAssignmentStore/ISecurityCatalog/
 // ISodEngine/ISodExceptionLog) are all already registered above, so it's auto-wired like BusinessPartnerService.
@@ -590,7 +590,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddSingleton<ITokenService>(_ => new JwtTokenService(jwtSigningKey));
 
 // Modules.Construction: the sixth real, persisted business module, Phase 3's commercial layer on top of
-// ProjectManagement's WBS backbone (docs/architecture/07-project-accounting-and-financial-architecture.md
+// ProjectManagement's WBS backbone (docs/architecture/07-integrated-project-controlling.md
 // §4). Own "construction" Postgres schema, same physical database as every other module's. Depends on
 // Modules.ProjectManagement.Contracts (IProjectLookup, to validate a Contract's Project and each BOQ line's
 // WBS element) and Modules.MasterData.Contracts (ILookupCatalog, for ContractType/UnitOfMeasure) only, never
@@ -654,7 +654,7 @@ app.MapHealthChecks("/health");
 
 // Prove the events pipeline works end-to-end at boot: subscribe a logger, publish the one real event
 // this application raises so far, then relay the outbox once. The actual "run the relay every few
-// seconds" scheduler is a hosted background service, not built yet (see Platform.Events/README.md) —
+// seconds" scheduler is a hosted background service, not built yet (see docs/architecture/04-platform-services.md) —
 // this one-time relay at startup is enough to prove enqueue -> outbox -> bus -> subscriber works.
 var eventBus = app.Services.GetRequiredService<IEventBus>();
 var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();

@@ -37,6 +37,6 @@ public static class APInvoiceSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both create/maintain and approve/post an AP Invoice " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2) — the textbook " +
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2) — the textbook " +
         "\"Create Vendor Invoice vs. Approve Vendor Payment\" example.");
 }

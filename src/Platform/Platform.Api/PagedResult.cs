@@ -1,7 +1,7 @@
 namespace Platform.Api;
 
 /// <summary>
-/// The standard envelope every List Report endpoint returns (docs/architecture/04-data-and-api.md #2.1 —
+/// The standard envelope every List Report endpoint returns (docs/architecture/05-data-and-api.md #2.1 —
 /// OData-inspired query conventions). A consistent shape so the frontend and external integrators always
 /// know how to page through a list, regardless of which module's endpoint they're calling.
 ///

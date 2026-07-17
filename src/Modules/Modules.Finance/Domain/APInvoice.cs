@@ -5,7 +5,7 @@ namespace Modules.Finance.Domain;
 /// <summary>
 /// One Accounts Payable invoice — the second Finance Business Object, and the other half of the Phase 1
 /// exit criteria: "post/reverse a GL journal and an AP invoice end-to-end with full audit trail"
-/// (docs/architecture/06-roadmap.md). Same Draft → Submit → Approve → Post → Reverse lifecycle as
+/// (ROADMAP.md). Same Draft → Submit → Approve → Post → Reverse lifecycle as
 /// <see cref="JournalEntry"/>; Posting an invoice generates a real linked <see cref="JournalEntry"/>
 /// (Dr Expense[/VAT], Cr Payable) rather than just changing a status — see
 /// <c>APInvoiceService.PostAsync</c>.

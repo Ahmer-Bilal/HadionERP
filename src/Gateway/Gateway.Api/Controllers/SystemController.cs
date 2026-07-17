@@ -15,7 +15,7 @@ namespace Gateway.Api.Controllers;
 /// health, and a localization proof-point), not a throwaway demo. Business-module controllers will sit
 /// alongside this one as each module is built, inheriting the same <see cref="PlatformApiController"/> base
 /// so the conventions (route prefix, error envelope, paging) are uniform across every module — see
-/// docs/architecture/04-data-and-api.md #2.
+/// docs/architecture/05-data-and-api.md #2.
 /// </summary>
 public class SystemController : PlatformApiController
 {

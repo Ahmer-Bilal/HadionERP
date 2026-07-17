@@ -4,7 +4,7 @@ namespace Modules.MasterData.Domain;
 
 /// <summary>
 /// One tax code (e.g. "VAT15" at 15%, "ZERO" at 0%, "EXEMPT") — the fifth and last Phase 1 Master Data
-/// piece (docs/architecture/06-roadmap.md's Phase 1 list). Every AP/AR document that needs ZATCA-compliant
+/// piece (ROADMAP.md's Phase 1 list). Every AP/AR document that needs ZATCA-compliant
 /// VAT references one of these; the <see cref="Rate"/> is data on this record, never a literal percentage
 /// hardcoded in any module's code (CLAUDE.md's "don't hard-code business rules... that should be
 /// configuration" — a rate change is a data edit here, not a code change anywhere).

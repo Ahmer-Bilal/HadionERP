@@ -3,7 +3,7 @@ using Platform.Core;
 namespace Modules.Procurement.Domain;
 
 /// <summary>
-/// The fourth document in the procure-to-pay chain (docs/architecture/06-roadmap.md's "PR → RFQ → PO → GRN →
+/// The fourth document in the procure-to-pay chain (ROADMAP.md's "PR → RFQ → PO → GRN →
 /// 3-way match against AP") — records that goods against an Approved <see cref="PurchaseOrder"/> were
 /// physically received. Multiple GRNs can exist against one PO (partial/staged deliveries are normal in
 /// construction procurement); <see cref="GoodsReceiptNoteService.CreateAsync"/> enforces that the cumulative

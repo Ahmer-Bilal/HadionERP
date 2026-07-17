@@ -4,8 +4,8 @@ namespace Platform.Core;
 
 /// <summary>
 /// Typed custom-field storage for a Business Object, backed by a single JSON blob (the "extension_data
-/// jsonb column" in docs/architecture/04-data-and-api.md §1.3). This is what lets an extension
-/// (docs/architecture/05-engineering-standards.md §3) add a field to any BO without a schema migration
+/// jsonb column" in docs/architecture/05-data-and-api.md §1.3). This is what lets an extension
+/// (docs/architecture/06-engineering-standards.md §3) add a field to any BO without a schema migration
 /// of core tables.
 /// </summary>
 public sealed class ExtensionFieldBag

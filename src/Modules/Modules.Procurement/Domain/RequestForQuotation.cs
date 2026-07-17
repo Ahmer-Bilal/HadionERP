@@ -3,7 +3,7 @@ using Platform.Core;
 namespace Modules.Procurement.Domain;
 
 /// <summary>
-/// The second document in the procure-to-pay chain (docs/architecture/06-roadmap.md's "PR → RFQ → PO → GRN
+/// The second document in the procure-to-pay chain (ROADMAP.md's "PR → RFQ → PO → GRN
 /// → 3-way match") — invites a fixed set of vendors to quote a unit price against each line of an Approved
 /// <see cref="PurchaseRequisition"/>. <see cref="Submit"/> is the point the RFQ is considered "sent" (the
 /// invited-vendor set and line set both freeze); <see cref="RecordVendorQuote"/> then records each invited

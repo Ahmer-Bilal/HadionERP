@@ -36,5 +36,5 @@ public static class GoodsReceiptNoteSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both record and approve a Goods Receipt Note " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

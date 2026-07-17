@@ -4,7 +4,7 @@ namespace Modules.Finance.Domain;
 
 /// <summary>
 /// One bank account this company holds — SAP's "House Bank" / Dynamics's "Bank account" concept
-/// (`ARCHITECTURE-AUDIT.md` Part 2 §16). A <see cref="Payment"/> credits a real bank account's
+/// (`MISSING-FEATURES-AUDIT.md` Part 2 §16). A <see cref="Payment"/> credits a real bank account's
 /// <see cref="LinkedGLAccountId"/> when posted, rather than a payment guessing at a single hardcoded "Cash"
 /// account — a real company routes payments through several accounts (main operating account, a project-
 /// specific account, etc.).

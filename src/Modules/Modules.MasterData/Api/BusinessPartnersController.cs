@@ -9,11 +9,11 @@ namespace Modules.MasterData.Api;
 /// <summary>
 /// The first business-module controller — inherits <see cref="PlatformApiController"/> for the shared
 /// conventions (paging, error envelope), with its own explicit kebab-case route
-/// (docs/architecture/05-engineering-standards.md #2: "API route: kebab-case, plural resource") since the
+/// (docs/architecture/06-engineering-standards.md #2: "API route: kebab-case, plural resource") since the
 /// base's default `[controller]` token can't produce a hyphen for a compound resource name.
 ///
 /// Every action below uses <see cref="PlatformApiController.CurrentActor"/> — the real logged-in user's
-/// username, resolved from the validated JWT (`ARCHITECTURE-AUDIT.md` Part 1 §1, closed by
+/// username, resolved from the validated JWT (`MISSING-FEATURES-AUDIT.md` Part 1 §1, closed by
 /// `Modules.Identity`). What used to be two hardcoded actor literals impersonating "the maintainer" and
 /// "the approver" is now whichever real user is actually logged in; the Segregation of Duties split
 /// registered in <see cref="Modules.MasterData.Application.BusinessPartnerSecurity"/> (a real fraud/
@@ -60,7 +60,7 @@ public sealed class BusinessPartnersController : PlatformApiController
     public async Task<IActionResult> Create([FromBody] CreateBusinessPartnerRequest request, CancellationToken cancellationToken)
     {
         // The company should come from the selected company context once real multi-company selection
-        // exists — see Modules.MasterData/README.md for what's deferred.
+        // exists — see docs/module/master-data.md for what's deferred.
         const string companyId = "C001";
 
         try

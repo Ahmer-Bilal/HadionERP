@@ -3,7 +3,7 @@ namespace Platform.Localization.Translation;
 /// <summary>
 /// Reference implementation of <see cref="ITranslationService"/>. A real deployment backs this with a
 /// database-managed translation store maintained through a non-developer-friendly workbench
-/// (docs/architecture/03-platform-services.md #1.4) — this in-memory version proves the resolution
+/// (docs/architecture/04-platform-services.md #1.4) — this in-memory version proves the resolution
 /// order works, the same pattern as every other "InMemory*" reference implementation in Platform.Core
 /// and Platform.Security.
 /// </summary>

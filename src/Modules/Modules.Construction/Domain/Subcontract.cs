@@ -6,8 +6,8 @@ namespace Modules.Construction.Domain;
 /// A procurement document assigned to WBS elements, distinct from a standard
 /// <c>Modules.Procurement.Domain.PurchaseOrder</c> because it carries real construction-industry commercial
 /// terms a plain PO has no concept of — retention withheld per certified payment, mobilization advance, and
-/// back-charges (docs/architecture/06-roadmap.md's Phase 3 scope;
-/// docs/architecture/07-project-accounting-and-financial-architecture.md §4). References a
+/// back-charges (ROADMAP.md's Phase 3 scope;
+/// docs/architecture/07-integrated-project-controlling.md §4). References a
 /// <c>Modules.ProjectManagement.Domain.Project</c> directly (validated Approved via <c>IProjectLookup</c>
 /// at Create, exactly like <see cref="Contract"/>) rather than being nested under one — an optional
 /// <see cref="ContractId"/> gives back-to-back traceability to the Customer Contract when this
@@ -30,7 +30,7 @@ public sealed class Subcontract : BusinessObject
     public Guid SubcontractorId { get; private set; }
 
     /// <summary>Percentage withheld per certified payment (commonly 5-10% in KSA construction contracts,
-    /// docs/architecture/07-project-accounting-and-financial-architecture.md §4). Carried as a commercial
+    /// docs/architecture/07-integrated-project-controlling.md §4). Carried as a commercial
     /// term only this slice — not yet wired to any actual withholding mechanics, since Payment has no
     /// retention-holdback concept yet (same "stored, not yet mechanically enforced" state as
     /// <see cref="Contract.AdvancePaymentPercentage"/>).</summary>

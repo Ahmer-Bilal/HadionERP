@@ -3,7 +3,7 @@ namespace Platform.Configuration;
 /// <summary>
 /// The single entry point modules use to read/write configuration — mirrors how
 /// IAuthorizationService/IWorkflowEngine/IIntegrationEventPublisher are the single entry points for their
-/// concerns. Walks the override hierarchy (docs/architecture/04-data-and-api.md #3) and enforces that a
+/// concerns. Walks the override hierarchy (docs/architecture/05-data-and-api.md #3) and enforces that a
 /// key is only ever set at a level it declares itself overridable at.
 /// </summary>
 public interface IConfigurationResolver

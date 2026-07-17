@@ -2,7 +2,7 @@ namespace Platform.Api;
 
 /// <summary>
 /// The unified error response shape (RFC 7807 problem-details-inspired) every error response uses
-/// (docs/architecture/04-data-and-api.md #2). A frontend or external integrator handles errors uniformly
+/// (docs/architecture/05-data-and-api.md #2). A frontend or external integrator handles errors uniformly
 /// rather than each endpoint inventing its own error JSON.
 ///
 /// <see cref="Errors"/> carries field-level validation failures (e.g. "Amount must be positive") — the

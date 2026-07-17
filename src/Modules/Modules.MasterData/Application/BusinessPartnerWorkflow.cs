@@ -6,7 +6,7 @@ namespace Modules.MasterData.Application;
 /// The approval matrix Business Partner onboarding is checked against — registered into
 /// <see cref="IWorkflowDefinitionCatalog"/> at startup (see <c>Gateway.Api/Program.cs</c>), the same way
 /// <see cref="BusinessPartnerService.NumberRangeKey"/> is registered into the number-range catalog. This is
-/// module-owned configuration data (docs/architecture/03-platform-services.md #4: "attached... via
+/// module-owned configuration data (docs/architecture/04-platform-services.md #4: "attached... via
 /// configuration, not code"), not workflow engine logic — the engine itself has no idea Business Partner
 /// exists.
 ///

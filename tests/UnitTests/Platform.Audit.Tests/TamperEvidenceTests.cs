@@ -3,7 +3,7 @@ using Platform.Core;
 namespace Platform.Audit.Tests;
 
 /// <summary>
-/// THE headline guarantee of docs/architecture/03-platform-services.md #5: "audit records are hash-chained
+/// THE headline guarantee of docs/architecture/04-platform-services.md #5: "audit records are hash-chained
 /// ... so undetected retroactive edits are computationally evident." Proved here, not assumed — an attacker
 /// with write access to the audit store edits an old record's content, and <see cref="IAuditLog.VerifyChain"/>
 /// must surface it. This mirrors the spirit of SAP's change-document framework: you cannot silently rewrite

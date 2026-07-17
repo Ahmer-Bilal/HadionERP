@@ -2,7 +2,7 @@ namespace Platform.Security;
 
 /// <summary>
 /// The single entry point every module calls to check "is this user allowed to do this" — the hybrid
-/// RBAC + ABAC check from docs/architecture/03-platform-services.md #2.2. Modules never re-implement
+/// RBAC + ABAC check from docs/architecture/04-platform-services.md #2.2. Modules never re-implement
 /// permission checks themselves; they call this with the Privilege key their action requires.
 /// </summary>
 public interface IAuthorizationService

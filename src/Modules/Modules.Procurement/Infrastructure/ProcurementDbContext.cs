@@ -10,7 +10,7 @@ namespace Modules.Procurement.Infrastructure;
 
 /// <summary>
 /// This module's own Postgres schema ("procurement") — physically enforcing the module-boundary rule from
-/// docs/architecture/01-architecture-foundation.md §3.2 at the database level, same as Modules.MasterData's
+/// docs/architecture/01-overview.md §3.2 at the database level, same as Modules.MasterData's
 /// "masterdata" schema and Modules.Finance's "finance" schema. Owns its own copies of the generic
 /// kernel-port implementations (WorkflowInstance persistence, number range counters, attachments) rather
 /// than sharing another module's tables — see <see cref="NumberRangeCounterEntity"/>'s doc comment for why.

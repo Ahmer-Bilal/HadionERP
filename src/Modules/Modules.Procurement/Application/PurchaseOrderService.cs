@@ -121,7 +121,7 @@ public sealed class PurchaseOrderService
 
     /// <summary>Runs the Finance budget check — one call per distinct cost center on the PO, summing that
     /// cost center's lines — before the PO is ever submitted for approval, matching
-    /// docs/architecture/01-architecture-foundation.md §3.2's own example ("Procurement asks Finance's
+    /// docs/architecture/01-overview.md §3.2's own example ("Procurement asks Finance's
     /// IBudgetCheckService before releasing a PO"). A denied cost center blocks the whole submit; nothing is
     /// partially submitted.</summary>
     public async Task<PurchaseOrderDto> SubmitAsync(Guid id, string actor, CancellationToken cancellationToken = default)

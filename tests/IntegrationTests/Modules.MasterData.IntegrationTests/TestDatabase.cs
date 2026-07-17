@@ -14,8 +14,8 @@ namespace Modules.MasterData.IntegrationTests;
 
 /// <summary>
 /// Points at the real, separate erp_platform_test database (Docker/Testcontainers isn't available on
-/// this development machine — see Modules.MasterData/README.md for the disclosed deviation from
-/// docs/architecture/05-engineering-standards.md #1's Testcontainers recommendation). The connection
+/// this development machine — see docs/module/master-data.md for the disclosed deviation from
+/// docs/architecture/06-engineering-standards.md #1's Testcontainers recommendation). The connection
 /// string comes from an environment variable, never a hardcoded value committed to source control.
 /// </summary>
 internal static class TestDatabase

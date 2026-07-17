@@ -3,7 +3,7 @@ using Platform.Core;
 namespace Modules.Procurement.Domain;
 
 /// <summary>
-/// The third document in the procure-to-pay chain (docs/architecture/06-roadmap.md's "PR → RFQ → PO → GRN →
+/// The third document in the procure-to-pay chain (ROADMAP.md's "PR → RFQ → PO → GRN →
 /// 3-way match against AP") — a commitment to buy specific Items in specific quantities from one Vendor at a
 /// negotiated (not estimated) unit price. Built "from an RFQ-selected quote or direct" (task #102's own
 /// wording): <see cref="RequestForQuotationId"/> is set when the lines/prices were copied from one vendor's

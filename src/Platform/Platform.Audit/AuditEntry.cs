@@ -4,7 +4,7 @@ namespace Platform.Audit;
 
 /// <summary>
 /// One permanent, tamper-evident record of something that happened to an audited entity
-/// (docs/architecture/03-platform-services.md #5). Captures the full "who / what / when / from where / why"
+/// (docs/architecture/04-platform-services.md #5). Captures the full "who / what / when / from where / why"
 /// set the architecture requires, and is hash-chained to the entry before it so a retroactive edit is
 /// computationally evident (see <see cref="Hashing.AuditHasher"/> and <see cref="IAuditLog.VerifyChain"/>).
 ///

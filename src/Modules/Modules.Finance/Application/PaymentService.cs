@@ -10,7 +10,7 @@ using Platform.Workflow;
 namespace Modules.Finance.Application;
 
 /// <summary>
-/// Closes `ARCHITECTURE-AUDIT.md` Part 2 §16: this is the one place in the whole codebase that can finally
+/// Closes `MISSING-FEATURES-AUDIT.md` Part 2 §16: this is the one place in the whole codebase that can finally
 /// record that an <see cref="APInvoice"/> was actually paid. Mirrors <see cref="APInvoiceService"/>'s own
 /// shape almost exactly (same Create/Submit/Approve/Reject/Post/Reverse pattern, same
 /// "Post generates a real linked Journal Entry" pattern) — see that class for the pattern this one repeats.

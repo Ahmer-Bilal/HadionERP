@@ -37,5 +37,5 @@ public static class PurchaseRequisitionSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both raise and approve a Purchase Requisition " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

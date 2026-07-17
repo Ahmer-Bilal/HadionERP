@@ -4,7 +4,7 @@ using System.Text;
 namespace Platform.Audit.Hashing;
 
 /// <summary>
-/// The tamper-evidence mechanism docs/architecture/03-platform-services.md #5 calls for ("audit records are
+/// The tamper-evidence mechanism docs/architecture/04-platform-services.md #5 calls for ("audit records are
 /// hash-chained (each record's hash includes the previous record's hash) so undetected retroactive edits are
 /// computationally evident").
 ///

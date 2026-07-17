@@ -13,7 +13,7 @@ namespace Modules.Identity.Application;
 /// finally calls <see cref="ISodEngine.FindUnresolvedConflicts"/> in a live request path (see
 /// <see cref="AssignRoleAsync"/>) — every prior module registered real SoD conflict rules, but nothing ever
 /// checked them, since there was no role-<em>assignment</em> action to guard (per
-/// `ARCHITECTURE-AUDIT.md` Part 1 §3).
+/// `MISSING-FEATURES-AUDIT.md` Part 1 §3).
 /// </summary>
 public sealed class UserService
 {

@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace Platform.ArchitectureTests;
 
 /// <summary>
-/// Enforces docs/architecture/03-platform-services.md #1.1 at build time, not just by convention: no
+/// Enforces docs/architecture/04-platform-services.md #1.1 at build time, not just by convention: no
 /// source file may contain a literal Arabic string unless it is on the explicit allow-list below.
 ///
 /// This exists because the rule was violated once already during development — an early version of
@@ -111,6 +111,6 @@ public class NoHardcodedTranslatableTextTests
         string.Join("\n", violations) +
         "\n\nMove the text into a dedicated *Defaults.cs content file (see " +
         "src/Platform/Platform.Localization/LocalizationDefaults.cs for the pattern) and look it up via " +
-        "ITranslationService instead — see src/Platform/Platform.Localization/README.md. If this really " +
+        "ITranslationService instead — see docs/architecture/04-platform-services.md. If this really " +
         "is a structural constant (not translatable content), add it to AllowedFiles with a justification.";
 }

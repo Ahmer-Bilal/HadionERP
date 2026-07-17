@@ -6,7 +6,7 @@ namespace Modules.Identity.Infrastructure;
 /// <summary>
 /// The real, persisted <see cref="IActorRoleAssignmentStore"/> — replaces
 /// <see cref="InMemoryActorRoleAssignmentStore"/>'s hardcoded dictionary now that real users/roles exist
-/// (`ARCHITECTURE-AUDIT.md` Part 1 §1). A deactivated or unknown username resolves to zero roles — "denied
+/// (`MISSING-FEATURES-AUDIT.md` Part 1 §1). A deactivated or unknown username resolves to zero roles — "denied
 /// by default, not granted by default," the same convention the in-memory reference implementation it
 /// replaces already established.
 ///

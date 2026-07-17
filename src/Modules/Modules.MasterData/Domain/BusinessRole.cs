@@ -15,7 +15,7 @@ namespace Modules.MasterData.Domain;
 /// role family (<c>"SubcontractorTrade"</c>, <c>"SupplierTrade"</c>, <c>"ConsultantTrade"</c>), not one
 /// undifferentiated list: a Subcontractor's trades (Electrical/Concrete/Steel Structure/...) are a
 /// genuinely different real-world taxonomy from a Supplier's (Steel/Cement/MEP Materials/...) or a
-/// Consultant's (Structural/Architectural/MEP Design/...), per docs/architecture/06-roadmap.md's own Phase 2
+/// Consultant's (Structural/Architectural/MEP Design/...), per ROADMAP.md's own Phase 2
 /// design. Deliberately NOT enforced server-side (see this module's README Deferred section): it's a
 /// suggested-values list surfaced to the UI, since trades vary by discipline and a hard validation here
 /// would block a legitimate trade the seed list hasn't caught up with yet. Only meaningful for the

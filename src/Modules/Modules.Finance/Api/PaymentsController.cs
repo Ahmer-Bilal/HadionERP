@@ -7,7 +7,7 @@ namespace Modules.Finance.Api;
 public sealed record ReversePaymentRequest(DateOnly? ReversalDate = null);
 
 /// <summary>
-/// Payment controller — closes `ARCHITECTURE-AUDIT.md` Part 2 §16. Inherits <see cref="PlatformApiController"/>
+/// Payment controller — closes `MISSING-FEATURES-AUDIT.md` Part 2 §16. Inherits <see cref="PlatformApiController"/>
 /// for shared conventions, same route/actor/exception-mapping pattern as <see cref="APInvoicesController"/>.
 /// </summary>
 [Route("api/v1/finance/payments")]

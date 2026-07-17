@@ -4,7 +4,7 @@ namespace Platform.Audit;
 
 /// <summary>
 /// The permanent, append-only, tamper-evident record of changes
-/// (docs/architecture/03-platform-services.md #5). This is the read/append surface only — modules don't
+/// (docs/architecture/04-platform-services.md #5). This is the read/append surface only — modules don't
 /// construct <see cref="AuditEntry"/> values by hand; they go through <see cref="IAuditRecorder"/>, which is
 /// the friendly facade for "record what just happened."
 ///

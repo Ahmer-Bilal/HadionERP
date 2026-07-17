@@ -1,7 +1,7 @@
 namespace Platform.Localization;
 
 /// <summary>
-/// The languages this platform treats as first-class (docs/architecture/03-platform-services.md #1.1).
+/// The languages this platform treats as first-class (docs/architecture/04-platform-services.md #1.1).
 /// Adding a third language later means adding a case here and to <see cref="TextDirection"/> — it does
 /// not mean redesigning any UI component, because every component is authored direction-aware, not
 /// English-with-Arabic-bolted-on.

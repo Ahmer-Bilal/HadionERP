@@ -6,7 +6,7 @@ namespace Modules.Procurement.Domain;
 /// Modules.Finance.Domain.JournalLine. References an Item and a Cost Center — both by <see cref="Guid"/>
 /// only, resolved and validated through <c>Modules.MasterData.Contracts.IItemLookup</c>/
 /// <c>ICostCenterLookup</c> at the Application layer, never through a direct reference to
-/// Modules.MasterData's own types (docs/architecture/01-architecture-foundation.md §3.2).
+/// Modules.MasterData's own types (docs/architecture/01-overview.md §3.2).
 /// </summary>
 public sealed class PurchaseRequisitionLine
 {

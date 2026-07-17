@@ -6,7 +6,7 @@ namespace Platform.Events.Tests;
 /// Proves the whole architecture in one test: a module publishes an event, it's staged in the outbox
 /// (not lost even if the bus were down), a relay drains the outbox to the bus, and a subscriber (playing
 /// the part of a different module reacting to it — e.g. Finance reacting to Procurement's approval)
-/// actually receives it. This is the concrete mechanism behind docs/architecture/03-platform-services.md
+/// actually receives it. This is the concrete mechanism behind docs/architecture/04-platform-services.md
 /// #3's example: "PO Approved -> Finance creates budget commitment."
 /// </summary>
 public class EndToEndPipelineTests

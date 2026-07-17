@@ -4,7 +4,7 @@ namespace Modules.ProjectManagement.Domain;
 /// One node in a <see cref="Project"/>'s Work Breakdown Structure — a child entity, not an independent
 /// Business Object (same "0..n child collection, only exists through its parent" pattern as every other
 /// module's line collections), but a real <b>Controlling object</b> per
-/// docs/architecture/07-project-accounting-and-financial-architecture.md §4: once this project is Approved,
+/// docs/architecture/07-integrated-project-controlling.md §4: once this project is Approved,
 /// this element's <see cref="Id"/> is the thing other modules will eventually post cost/revenue/budget
 /// against (a future Procurement PO line, a future Payroll labor-cost line) — the same role a Cost Center
 /// plays for non-project costs.

@@ -21,7 +21,7 @@ Opens on http://localhost:5173 by default. Requires `Gateway.Api` running on htt
 
 ## Text/translation discipline
 
-Same rule as the backend (see `src/Platform/Platform.Localization/README.md`): no component embeds a
+Same rule as the backend (see `docs/architecture/04-platform-services.md`'s Localization section): no component embeds a
 literal display string. All display text lives in `src/i18n/content.ts` (translatable content) or
 `src/i18n/languageNames.ts` (fixed language autonyms), looked up via `t(key, language)`.
 

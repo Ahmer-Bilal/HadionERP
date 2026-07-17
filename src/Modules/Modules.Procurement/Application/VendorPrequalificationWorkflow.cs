@@ -7,7 +7,7 @@ namespace Modules.Procurement.Application;
 /// <see cref="IWorkflowDefinitionCatalog"/> at startup, same module-owned configuration pattern as every
 /// prior BO's Workflow class. The FIRST real multi-step workflow in this codebase: five sequential,
 /// Any-quorum, unconditioned steps (Commercial → Legal → Technical → HSE → Quality), per
-/// docs/architecture/06-roadmap.md's design — every one of these domains applies to every
+/// ROADMAP.md's design — every one of these domains applies to every
 /// <c>BusinessRoleType</c> a vendor can hold (only the review CRITERIA differ per role, not which steps
 /// run), so no step needs a <see cref="WorkflowStepDefinition.Condition"/>. Confirmed feasible without any
 /// new platform capability by reading <see cref="WorkflowEngine.Start"/>/<see cref="AttributeConstraints"/>

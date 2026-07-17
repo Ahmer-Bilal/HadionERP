@@ -4,7 +4,7 @@ namespace Modules.Construction.Domain;
 
 /// <summary>
 /// The commercial contract a <c>Modules.ProjectManagement.Domain.Project</c> is executed against
-/// (docs/architecture/07-project-accounting-and-financial-architecture.md §4's Construction layer —
+/// (docs/architecture/07-integrated-project-controlling.md §4's Construction layer —
 /// "Customer Contracts... referencing WBS elements"). Owns a <see cref="BoqLine"/> collection — the
 /// line-by-line quantity/rate breakdown mapped onto the Project's WBS elements, priced by this Contract.
 /// Stops at Approved like every commercial/organizational BO so far (no Post/Reverse — a Contract is not
@@ -25,7 +25,7 @@ public sealed class Contract : BusinessObject
     public string ContractType { get; private set; }
 
     /// <summary>Free text for this slice — the real Payment-Terms field belongs on the Business Partner
-    /// master (<c>ARCHITECTURE-AUDIT.md</c> §15, still open), not duplicated here as a separate concept.</summary>
+    /// master (<c>MISSING-FEATURES-AUDIT.md</c> §15, still open), not duplicated here as a separate concept.</summary>
     public string? PaymentTerms { get; private set; }
 
     public decimal? AdvancePaymentPercentage { get; private set; }

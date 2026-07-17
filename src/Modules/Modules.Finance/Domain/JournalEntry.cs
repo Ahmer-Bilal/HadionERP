@@ -5,9 +5,9 @@ namespace Modules.Finance.Domain;
 /// <summary>
 /// One General Ledger journal entry — the Universal-Journal-style line-item document every financial fact
 /// in this platform eventually reduces to
-/// (docs/architecture/07-project-accounting-and-financial-architecture.md #1), and the first Finance
+/// (docs/architecture/07-integrated-project-controlling.md #1), and the first Finance
 /// Business Object, matching the Phase 1 exit criteria's "post/reverse a GL journal ... with full audit
-/// trail" (docs/architecture/06-roadmap.md). This is the first real use anywhere in this codebase of the
+/// trail" (ROADMAP.md). This is the first real use anywhere in this codebase of the
 /// full Draft → Submit → Approve → Post → Reverse lifecycle
 /// (Platform.Core.Lifecycle.LifecycleEngine already supported Post/Reverse from Phase 0, but no Business
 /// Object had exercised that path until now — every Master Data slice stops at Approved).

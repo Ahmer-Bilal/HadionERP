@@ -2,7 +2,7 @@ namespace Modules.MasterData.Contracts;
 
 /// <summary>
 /// The published, read-only view of a G/L Account another module (Finance) may depend on — per
-/// docs/architecture/01-architecture-foundation.md §3.2, a module may depend on another module's
+/// docs/architecture/01-overview.md §3.2, a module may depend on another module's
 /// published Contracts package only, never its Domain/Infrastructure/Application internals directly.
 /// Deliberately a flat summary, not the real <c>GLAccount</c> aggregate — Finance needs to know "does this
 /// account exist, is it postable, what's its normal balance," not the chart's own maintenance concerns

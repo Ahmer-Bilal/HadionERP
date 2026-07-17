@@ -9,7 +9,7 @@ namespace Modules.ProjectManagement.Infrastructure;
 
 /// <summary>
 /// This module's own Postgres schema ("projectmanagement") — physically enforcing the module-boundary rule
-/// from docs/architecture/01-architecture-foundation.md §3.2 at the database level, same as every other
+/// from docs/architecture/01-overview.md §3.2 at the database level, same as every other
 /// module's own schema. Owns its own copies of the generic kernel-port implementations (WorkflowInstance
 /// persistence, number range counters) rather than sharing another module's tables.
 /// </summary>

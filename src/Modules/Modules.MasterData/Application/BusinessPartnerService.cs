@@ -13,9 +13,9 @@ namespace Modules.MasterData.Application;
 /// <summary>
 /// Orchestrates Business Partner use cases — validates input, drives the Domain object, and persists
 /// through the repository port. No business rules live here (those belong on
-/// <see cref="BusinessPartner"/> itself, per docs/architecture/01-architecture-foundation.md #1); this
+/// <see cref="BusinessPartner"/> itself, per docs/architecture/01-overview.md #1); this
 /// layer only coordinates. Audit, Workflow, and Security are likewise platform services, not module logic
-/// (CLAUDE.md / docs/architecture/03-platform-services.md #2, #4-5) — this layer only calls
+/// (CLAUDE.md / docs/architecture/04-platform-services.md #2, #4-5) — this layer only calls
 /// <see cref="Platform.Audit.IAuditRecorder"/>, <see cref="Platform.Workflow.IWorkflowEngine"/>, and
 /// <see cref="Platform.Security.IAuthorizationService"/> at the points a real business process cares
 /// about; the actual capture/hash-chaining/approval-routing/permission logic lives entirely in those
@@ -24,7 +24,7 @@ namespace Modules.MasterData.Application;
 public sealed class BusinessPartnerService
 {
     /// <summary>The number range key this module registers for Business Partners — matches the naming
-    /// convention "{ModuleAbbrev}-{DocAbbrev}" in docs/architecture/05-engineering-standards.md #2.</summary>
+    /// convention "{ModuleAbbrev}-{DocAbbrev}" in docs/architecture/06-engineering-standards.md #2.</summary>
     public const string NumberRangeKey = "MD-BP";
 
     private const string AuditTargetType = "BusinessPartner";
@@ -429,7 +429,7 @@ public sealed class BusinessPartnerService
     /// <summary>
     /// The real authorization gate — calls <see cref="Platform.Security.IAuthorizationService"/>, the
     /// same platform service every module is meant to call rather than reimplementing permission checks
-    /// (docs/architecture/03-platform-services.md #2.2). Throws <see cref="UnauthorizedAccessException"/>
+    /// (docs/architecture/04-platform-services.md #2.2). Throws <see cref="UnauthorizedAccessException"/>
     /// on denial, the same exception type <see cref="IWorkflowEngine.Decide"/> already throws for
     /// workflow-eligibility denials — <see cref="Api.BusinessPartnersController"/> maps both to a 403.
     /// </summary>
@@ -447,7 +447,7 @@ public sealed class BusinessPartnerService
     /// check against, resolving real Role keys from <see cref="IActorRoleAssignmentStore"/> — replacing
     /// what used to be an unconditional grant (see git history for the prior shim). Still a placeholder
     /// for real authentication (there is no logged-in user yet, only the bare actor-id strings every
-    /// endpoint currently hardcodes — see `Modules.MasterData/README.md`'s deferred list), but it is no
+    /// endpoint currently hardcodes — see `docs/module/master-data.md`'s deferred list), but it is no
     /// longer a shim that grants every actor every role: an actor with no assignment resolves to zero
     /// Roles and is correctly denied.
     /// </summary>

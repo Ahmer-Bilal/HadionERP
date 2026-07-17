@@ -3,7 +3,7 @@ using Platform.Core;
 namespace Modules.Procurement.Domain;
 
 /// <summary>
-/// The first document in the procure-to-pay chain (docs/architecture/06-roadmap.md's Phase 2: "PR → RFQ →
+/// The first document in the procure-to-pay chain (ROADMAP.md's Phase 2: "PR → RFQ →
 /// PO → GRN → 3-way match against AP") — a cost-center owner's request to buy specific Items in specific
 /// quantities, at an estimated (not yet negotiated) price. Stops at Approved, like every Master-Data-ish BO
 /// so far (GLAccount/Item/CostCenter/TaxCode/VendorPrequalification) — a requisition is an internal request,

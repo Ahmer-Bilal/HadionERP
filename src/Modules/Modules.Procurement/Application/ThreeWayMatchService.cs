@@ -4,10 +4,10 @@ using Platform.Core;
 namespace Modules.Procurement.Application;
 
 /// <summary>
-/// Computes the 3-way match (Ordered vs Received vs Invoiced) docs/architecture/06-roadmap.md's Phase 2
+/// Computes the 3-way match (Ordered vs Received vs Invoiced) ROADMAP.md's Phase 2
 /// bullet names as the last piece of the procure-to-pay chain — "PR → RFQ → PO → GRN → 3-way match against
 /// AP." Deliberately lives entirely on the Procurement side: Finance is upstream of Procurement in the
-/// module dependency graph (docs/architecture/01-architecture-foundation.md §3.2 — Procurement depends on
+/// module dependency graph (docs/architecture/01-overview.md §3.2 — Procurement depends on
 /// Finance, never the reverse), so this reads the PO/GRN data it already owns directly and reaches into
 /// Finance only through the one published, read-only <see cref="IAPInvoiceLookup"/> contract — the same
 /// direction <see cref="PurchaseOrderService"/> already uses for the budget check.

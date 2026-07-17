@@ -1,6 +1,6 @@
 namespace Platform.Security.FieldLevel;
 
-/// <summary>Common masking strategies for sensitive fields (docs/architecture/03-platform-services.md #2.3)
+/// <summary>Common masking strategies for sensitive fields (docs/architecture/04-platform-services.md #2.3)
 /// — e.g. salary, IBAN, national ID/Iqama number.</summary>
 public static class MaskingStrategies
 {

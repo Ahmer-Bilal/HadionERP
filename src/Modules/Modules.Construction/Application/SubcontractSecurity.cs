@@ -35,5 +35,5 @@ public static class SubcontractSecurity
         MaintainerDutyKey,
         ApproverDutyKey,
         "The same person should not both build and approve a Subcontract " +
-        "(Segregation of Duties, docs/architecture/03-platform-services.md #2.2).");
+        "(Segregation of Duties, docs/architecture/04-platform-services.md #2.2).");
 }

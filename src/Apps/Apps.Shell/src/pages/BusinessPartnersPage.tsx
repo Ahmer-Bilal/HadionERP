@@ -70,7 +70,7 @@ function lookupLabel(value: LookupValue, language: SupportedLanguageCode): strin
 }
 
 // Only the Supplier/Subcontractor/Consultant-family roles have a meaningful Trade/Specialty concept —
-// docs/architecture/06-roadmap.md's Phase 2 design (Client/JointVenturePartner/GovernmentAuthority have
+// ROADMAP.md's Phase 2 design (Client/JointVenturePartner/GovernmentAuthority have
 // none).
 const TRADE_ELIGIBLE_ROLES = new Set(["Supplier", "Subcontractor", "Consultant"]);
 
@@ -179,7 +179,7 @@ export function BusinessPartnersPage({ language }: BusinessPartnersPageProps) {
   // Trade suggestions are role-scoped, not one flat list — a Subcontractor's trades (Electrical/Concrete/
   // Steel Structure/...) are a different real-world taxonomy from a Supplier's (Steel/Cement/MEP
   // Materials/...) or a Consultant's (Structural/Architectural/MEP Design/...), matching
-  // docs/architecture/06-roadmap.md's own Phase 2 design.
+  // ROADMAP.md's own Phase 2 design.
   const [tradeOptionsByRole, setTradeOptionsByRole] = useState<Record<string, LookupValue[]>>({});
 
   const load = useCallback(() => {

@@ -79,7 +79,7 @@ public static class VendorPrequalificationSecurity
 
     /// <summary>The same person should never both submit a vendor's prequalification and review one of its
     /// domains — one conflict rule per reviewer duty, same reasoning as every other module's Maintainer-vs-
-    /// Approver conflict (docs/architecture/03-platform-services.md #2.2), just five times over since there
+    /// Approver conflict (docs/architecture/04-platform-services.md #2.2), just five times over since there
     /// are five distinct review duties here instead of one.</summary>
     public static readonly SodConflictRule MaintainerCommercialReviewerConflict = new(
         MaintainerDutyKey, CommercialReviewerDuty.Key,

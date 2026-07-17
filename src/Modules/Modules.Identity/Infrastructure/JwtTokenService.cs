@@ -9,7 +9,7 @@ namespace Modules.Identity.Infrastructure;
 /// <summary>
 /// JWT implementation of <see cref="ITokenService"/> — see that interface's own doc comment for why it's
 /// defined in Platform.Security but implemented here. Short-lived, symmetrically-signed tokens; no refresh-
-/// token rotation in this pass (`ARCHITECTURE-AUDIT.md` Part 1 §1's own disclosed scope boundary) — a
+/// token rotation in this pass (`MISSING-FEATURES-AUDIT.md` Part 1 §1's own disclosed scope boundary) — a
 /// token's holder simply re-authenticates after it expires.
 /// </summary>
 public sealed class JwtTokenService : ITokenService

@@ -3,7 +3,7 @@ using Modules.MasterData.Domain;
 namespace Modules.MasterData.Application;
 
 /// <summary>The persistence port this Application layer depends on — Infrastructure provides the real
-/// (EF Core) implementation, per docs/architecture/01-architecture-foundation.md #1's dependency
+/// (EF Core) implementation, per docs/architecture/01-overview.md #1's dependency
 /// inversion rule (Application never references Infrastructure directly).</summary>
 public interface IBusinessPartnerRepository
 {

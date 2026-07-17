@@ -19,7 +19,7 @@ public sealed class IntegrationEventPublisher : IIntegrationEventPublisher
         {
             throw new InvalidOperationException(
                 $"Event type '{integrationEvent.EventType}' is not registered in the event catalog. " +
-                "Register it (with its version) before publishing — see docs/architecture/03-platform-services.md #3.");
+                "Register it (with its version) before publishing — see docs/architecture/04-platform-services.md #3.");
         }
 
         _outboxStore.Enqueue(integrationEvent);

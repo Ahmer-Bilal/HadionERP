@@ -8,7 +8,7 @@ namespace Modules.Finance.Domain;
 /// Center — both by <see cref="Guid"/> only, resolved and validated through
 /// <c>Modules.MasterData.Contracts.IGLAccountLookup</c>/a future cost-center lookup at the Application
 /// layer, never through a direct reference to Modules.MasterData's own types
-/// (docs/architecture/01-architecture-foundation.md #3.2 — Finance may depend on MasterData's published
+/// (docs/architecture/01-overview.md #3.2 — Finance may depend on MasterData's published
 /// Contracts only).
 ///
 /// Exactly one of <see cref="DebitAmount"/>/<see cref="CreditAmount"/> is non-zero on any given line — the

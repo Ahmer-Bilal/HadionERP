@@ -4,18 +4,18 @@ namespace Modules.MasterData.Domain;
 
 /// <summary>
 /// A construction-industry business party — the first Master Data entity built
-/// (docs/architecture/01-architecture-foundation.md #3.1) since every transactional module eventually
+/// (docs/architecture/01-overview.md #3.1) since every transactional module eventually
 /// references it (Finance's AP/AR, Procurement's vendors, Construction's subcontractors/customers).
 /// Follows the standard Business Object lifecycle (Platform.Core.BusinessObject): Draft (data entry) →
 /// Submit → Approve (new-partner onboarding is a real fraud/compliance control point, per
-/// docs/architecture/03-platform-services.md #2.2's Segregation of Duties example) → Approved is the
+/// docs/architecture/04-platform-services.md #2.2's Segregation of Duties example) → Approved is the
 /// "active, usable" state master data settles into; there's no "Posted" concept for master data the way
 /// there is for a financial document.
 ///
 /// Owns three child collections — <see cref="Addresses"/>, <see cref="Contacts"/>, and
 /// <see cref="BusinessRoles"/> — because a real company has several addresses by purpose (head office,
 /// billing, shipping, one or more site offices), several contact people (a Procurement Manager, an
-/// Accountant, a CEO, a Site Engineer), and (per docs/architecture/06-roadmap.md's Phase 2 design) several
+/// Accountant, a CEO, a Site Engineer), and (per ROADMAP.md's Phase 2 design) several
 /// simultaneous roles (a company can be both a Supplier and a Subcontractor) — not one shared field or a
 /// single enum for the whole company. All three are child entities, not independent Business Objects.
 ///
@@ -96,7 +96,7 @@ public sealed class BusinessPartner : BusinessObject
     /// <summary>The one <see cref="BusinessRoleType"/> lookup value every consumer across every module
     /// (this Domain, Procurement's VendorPrequalificationService/RequestForQuotationService, Finance's
     /// APInvoiceService) special-cases by this exact code — "no commercial relationship, no AP/AR posting,
-    /// no scorecard" per docs/architecture/06-roadmap.md's Phase 2 design. Making <see cref="BusinessRole.RoleType"/>
+    /// no scorecard" per ROADMAP.md's Phase 2 design. Making <see cref="BusinessRole.RoleType"/>
     /// admin-extensible (any other code) doesn't change this one rule; a real SAP/Dynamics account-group
     /// taxonomy has the same kind of fixed special case (e.g. a "one-time customer" account group) sitting
     /// alongside otherwise-configurable groups.</summary>
@@ -107,7 +107,7 @@ public sealed class BusinessPartner : BusinessObject
     /// GovernmentAuthority (no trade/specialty concept) but genuinely useful for the
     /// Supplier/Subcontractor/Consultant family, where the same partner can legitimately hold the same
     /// role type more than once with a different Trade (e.g. Subcontractor–Electrical and
-    /// Subcontractor–Concrete on the same company) — docs/architecture/06-roadmap.md's Phase 2 design calls
+    /// Subcontractor–Concrete on the same company) — ROADMAP.md's Phase 2 design calls
     /// this out explicitly for Vendor Prequalification's own sake ("a vendor can be prequalified as a Steel
     /// Supplier without being prequalified as an Electrical Subcontractor"). <paramref name="roleType"/> is
     /// an admin-configurable lookup code (Lookup type <c>"BusinessRoleType"</c>) — validated against

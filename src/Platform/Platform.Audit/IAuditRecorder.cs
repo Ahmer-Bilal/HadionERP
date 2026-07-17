@@ -7,7 +7,7 @@ namespace Platform.Audit;
 /// the same way <c>IIntegrationEventPublisher</c> is the single entry point for cross-module events
 /// (modules never call <see cref="IAuditLog"/> directly to build entries by hand). This is what keeps the
 /// captured content consistent across every module (who/when/from-where populated the same way everywhere)
-/// and is where a future session/user-context lookup would be wired (docs/architecture/03-platform-services.md #5:
+/// and is where a future session/user-context lookup would be wired (docs/architecture/04-platform-services.md #5:
 /// "who, what (field-level before/after), when, from where, why").
 /// </summary>
 public interface IAuditRecorder

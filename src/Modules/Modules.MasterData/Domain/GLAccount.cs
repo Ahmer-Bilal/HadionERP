@@ -4,7 +4,7 @@ namespace Modules.MasterData.Domain;
 
 /// <summary>
 /// One General Ledger account — a row in the Chart of Accounts. This is the "GL Account" dimension carried
-/// on every Journal Line Item (docs/architecture/07-project-accounting-and-financial-architecture.md #1),
+/// on every Journal Line Item (docs/architecture/07-integrated-project-controlling.md #1),
 /// and one of the two master-data pieces the Phase 1 exit criteria explicitly names ("maintain its chart of
 /// accounts and vendors"). Follows the standard Business Object lifecycle (Platform.Core.BusinessObject):
 /// Draft → Submit → Approve → Approved is the "active, usable" state, same as Business Partner.

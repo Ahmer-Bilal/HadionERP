@@ -15,14 +15,14 @@ public sealed class VendorPrequalificationService
     public const string NumberRangeKey = "PROC-VPQ";
 
     /// <summary>How many months an Approved certificate stays valid from its approval date — a real
-    /// Platform.Configuration key (docs/architecture/04-data-and-api.md #3's "don't hard-code business
+    /// Platform.Configuration key (docs/architecture/05-data-and-api.md #3's "don't hard-code business
     /// rules" applies here just as much as to a tax rate or approval threshold), overridable per Tenant/
     /// Company through the same future admin UI every other configured value in this codebase awaits.
     /// Defaults to 24 months, matching the common Saudi EPC/construction industry prequalification
     /// renewal cycle.</summary>
     public const string ValidityMonthsConfigurationKey = "Procurement.VendorPrequalification.ValidityMonths";
 
-    /// <summary>Excluded outright, per docs/architecture/06-roadmap.md's Vendor Prequalification design:
+    /// <summary>Excluded outright, per ROADMAP.md's Vendor Prequalification design:
     /// "Government Authority is not prequalified at all" — there is no commercial relationship to qualify.</summary>
     private const string GovernmentAuthorityRoleType = "GovernmentAuthority";
 
