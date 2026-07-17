@@ -148,10 +148,12 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 LookupSecurity.AdministratorRole, IdentitySecurity.AdministratorRole,
                 BankAccountSecurity.MaintainerRole, BankAccountSecurity.ApproverRole,
                 PaymentSecurity.MaintainerRole, PaymentSecurity.ApproverRole,
+                CustomerReceiptSecurity.MaintainerRole, CustomerReceiptSecurity.ApproverRole,
                 ContractSecurity.MaintainerRole, ContractSecurity.ApproverRole,
                 SubcontractSecurity.MaintainerRole, SubcontractSecurity.ApproverRole,
                 MeasurementSheetSecurity.MaintainerRole, MeasurementSheetSecurity.ApproverRole,
-                IpcSecurity.MaintainerRole, IpcSecurity.ApproverRole },
+                IpcSecurity.MaintainerRole, IpcSecurity.ApproverRole,
+                VariationOrderSecurity.MaintainerRole, VariationOrderSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -172,10 +174,12 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 LookupSecurity.AdministratorDuty, IdentitySecurity.AdministratorDuty,
                 BankAccountSecurity.MaintainerDuty, BankAccountSecurity.ApproverDuty,
                 PaymentSecurity.MaintainerDuty, PaymentSecurity.ApproverDuty,
+                CustomerReceiptSecurity.MaintainerDuty, CustomerReceiptSecurity.ApproverDuty,
                 ContractSecurity.MaintainerDuty, ContractSecurity.ApproverDuty,
                 SubcontractSecurity.MaintainerDuty, SubcontractSecurity.ApproverDuty,
                 MeasurementSheetSecurity.MaintainerDuty, MeasurementSheetSecurity.ApproverDuty,
-                IpcSecurity.MaintainerDuty, IpcSecurity.ApproverDuty });
+                IpcSecurity.MaintainerDuty, IpcSecurity.ApproverDuty,
+                VariationOrderSecurity.MaintainerDuty, VariationOrderSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -209,10 +213,12 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         ProjectSecurity.MaintainerApproverConflict,
         BankAccountSecurity.MaintainerApproverConflict,
         PaymentSecurity.MaintainerApproverConflict,
+        CustomerReceiptSecurity.MaintainerApproverConflict,
         ContractSecurity.MaintainerApproverConflict,
         SubcontractSecurity.MaintainerApproverConflict,
         MeasurementSheetSecurity.MaintainerApproverConflict,
         IpcSecurity.MaintainerApproverConflict,
+        VariationOrderSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
@@ -248,6 +254,7 @@ var allRegisteredRoleKeys = new[]
     LookupSecurity.AdministratorRoleKey, IdentitySecurity.AdministratorRoleKey,
     BankAccountSecurity.MaintainerRoleKey, BankAccountWorkflow.ApproverRoleKey,
     PaymentSecurity.MaintainerRoleKey, PaymentWorkflow.ApproverRoleKey,
+    CustomerReceiptSecurity.MaintainerRoleKey, CustomerReceiptWorkflow.ApproverRoleKey,
 };
 
 // Platform.Workflow: one real approval workflow is registered — Modules.MasterData's Business Partner
@@ -272,10 +279,12 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         ProjectWorkflow.SubmitApprovalDefinition,
         BankAccountWorkflow.SubmitApprovalDefinition,
         PaymentWorkflow.SubmitApprovalDefinition,
+        CustomerReceiptWorkflow.SubmitApprovalDefinition,
         ContractWorkflow.SubmitApprovalDefinition,
         SubcontractWorkflow.SubmitApprovalDefinition,
         MeasurementSheetWorkflow.SubmitApprovalDefinition,
         IpcWorkflow.SubmitApprovalDefinition,
+        VariationOrderWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -442,12 +451,16 @@ builder.Services.AddScoped<Modules.Finance.Application.ARInvoiceService>(sp => n
     sp.GetRequiredService<IGLAccountLookup>(),
     sp.GetRequiredService<ICostCenterLookup>(),
     sp.GetRequiredService<ITaxCodeLookup>(),
-    sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
+    sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>(),
+    sp.GetRequiredService<Modules.Finance.Application.ICustomerReceiptRepository>()));
 // Modules.Finance.Contracts.ICustomerInvoicingService: the first cross-module *write* Contracts interface
 // in this system — Construction's IpcService calls this to raise a real AR Invoice the moment a Contract-
 // type IPC is certified (docs/architecture/01-overview.md #3.2's "never reach past the interface into the
 // owning module's Infrastructure directly" rule, now exercised for a write, not just a read).
 builder.Services.AddScoped<Modules.Finance.Contracts.ICustomerInvoicingService, Modules.Finance.Infrastructure.ArInvoiceCustomerInvoicingService>();
+// The AP mirror — Construction's IpcService calls this when a Subcontract-type IPC is certified, raising a
+// real AP Invoice against the Subcontract's own Subcontractor.
+builder.Services.AddScoped<Modules.Finance.Contracts.IVendorInvoicingService, Modules.Finance.Infrastructure.ApInvoiceVendorInvoicingService>();
 
 // Bank Accounts & Payments — closes MISSING-FEATURES-AUDIT.md Part 2 §16 ("no way anywhere in this system to
 // record that an AP invoice was actually paid"). Both live in Modules.Finance (same reasoning as JournalEntry/
@@ -476,6 +489,26 @@ builder.Services.AddScoped<Modules.Finance.Application.PaymentService>(sp => new
     new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
         sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
         new[] { new NumberRangeDefinition(Modules.Finance.Application.PaymentService.NumberRangeKey, "FIN", "PAY") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>(),
+    sp.GetRequiredService<ILookupCatalog>(),
+    sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
+
+builder.Services.AddScoped<Modules.Finance.Application.ICustomerReceiptRepository, Modules.Finance.Infrastructure.EfCustomerReceiptRepository>();
+// Customer Receipt: the AR mirror of Payment — finally makes ARInvoice.OutstandingBalance mean something
+// real. Same intra-module dependency shape as PaymentService (IARInvoiceRepository/IBankAccountRepository
+// directly, ILookupCatalog for PaymentMethod validation).
+builder.Services.AddScoped<Modules.Finance.Application.CustomerReceiptService>(sp => new Modules.Finance.Application.CustomerReceiptService(
+    sp.GetRequiredService<Modules.Finance.Application.ICustomerReceiptRepository>(),
+    sp.GetRequiredService<Modules.Finance.Application.IARInvoiceRepository>(),
+    sp.GetRequiredService<Modules.Finance.Application.IBankAccountRepository>(),
+    new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
+        new[] { new NumberRangeDefinition(Modules.Finance.Application.CustomerReceiptService.NumberRangeKey, "FIN", "CR") }),
     sp.GetRequiredService<IAuditRecorder>(),
     sp.GetRequiredService<IWorkflowEngine>(),
     new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
@@ -708,7 +741,27 @@ builder.Services.AddScoped<IpcService>(sp => new IpcService(
     sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IProjectLookup>(),
-    sp.GetRequiredService<Modules.Finance.Contracts.ICustomerInvoicingService>()));
+    sp.GetRequiredService<Modules.Finance.Contracts.ICustomerInvoicingService>(),
+    sp.GetRequiredService<Modules.Finance.Contracts.IVendorInvoicingService>()));
+
+// Variation Order: a scope/quantity change against an Approved Contract or Subcontract — the mechanism
+// MeasurementSheetService's over-measurement guard already points to. Approval writes through to the
+// underlying Contract/Subcontract's own line collection, so it depends on IContractRepository/
+// ISubcontractRepository directly (same module, no cross-module lookup needed), same as Measurement/IPC.
+builder.Services.AddScoped<IVariationOrderRepository, Modules.Construction.Infrastructure.EfVariationOrderRepository>();
+builder.Services.AddScoped<VariationOrderService>(sp => new VariationOrderService(
+    sp.GetRequiredService<IVariationOrderRepository>(),
+    sp.GetRequiredService<IContractRepository>(),
+    sp.GetRequiredService<ISubcontractRepository>(),
+    new Modules.Construction.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>(),
+        new[] { new NumberRangeDefinition(VariationOrderService.NumberRangeKey, "CON", "VO") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Construction.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IProjectLookup>()));
 
 var app = builder.Build();
 

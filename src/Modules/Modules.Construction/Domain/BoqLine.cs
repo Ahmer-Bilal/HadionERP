@@ -52,4 +52,15 @@ public sealed class BoqLine
         Description = null!;
         UnitOfMeasure = null!;
     }
+
+    /// <summary>Applied by an Approved <see cref="VariationOrder"/> line against this line — the one way a
+    /// BOQ line's Quantity changes after the Contract itself has left Draft. <paramref name="delta"/> may be
+    /// negative (an omission), but the resulting quantity can never drop to zero or below.</summary>
+    internal void AdjustQuantity(decimal delta)
+    {
+        var updated = Quantity + delta;
+        if (updated <= 0)
+            throw new ArgumentException($"Adjusting line '{Code}' by {delta} would bring its quantity to {updated}, which is not allowed.");
+        Quantity = updated;
+    }
 }

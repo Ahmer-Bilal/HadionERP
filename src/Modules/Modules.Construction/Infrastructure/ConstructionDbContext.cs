@@ -24,6 +24,8 @@ public sealed class ConstructionDbContext : DbContext
     internal DbSet<MeasurementLine> MeasurementLines => Set<MeasurementLine>();
     public DbSet<Ipc> Ipcs => Set<Ipc>();
     internal DbSet<IpcLine> IpcLines => Set<IpcLine>();
+    public DbSet<VariationOrder> VariationOrders => Set<VariationOrder>();
+    internal DbSet<VariationOrderLine> VariationOrderLines => Set<VariationOrderLine>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
 
@@ -252,6 +254,9 @@ public sealed class ConstructionDbContext : DbContext
             entity.Property(e => e.TaxCodeId).HasColumnName("tax_code_id");
             entity.Property(e => e.VatAccountId).HasColumnName("vat_account_id");
             entity.Property(e => e.LinkedArInvoiceId).HasColumnName("linked_ar_invoice_id");
+            entity.Property(e => e.ExpenseAccountId).HasColumnName("expense_account_id");
+            entity.Property(e => e.PayableAccountId).HasColumnName("payable_account_id");
+            entity.Property(e => e.LinkedApInvoiceId).HasColumnName("linked_ap_invoice_id");
 
             entity.Property(e => e.ExtensionFields)
                 .HasColumnName("extension_data")
@@ -290,6 +295,63 @@ public sealed class ConstructionDbContext : DbContext
 
             entity.Ignore(e => e.ValueThisPeriod);
             entity.Ignore(e => e.ValueToDate);
+        });
+
+        modelBuilder.Entity<VariationOrder>(entity =>
+        {
+            entity.ToTable("variation_orders");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.CommercialDocumentType).HasColumnName("commercial_document_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.CommercialDocumentId).HasColumnName("commercial_document_id");
+            entity.Property(e => e.Reason).HasColumnName("reason").HasMaxLength(1000).IsRequired();
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("VariationOrderId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+            entity.Ignore(e => e.TotalValue);
+        });
+
+        modelBuilder.Entity<VariationOrderLine>(entity =>
+        {
+            entity.ToTable("variation_order_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CommercialDocumentLineId).HasColumnName("commercial_document_line_id");
+            entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(50);
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+            entity.Property(e => e.DescriptionArabic).HasColumnName("description_arabic").HasMaxLength(500);
+            entity.Property(e => e.UnitOfMeasure).HasColumnName("unit_of_measure").HasMaxLength(20);
+            entity.Property(e => e.WbsElementId).HasColumnName("wbs_element_id");
+            entity.Property(e => e.QuantityDelta).HasColumnName("quantity_delta").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.Rate).HasColumnName("rate").HasColumnType("numeric(18,2)");
+            entity.Property<Guid>("VariationOrderId").HasColumnName("variation_order_id");
+
+            entity.Ignore(e => e.Amount);
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

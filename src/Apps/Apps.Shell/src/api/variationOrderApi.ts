@@ -1,44 +1,28 @@
 import { API_BASE_URL } from "../config";
 import { authHeaders } from "./authApi";
 
-export interface IpcLine {
+export interface VariationOrderLine {
   id: string;
-  commercialDocumentLineId: string;
+  commercialDocumentLineId: string | null;
+  code: string | null;
+  description: string | null;
+  unitOfMeasure: string | null;
+  wbsElementId: string | null;
+  quantityDelta: number;
   rate: number;
-  quantityThisPeriod: number;
-  quantityToDate: number;
-  valueThisPeriod: number;
-  valueToDate: number;
+  amount: number;
 }
 
-export interface Ipc {
+export interface VariationOrder {
   id: string;
   documentNumber: string | null;
   status: string;
   projectId: string;
   commercialDocumentType: string;
   commercialDocumentId: string;
-  measurementSheetId: string;
-  periodStart: string;
-  periodEnd: string;
-  retentionPercentageApplied: number | null;
-  advancePaymentPercentageApplied: number | null;
-  otherDeductions: number;
-  revenueAccountId: string | null;
-  receivableAccountId: string | null;
-  expenseAccountId: string | null;
-  payableAccountId: string | null;
-  taxCodeId: string | null;
-  vatAccountId: string | null;
-  linkedArInvoiceId: string | null;
-  linkedApInvoiceId: string | null;
-  grossValueToDate: number;
-  grossValueThisPeriod: number;
-  grossValuePreviousIpc: number;
-  retentionAmount: number;
-  advanceRecoveryAmount: number;
-  netPayable: number;
-  lines: IpcLine[];
+  reason: string;
+  totalValue: number;
+  lines: VariationOrderLine[];
   createdAt: string;
   createdBy: string;
 }
@@ -50,21 +34,26 @@ export interface PagedResult<T> {
   top: number;
 }
 
-export interface CreateIpcInput {
+export interface CreateVariationOrderLineInput {
+  commercialDocumentLineId?: string;
+  quantityDelta: number;
+  code?: string;
+  description?: string;
+  descriptionArabic?: string;
+  unitOfMeasure?: string;
+  wbsElementId?: string;
+  rate?: number;
+}
+
+export interface CreateVariationOrderInput {
   projectId: string;
   commercialDocumentType: string;
   commercialDocumentId: string;
-  measurementSheetId: string;
-  otherDeductions: number;
-  revenueAccountId?: string;
-  receivableAccountId?: string;
-  expenseAccountId?: string;
-  payableAccountId?: string;
-  taxCodeId?: string;
-  vatAccountId?: string;
+  reason: string;
+  lines: CreateVariationOrderLineInput[];
 }
 
-const BASE_PATH = "/api/v1/construction/ipcs";
+const BASE_PATH = "/api/v1/construction/variation-orders";
 
 async function handleJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -74,17 +63,17 @@ async function handleJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function listIpcs(top = 50, skip = 0): Promise<PagedResult<Ipc>> {
+export async function listVariationOrders(top = 50, skip = 0): Promise<PagedResult<VariationOrder>> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}?$top=${top}&$skip=${skip}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
-export async function getIpc(id: string): Promise<Ipc> {
+export async function getVariationOrder(id: string): Promise<VariationOrder> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { headers: authHeaders() });
   return handleJson(response);
 }
 
-export async function createIpc(input: CreateIpcInput): Promise<Ipc> {
+export async function createVariationOrder(input: CreateVariationOrderInput): Promise<VariationOrder> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -93,17 +82,17 @@ export async function createIpc(input: CreateIpcInput): Promise<Ipc> {
   return handleJson(response);
 }
 
-export async function submitIpc(id: string): Promise<Ipc> {
+export async function submitVariationOrder(id: string): Promise<VariationOrder> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/submit`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
-export async function approveIpc(id: string): Promise<Ipc> {
+export async function approveVariationOrder(id: string): Promise<VariationOrder> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/approve`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }
 
-export async function rejectIpc(id: string): Promise<Ipc> {
+export async function rejectVariationOrder(id: string): Promise<VariationOrder> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
 }

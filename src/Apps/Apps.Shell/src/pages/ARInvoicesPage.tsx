@@ -19,6 +19,8 @@ import { listGLAccounts } from "../api/glAccountApi";
 import type { GLAccount } from "../api/glAccountApi";
 import { listTaxCodes } from "../api/taxCodeApi";
 import type { TaxCode } from "../api/taxCodeApi";
+import { listCustomerReceiptsForInvoice } from "../api/customerReceiptApi";
+import type { CustomerReceipt } from "../api/customerReceiptApi";
 
 interface ARInvoicesPageProps {
   language: SupportedLanguageCode;
@@ -53,6 +55,7 @@ export function ARInvoicesPage({ language }: ARInvoicesPageProps) {
   const [customers, setCustomers] = useState<BusinessPartner[]>([]);
   const [accounts, setAccounts] = useState<GLAccount[]>([]);
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
+  const [invoiceReceipts, setInvoiceReceipts] = useState<CustomerReceipt[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -92,6 +95,11 @@ export function ARInvoicesPage({ language }: ARInvoicesPageProps) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (view.kind !== "details") { setInvoiceReceipts([]); return; }
+    listCustomerReceiptsForInvoice(view.invoice.id).then((result) => setInvoiceReceipts(result.items)).catch(() => setInvoiceReceipts([]));
+  }, [view]);
 
   const customerLabel = (id: string) => customers.find((c) => c.id === id)?.name ?? id;
 
@@ -275,6 +283,34 @@ export function ARInvoicesPage({ language }: ARInvoicesPageProps) {
                   </>
                 )}
               </dl>
+            ),
+          },
+          {
+            key: "receipts",
+            title: t("cr.heading", language),
+            content: invoiceReceipts.length === 0 ? (
+              <p>{t("cr.emptyState", language)}</p>
+            ) : (
+              <table className="bp-table">
+                <thead>
+                  <tr>
+                    <th>{t("cr.columnDocumentNumber", language)}</th>
+                    <th>{t("cr.fieldReceiptDate", language)}</th>
+                    <th>{t("cr.fieldAllocatedAmount", language)}</th>
+                    <th>{t("cr.columnStatus", language)}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoiceReceipts.map((receipt) => (
+                    <tr key={receipt.id}>
+                      <td><bdi dir="ltr">{receipt.documentNumber}</bdi></td>
+                      <td><bdi dir="ltr">{receipt.receiptDate}</bdi></td>
+                      <td><bdi dir="ltr">{receipt.allocations.find((a) => a.arInvoiceId === invoice.id)?.allocatedAmount.toFixed(2) ?? "—"}</bdi></td>
+                      <td>{translateStatus(receipt.status, language)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ),
           },
         ]} />

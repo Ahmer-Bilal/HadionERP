@@ -74,6 +74,45 @@ public class IpcPersistenceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_saved_Subcontract_ipc_with_AP_billing_accounts_reads_back_identically()
+    {
+        var expenseAccountId = Guid.NewGuid();
+        var payableAccountId = Guid.NewGuid();
+        var apInvoiceId = Guid.NewGuid();
+        Guid id;
+        await using (var writeContext = TestDatabase.CreateContext())
+        {
+            var ipc = new Ipc(
+                "ahmer.bilal", Guid.NewGuid(), CommercialDocumentType.Subcontract, Guid.NewGuid(), Guid.NewGuid(),
+                PeriodStart, PeriodEnd, retentionPercentageApplied: 10m, advancePaymentPercentageApplied: null, otherDeductions: 0m,
+                expenseAccountId: expenseAccountId, payableAccountId: payableAccountId);
+            ipc.AddLine(Guid.NewGuid(), 40m, 20m, 20m);
+            ipc.AssignNumber("CON-IPC-2026-000004");
+            writeContext.Ipcs.Add(ipc);
+            await writeContext.SaveChangesAsync();
+
+            ipc.Submit("ahmer.bilal");
+            await writeContext.SaveChangesAsync();
+            ipc.LinkApInvoice(apInvoiceId);
+            ipc.Approve("engineer");
+            await writeContext.SaveChangesAsync();
+            id = ipc.Id;
+        }
+
+        await using var readContext = TestDatabase.CreateContext();
+        var reloaded = await readContext.Ipcs.FirstOrDefaultAsync(i => i.Id == id);
+
+        Assert.NotNull(reloaded);
+        Assert.Equal(CommercialDocumentType.Subcontract, reloaded!.CommercialDocumentType);
+        Assert.Equal(expenseAccountId, reloaded.ExpenseAccountId);
+        Assert.Equal(payableAccountId, reloaded.PayableAccountId);
+        Assert.Equal(apInvoiceId, reloaded.LinkedApInvoiceId);
+        Assert.Null(reloaded.RevenueAccountId);
+        Assert.Null(reloaded.ReceivableAccountId);
+        Assert.Null(reloaded.LinkedArInvoiceId);
+    }
+
+    [Fact]
     public async Task Deleting_an_ipc_cascades_to_its_lines()
     {
         Guid id;

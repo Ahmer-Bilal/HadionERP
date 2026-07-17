@@ -33,6 +33,7 @@ internal static class TestDatabase
     {
         await using var context = CreateContext();
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.payments CASCADE");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.customer_receipts CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.bank_accounts");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.journal_entries CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.ap_invoices");

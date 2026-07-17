@@ -80,6 +80,36 @@ public sealed class Contract : BusinessObject
         return line;
     }
 
+    /// <summary>Increases (or decreases) an existing BOQ line's quantity — the write-through an Approved
+    /// <see cref="VariationOrder"/> performs, called from <c>VariationOrderService.ApproveInternalAsync</c>.
+    /// Only while the Contract itself is Approved, since this is a live-execution change, not a Draft-time
+    /// edit like <see cref="AddBoqLine"/>.</summary>
+    public void AdjustBoqLineQuantity(Guid lineId, decimal quantityDelta)
+    {
+        if (Status != BusinessObjectStatus.Approved)
+            throw new InvalidOperationException("BOQ line quantities can only be adjusted against an Approved contract.");
+        var line = _boqLines.FirstOrDefault(l => l.Id == lineId)
+            ?? throw new ArgumentException($"BOQ line {lineId} does not belong to this contract.", nameof(lineId));
+        line.AdjustQuantity(quantityDelta);
+    }
+
+    /// <summary>Adds a wholly new BOQ line via an Approved <see cref="VariationOrder"/> — the other
+    /// write-through it performs. Mirrors <see cref="AddBoqLine"/>'s own validation, but only while the
+    /// Contract itself is Approved, not Draft.</summary>
+    public BoqLine AddBoqLineFromVariationOrder(
+        string code, string description, string? descriptionArabic, string unitOfMeasure,
+        decimal quantity, decimal rate, Guid wbsElementId)
+    {
+        if (Status != BusinessObjectStatus.Approved)
+            throw new InvalidOperationException("New BOQ lines can only be added via a Variation Order against an Approved contract.");
+        if (_boqLines.Any(l => l.Code.Equals(code, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException($"BOQ line code '{code}' is already used in this contract.", nameof(code));
+
+        var line = new BoqLine(code, description, descriptionArabic, unitOfMeasure, quantity, rate, wbsElementId);
+        _boqLines.Add(line);
+        return line;
+    }
+
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 
     public void Approve(string actor) => Transition(BusinessObjectTransition.Approve, actor);

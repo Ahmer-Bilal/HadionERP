@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Modules.Construction.Infrastructure;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Modules.Construction.Infrastructure.Migrations
 {
     [DbContext(typeof(ConstructionDbContext))]
-    partial class ConstructionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260717084943_AddIpcApBillingAccounts")]
+    partial class AddIpcApBillingAccounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -584,133 +587,6 @@ namespace Modules.Construction.Infrastructure.Migrations
                     b.ToTable("subcontract_lines", "construction");
                 });
 
-            modelBuilder.Entity("Modules.Construction.Domain.VariationOrder", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CommercialDocumentId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("commercial_document_id");
-
-                    b.Property<string>("CommercialDocumentType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("commercial_document_type");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("DocumentNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("doc_number");
-
-                    b.Property<string>("ExtensionFields")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("extension_data");
-
-                    b.Property<DateTimeOffset?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("modified_at");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("modified_by");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_id");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("reason");
-
-                    b.Property<long>("RowVersion")
-                        .HasColumnType("bigint")
-                        .HasColumnName("row_version");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("status");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("variation_orders", "construction");
-                });
-
-            modelBuilder.Entity("Modules.Construction.Domain.VariationOrderLine", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Code")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("code");
-
-                    b.Property<Guid?>("CommercialDocumentLineId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("commercial_document_line_id");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("description");
-
-                    b.Property<string>("DescriptionArabic")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("description_arabic");
-
-                    b.Property<decimal>("QuantityDelta")
-                        .HasColumnType("numeric(18,3)")
-                        .HasColumnName("quantity_delta");
-
-                    b.Property<decimal>("Rate")
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("rate");
-
-                    b.Property<string>("UnitOfMeasure")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("unit_of_measure");
-
-                    b.Property<Guid>("VariationOrderId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("variation_order_id");
-
-                    b.Property<Guid?>("WbsElementId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("wbs_element_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VariationOrderId");
-
-                    b.ToTable("variation_order_lines", "construction");
-                });
-
             modelBuilder.Entity("Modules.Construction.Infrastructure.NumberRangeCounterEntity", b =>
                 {
                     b.Property<string>("RangeKey")
@@ -839,15 +715,6 @@ namespace Modules.Construction.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Modules.Construction.Domain.VariationOrderLine", b =>
-                {
-                    b.HasOne("Modules.Construction.Domain.VariationOrder", null)
-                        .WithMany("Lines")
-                        .HasForeignKey("VariationOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Modules.Construction.Domain.Contract", b =>
                 {
                     b.Navigation("BoqLines");
@@ -867,11 +734,6 @@ namespace Modules.Construction.Infrastructure.Migrations
                 {
                     b.Navigation("BackCharges");
 
-                    b.Navigation("Lines");
-                });
-
-            modelBuilder.Entity("Modules.Construction.Domain.VariationOrder", b =>
-                {
                     b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618

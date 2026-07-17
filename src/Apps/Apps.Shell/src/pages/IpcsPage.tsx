@@ -55,6 +55,8 @@ export function IpcsPage({ language }: IpcsPageProps) {
   const [otherDeductions, setOtherDeductions] = useState("0");
   const [revenueAccountId, setRevenueAccountId] = useState("");
   const [receivableAccountId, setReceivableAccountId] = useState("");
+  const [expenseAccountId, setExpenseAccountId] = useState("");
+  const [payableAccountId, setPayableAccountId] = useState("");
   const [taxCodeId, setTaxCodeId] = useState("");
   const [vatAccountId, setVatAccountId] = useState("");
 
@@ -132,6 +134,8 @@ export function IpcsPage({ language }: IpcsPageProps) {
     setOtherDeductions("0");
     setRevenueAccountId("");
     setReceivableAccountId("");
+    setExpenseAccountId("");
+    setPayableAccountId("");
     setTaxCodeId("");
     setVatAccountId("");
   };
@@ -148,8 +152,10 @@ export function IpcsPage({ language }: IpcsPageProps) {
         otherDeductions: Number(otherDeductions) || 0,
         revenueAccountId: documentType === "Contract" ? revenueAccountId || undefined : undefined,
         receivableAccountId: documentType === "Contract" ? receivableAccountId || undefined : undefined,
-        taxCodeId: documentType === "Contract" ? taxCodeId || undefined : undefined,
-        vatAccountId: documentType === "Contract" && taxCodeId ? vatAccountId || undefined : undefined,
+        expenseAccountId: documentType === "Subcontract" ? expenseAccountId || undefined : undefined,
+        payableAccountId: documentType === "Subcontract" ? payableAccountId || undefined : undefined,
+        taxCodeId: taxCodeId || undefined,
+        vatAccountId: taxCodeId ? vatAccountId || undefined : undefined,
       });
       resetCreateForm();
       await load();
@@ -179,7 +185,9 @@ export function IpcsPage({ language }: IpcsPageProps) {
   const inputStyle: React.CSSProperties = { display: "block", marginBlockEnd: "0.5rem", inlineSize: "100%", padding: "0.3rem" };
 
   if (view.kind === "create") {
-    const missingBillingAccounts = documentType === "Contract" && (!revenueAccountId || !receivableAccountId);
+    const missingBillingAccounts =
+      (documentType === "Contract" && (!revenueAccountId || !receivableAccountId)) ||
+      (documentType === "Subcontract" && (!expenseAccountId || !payableAccountId));
     const actions: ActionItem[] = [
       { key: "create", label: t("ipc.actionCreate", language), onClick: handleCreate, variant: "primary", isDisabled: busy || !projectId || !documentType || !documentId || !measurementSheetId || missingBillingAccounts },
       { key: "back", label: t("ipc.actionBack", language), onClick: () => setView({ kind: "browse", selectedId: null }) },
@@ -236,6 +244,27 @@ export function IpcsPage({ language }: IpcsPageProps) {
                   {accounts.map((a) => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
                 </select>
               </label>
+            </>
+          )}
+          {documentType === "Subcontract" && (
+            <>
+              <p>{t("ipc.apBillingAccountsHint", language)}</p>
+              <label>{t("ipc.fieldExpenseAccount", language)}
+                <select style={inputStyle} value={expenseAccountId} onChange={(e) => setExpenseAccountId(e.target.value)}>
+                  <option value=""></option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
+                </select>
+              </label>
+              <label>{t("ipc.fieldPayableAccount", language)}
+                <select style={inputStyle} value={payableAccountId} onChange={(e) => setPayableAccountId(e.target.value)}>
+                  <option value=""></option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
+                </select>
+              </label>
+            </>
+          )}
+          {documentType && (
+            <>
               <label>{t("ar.fieldTaxCode", language)}
                 <select style={inputStyle} value={taxCodeId} onChange={(e) => setTaxCodeId(e.target.value)}>
                   <option value="">{t("ar.noTaxCode", language)}</option>
@@ -345,6 +374,24 @@ export function IpcsPage({ language }: IpcsPageProps) {
                   <>
                     <dt>{t("ipc.linkedArInvoice", language)}</dt>
                     <dd><bdi dir="ltr">{ipc.linkedArInvoiceId}</bdi></dd>
+                  </>
+                )}
+                {ipc.expenseAccountId && (
+                  <>
+                    <dt>{t("ipc.fieldExpenseAccount", language)}</dt>
+                    <dd><bdi dir="ltr">{accountLabel(ipc.expenseAccountId)}</bdi></dd>
+                  </>
+                )}
+                {ipc.payableAccountId && (
+                  <>
+                    <dt>{t("ipc.fieldPayableAccount", language)}</dt>
+                    <dd><bdi dir="ltr">{accountLabel(ipc.payableAccountId)}</bdi></dd>
+                  </>
+                )}
+                {ipc.linkedApInvoiceId && (
+                  <>
+                    <dt>{t("ipc.linkedApInvoice", language)}</dt>
+                    <dd><bdi dir="ltr">{ipc.linkedApInvoiceId}</bdi></dd>
                   </>
                 )}
               </dl>

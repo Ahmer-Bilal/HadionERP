@@ -36,6 +36,7 @@ public sealed class IpcService
     private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
     private readonly IProjectLookup _projectLookup;
     private readonly ICustomerInvoicingService _customerInvoicingService;
+    private readonly IVendorInvoicingService _vendorInvoicingService;
 
     public IpcService(
         IIpcRepository repository,
@@ -49,7 +50,8 @@ public sealed class IpcService
         IAuthorizationService authorizationService,
         IActorRoleAssignmentStore actorRoleAssignmentStore,
         IProjectLookup projectLookup,
-        ICustomerInvoicingService customerInvoicingService)
+        ICustomerInvoicingService customerInvoicingService,
+        IVendorInvoicingService vendorInvoicingService)
     {
         _repository = repository;
         _measurementSheetRepository = measurementSheetRepository;
@@ -63,6 +65,7 @@ public sealed class IpcService
         _actorRoleAssignmentStore = actorRoleAssignmentStore;
         _projectLookup = projectLookup;
         _customerInvoicingService = customerInvoicingService;
+        _vendorInvoicingService = vendorInvoicingService;
     }
 
     public async Task<IpcDto> CreateAsync(
@@ -76,9 +79,9 @@ public sealed class IpcService
         if (request.OtherDeductions < 0)
             throw new ArgumentException("Other deductions cannot be negative.", nameof(request.OtherDeductions));
 
-        // Only a Contract-type IPC ever raises an AR Invoice on certification (a Subcontract IPC is a
-        // payable to a subcontractor, a separate not-yet-built AP integration) — but the billing accounts
-        // must be chosen now, at Draft time, not guessed later at certification.
+        // A Contract-type IPC raises an AR Invoice on certification (billing the Project's Customer); a
+        // Subcontract-type IPC raises an AP Invoice instead (billing the Subcontract's own Subcontractor) —
+        // but either way, the billing accounts must be chosen now, at Draft time, not guessed later.
         if (documentType == CommercialDocumentType.Contract)
         {
             if (request.RevenueAccountId is null || request.ReceivableAccountId is null)
@@ -92,6 +95,14 @@ public sealed class IpcService
             if (project.CustomerId is null)
                 throw new ArgumentException(
                     $"Project '{project.ProjectName}' has no Customer set — an AR Invoice cannot be raised without one.");
+        }
+        else
+        {
+            if (request.ExpenseAccountId is null || request.PayableAccountId is null)
+                throw new ArgumentException(
+                    "An Expense account and a Payable account are required for a Subcontract IPC, since certifying it raises a real AP Invoice.");
+            if (request.TaxCodeId is not null && request.VatAccountId is null)
+                throw new ArgumentException("A VAT account is required when a tax code is specified.");
         }
 
         var sheet = await _measurementSheetRepository.GetAsync(request.MeasurementSheetId, cancellationToken)
@@ -115,7 +126,8 @@ public sealed class IpcService
         var ipc = new Ipc(
             actor, request.ProjectId, documentType, request.CommercialDocumentId, sheet.Id,
             sheet.PeriodStart, sheet.PeriodEnd, document.RetentionPercentage, document.AdvancePaymentPercentage,
-            request.OtherDeductions, request.RevenueAccountId, request.ReceivableAccountId, request.TaxCodeId, request.VatAccountId);
+            request.OtherDeductions, request.RevenueAccountId, request.ReceivableAccountId, request.TaxCodeId, request.VatAccountId,
+            request.ExpenseAccountId, request.PayableAccountId);
 
         foreach (var line in sheet.Lines)
         {
@@ -209,12 +221,12 @@ public sealed class IpcService
         return ToDto(ipc);
     }
 
-    /// <summary>Certifies the IPC and, for a Contract-type IPC, raises the real AR Invoice first — see
-    /// <see cref="Ipc"/>'s own doc comment for why this happens here (certification is the moment the
-    /// spec says the customer becomes legally obligated to pay) and why it's left in Draft rather than
-    /// auto-posted. Runs before <c>ipc.Approve</c> deliberately: if raising the invoice fails (e.g. the
-    /// customer was deactivated after this IPC was created), the IPC itself must not silently certify with
-    /// no invoice behind it.</summary>
+    /// <summary>Certifies the IPC and raises the real invoice first — a Contract-type IPC raises an AR
+    /// Invoice against the Project's Customer, a Subcontract-type IPC raises an AP Invoice against the
+    /// Subcontract's own Subcontractor. See <see cref="Ipc"/>'s own doc comment for why this happens here
+    /// and why it's left in Draft rather than auto-posted. Runs before <c>ipc.Approve</c> deliberately: if
+    /// raising the invoice fails (e.g. the customer/vendor was deactivated after this IPC was created), the
+    /// IPC itself must not silently certify with no invoice behind it.</summary>
     private async Task ApproveInternalAsync(Ipc ipc, string actor, CancellationToken cancellationToken)
     {
         if (ipc.CommercialDocumentType == CommercialDocumentType.Contract
@@ -232,6 +244,19 @@ public sealed class IpcService
                 actor, "C001", cancellationToken);
             ipc.LinkArInvoice(arInvoiceId);
         }
+        else if (ipc.CommercialDocumentType == CommercialDocumentType.Subcontract
+            && ipc.ExpenseAccountId is { } expenseAccountId && ipc.PayableAccountId is { } payableAccountId)
+        {
+            var subcontract = await _subcontractRepository.GetAsync(ipc.CommercialDocumentId, cancellationToken)
+                ?? throw new InvalidOperationException($"Subcontract {ipc.CommercialDocumentId} no longer exists.");
+
+            var apInvoiceId = await _vendorInvoicingService.RaiseInvoiceAsync(
+                new RaiseVendorInvoiceRequest(
+                    subcontract.SubcontractorId, ipc.DocumentNumber!, ipc.PeriodEnd, $"IPC {ipc.DocumentNumber} — {subcontract.DocumentNumber}",
+                    expenseAccountId, payableAccountId, ipc.NetPayable, CostCenterId: null, ipc.TaxCodeId, ipc.VatAccountId),
+                actor, "C001", cancellationToken);
+            ipc.LinkApInvoice(apInvoiceId);
+        }
 
         var fromStatus = ipc.Status;
         ipc.Approve(actor);
@@ -239,7 +264,9 @@ public sealed class IpcService
         _auditRecorder.RecordStatusTransition(AuditReference(ipc.Id), actor,
             ipc.LinkedArInvoiceId is { } linkedArInvoiceId
                 ? $"IPC '{ipc.DocumentNumber}' certified (net payable {ipc.NetPayable}), AR Invoice {linkedArInvoiceId} raised."
-                : $"IPC '{ipc.DocumentNumber}' certified (net payable {ipc.NetPayable}).",
+                : ipc.LinkedApInvoiceId is { } linkedApInvoiceId
+                    ? $"IPC '{ipc.DocumentNumber}' certified (net payable {ipc.NetPayable}), AP Invoice {linkedApInvoiceId} raised."
+                    : $"IPC '{ipc.DocumentNumber}' certified (net payable {ipc.NetPayable}).",
             JsonSerializer.Serialize(fromStatus.ToString()), JsonSerializer.Serialize(ipc.Status.ToString()), AuditSource);
     }
 
@@ -296,7 +323,8 @@ public sealed class IpcService
     private static IpcDto ToDto(Ipc i) => new(
         i.Id, i.DocumentNumber, i.Status.ToString(), i.ProjectId, i.CommercialDocumentType.ToString(), i.CommercialDocumentId,
         i.MeasurementSheetId, i.PeriodStart, i.PeriodEnd, i.RetentionPercentageApplied, i.AdvancePaymentPercentageApplied,
-        i.OtherDeductions, i.RevenueAccountId, i.ReceivableAccountId, i.TaxCodeId, i.VatAccountId, i.LinkedArInvoiceId,
+        i.OtherDeductions, i.RevenueAccountId, i.ReceivableAccountId, i.ExpenseAccountId, i.PayableAccountId,
+        i.TaxCodeId, i.VatAccountId, i.LinkedArInvoiceId, i.LinkedApInvoiceId,
         i.GrossValueToDate, i.GrossValueThisPeriod, i.GrossValuePreviousIpc, i.RetentionAmount,
         i.AdvanceRecoveryAmount, i.NetPayable,
         i.Lines.Select(l => new IpcLineDto(l.Id, l.CommercialDocumentLineId, l.Rate, l.QuantityThisPeriod, l.QuantityToDate, l.ValueThisPeriod, l.ValueToDate)).ToList(),

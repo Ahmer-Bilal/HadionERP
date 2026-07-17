@@ -331,6 +331,8 @@ type TranslationKey =
   | "bank.fieldLinkedGLAccount"
   | "nav.paymentsArea"
   | "nav.allPayments"
+  | "nav.customerReceiptsArea"
+  | "nav.allCustomerReceipts"
   | "pay.heading"
   | "pay.newHeading"
   | "pay.emptyState"
@@ -355,6 +357,30 @@ type TranslationKey =
   | "pay.fieldAllocatedAmount"
   | "pay.tabAllocations"
   | "pay.noOutstandingInvoices"
+  | "cr.heading"
+  | "cr.newHeading"
+  | "cr.emptyState"
+  | "cr.actionNew"
+  | "cr.actionCreate"
+  | "cr.actionBack"
+  | "cr.actionSubmit"
+  | "cr.actionApprove"
+  | "cr.actionReject"
+  | "cr.actionPost"
+  | "cr.actionReverse"
+  | "cr.columnDocumentNumber"
+  | "cr.columnAmount"
+  | "cr.columnStatus"
+  | "cr.columnInvoice"
+  | "cr.columnOutstandingBalance"
+  | "cr.fieldCustomer"
+  | "cr.fieldBankAccount"
+  | "cr.fieldPaymentMethod"
+  | "cr.fieldReceiptDate"
+  | "cr.fieldReference"
+  | "cr.fieldAllocatedAmount"
+  | "cr.tabAllocations"
+  | "cr.noOutstandingInvoices"
   | "nav.procurementModule"
   | "nav.vendorPrequalificationsArea"
   | "nav.allVendorPrequalifications"
@@ -687,6 +713,42 @@ type TranslationKey =
   | "ipc.fieldRevenueAccount"
   | "ipc.fieldReceivableAccount"
   | "ipc.linkedArInvoice"
+  | "ipc.apBillingAccountsHint"
+  | "ipc.fieldExpenseAccount"
+  | "ipc.fieldPayableAccount"
+  | "ipc.linkedApInvoice"
+  | "vo.heading"
+  | "vo.newHeading"
+  | "vo.emptyState"
+  | "vo.selectHint"
+  | "vo.actionNew"
+  | "vo.actionCreate"
+  | "vo.actionBack"
+  | "vo.actionSubmit"
+  | "vo.actionApprove"
+  | "vo.actionReject"
+  | "vo.actionAddLine"
+  | "vo.actionRemoveLine"
+  | "vo.fieldProject"
+  | "vo.fieldDocumentType"
+  | "vo.fieldDocument"
+  | "vo.fieldReason"
+  | "vo.fieldLineMode"
+  | "vo.lineModeAdjust"
+  | "vo.lineModeNew"
+  | "vo.fieldQuantityDelta"
+  | "vo.fieldRate"
+  | "vo.fieldNewLineCode"
+  | "vo.fieldNewLineDescription"
+  | "vo.fieldNewLineUnitOfMeasure"
+  | "vo.fieldNewLineWbsElement"
+  | "vo.columnDocumentNumber"
+  | "vo.columnTotalValue"
+  | "vo.columnStatus"
+  | "vo.columnLine"
+  | "vo.columnAmount"
+  | "vo.tabLines"
+  | "vo.rateSnapshotted"
   | "lookup.hubHeading"
   | "lookup.newTypeHeading"
   | "lookup.columnCode"
@@ -1087,6 +1149,8 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
 
   "nav.paymentsArea": { en: "Payments", ar: "المدفوعات" },
   "nav.allPayments": { en: "All Payments", ar: "جميع المدفوعات" },
+  "nav.customerReceiptsArea": { en: "Customer Receipts", ar: "مقبوضات العملاء" },
+  "nav.allCustomerReceipts": { en: "All Customer Receipts", ar: "جميع مقبوضات العملاء" },
   "pay.heading": { en: "Payments", ar: "المدفوعات" },
   "pay.newHeading": { en: "New Payment", ar: "دفعة جديدة" },
   "pay.emptyState": { en: "No payments yet.", ar: "لا توجد مدفوعات حتى الآن." },
@@ -1111,6 +1175,30 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "pay.fieldAllocatedAmount": { en: "Allocated Amount", ar: "المبلغ المخصص" },
   "pay.tabAllocations": { en: "Allocations", ar: "التخصيصات" },
   "pay.noOutstandingInvoices": { en: "This vendor has no outstanding Posted invoices.", ar: "لا توجد فواتير مرحّلة مستحقة لهذا المورّد." },
+  "cr.heading": { en: "Customer Receipts", ar: "مقبوضات العملاء" },
+  "cr.newHeading": { en: "New Customer Receipt", ar: "مقبوض عميل جديد" },
+  "cr.emptyState": { en: "No customer receipts yet.", ar: "لا توجد مقبوضات عملاء حتى الآن." },
+  "cr.actionNew": { en: "New", ar: "جديد" },
+  "cr.actionCreate": { en: "Create", ar: "إنشاء" },
+  "cr.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "cr.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "cr.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "cr.actionReject": { en: "Reject", ar: "رفض" },
+  "cr.actionPost": { en: "Post", ar: "ترحيل" },
+  "cr.actionReverse": { en: "Reverse", ar: "عكس القيد" },
+  "cr.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "cr.columnAmount": { en: "Amount", ar: "المبلغ" },
+  "cr.columnStatus": { en: "Status", ar: "الحالة" },
+  "cr.columnInvoice": { en: "AR Invoice", ar: "فاتورة العميل" },
+  "cr.columnOutstandingBalance": { en: "Outstanding Balance", ar: "الرصيد المستحق" },
+  "cr.fieldCustomer": { en: "Customer", ar: "العميل" },
+  "cr.fieldBankAccount": { en: "Bank Account", ar: "الحساب البنكي" },
+  "cr.fieldPaymentMethod": { en: "Payment Method", ar: "طريقة الدفع" },
+  "cr.fieldReceiptDate": { en: "Receipt Date", ar: "تاريخ القبض" },
+  "cr.fieldReference": { en: "Reference", ar: "المرجع" },
+  "cr.fieldAllocatedAmount": { en: "Allocated Amount", ar: "المبلغ المخصص" },
+  "cr.tabAllocations": { en: "Allocations", ar: "التخصيصات" },
+  "cr.noOutstandingInvoices": { en: "This customer has no outstanding Posted invoices.", ar: "لا توجد فواتير مرحّلة مستحقة لهذا العميل." },
 
   "nav.procurementModule": { en: "Procurement", ar: "المشتريات" },
   "nav.vendorPrequalificationsArea": { en: "Vendor Prequalification", ar: "تأهيل الموردين" },
@@ -1455,6 +1543,42 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "ipc.fieldRevenueAccount": { en: "Revenue Account", ar: "حساب الإيرادات" },
   "ipc.fieldReceivableAccount": { en: "Receivable Account", ar: "حساب المدينين" },
   "ipc.linkedArInvoice": { en: "AR Invoice Raised", ar: "فاتورة العميل الصادرة" },
+  "ipc.apBillingAccountsHint": { en: "Certifying this IPC will automatically raise a Draft AP Invoice for the subcontractor — choose which accounts it should post to.", ar: "سيؤدي اعتماد هذه الشهادة إلى إصدار فاتورة مقاول باطن تلقائيًا كمسودة — اختر الحسابات التي يجب أن تُرحّل إليها." },
+  "ipc.fieldExpenseAccount": { en: "Expense Account", ar: "حساب المصروفات" },
+  "ipc.fieldPayableAccount": { en: "Payable Account", ar: "حساب الدائنين" },
+  "ipc.linkedApInvoice": { en: "AP Invoice Raised", ar: "فاتورة المقاول الصادرة" },
+  "vo.heading": { en: "Variation Orders", ar: "أوامر التغيير" },
+  "vo.newHeading": { en: "New Variation Order", ar: "أمر تغيير جديد" },
+  "vo.emptyState": { en: "No variation orders yet.", ar: "لا توجد أوامر تغيير حتى الآن." },
+  "vo.selectHint": { en: "Select a variation order from the list to see its details.", ar: "اختر أمر تغيير من القائمة لعرض تفاصيله." },
+  "vo.actionNew": { en: "New", ar: "جديد" },
+  "vo.actionCreate": { en: "Create", ar: "إنشاء" },
+  "vo.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "vo.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "vo.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "vo.actionReject": { en: "Reject", ar: "رفض" },
+  "vo.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "vo.actionRemoveLine": { en: "Remove", ar: "إزالة" },
+  "vo.fieldProject": { en: "Project", ar: "المشروع" },
+  "vo.fieldDocumentType": { en: "Document Type", ar: "نوع المستند" },
+  "vo.fieldDocument": { en: "Contract / Subcontract", ar: "العقد / عقد الباطن" },
+  "vo.fieldReason": { en: "Reason", ar: "السبب" },
+  "vo.fieldLineMode": { en: "Line Type", ar: "نوع البند" },
+  "vo.lineModeAdjust": { en: "Adjust an existing line", ar: "تعديل بند موجود" },
+  "vo.lineModeNew": { en: "Add a new line", ar: "إضافة بند جديد" },
+  "vo.fieldQuantityDelta": { en: "Quantity Change", ar: "تغيير الكمية" },
+  "vo.fieldRate": { en: "Rate", ar: "السعر" },
+  "vo.fieldNewLineCode": { en: "Code", ar: "الرمز" },
+  "vo.fieldNewLineDescription": { en: "Description", ar: "الوصف" },
+  "vo.fieldNewLineUnitOfMeasure": { en: "Unit of Measure", ar: "وحدة القياس" },
+  "vo.fieldNewLineWbsElement": { en: "WBS Element", ar: "عنصر هيكل تقسيم العمل" },
+  "vo.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "vo.columnTotalValue": { en: "Total Value", ar: "القيمة الإجمالية" },
+  "vo.columnStatus": { en: "Status", ar: "الحالة" },
+  "vo.columnLine": { en: "Line", ar: "البند" },
+  "vo.columnAmount": { en: "Amount", ar: "المبلغ" },
+  "vo.tabLines": { en: "Lines", ar: "البنود" },
+  "vo.rateSnapshotted": { en: "(snapshotted on create)", ar: "(يُحدد عند الإنشاء)" },
   "lookup.hubHeading": { en: "Lookup Data", ar: "بيانات القوائم" },
   "lookup.newTypeHeading": { en: "Create a new lookup type", ar: "إنشاء نوع قائمة جديد" },
   "lookup.columnCode": { en: "Code", ar: "الرمز" },

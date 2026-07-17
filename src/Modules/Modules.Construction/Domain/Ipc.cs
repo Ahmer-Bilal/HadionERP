@@ -14,15 +14,16 @@ namespace Modules.Construction.Domain;
 /// Reuses the platform's Draft → Submitted → Approved/Rejected lifecycle unchanged for the spec's Draft
 /// (contractor prepares) → Submitted (to Engineer) → Certified (Engineer issues the Payment Certificate)
 /// workflow — "Approved" here IS "Certified," same convention <see cref="MeasurementSheet"/> already
-/// established. Still stops at Approved, not the spec's further "Paid" step (that needs a real Customer
-/// Receipt Business Object, not yet built) — but PROGRESS.md's 2026-07-16 "does certification raise an AR
-/// invoice immediately, or a WIP step first" question is now resolved: for a Contract-type IPC (never
-/// Subcontract — that side is a payable to a subcontractor, a separate not-yet-built AP integration),
-/// <c>IpcService.ApproveInternalAsync</c> raises a real Draft AR Invoice the moment certification completes,
-/// via <c>Modules.Finance.Contracts.ICustomerInvoicingService</c> — the first cross-module *write* Contracts
-/// call in this system. Left in Draft, not auto-posted — a human in Finance still submits/approves/posts it
-/// through the normal AR Invoice lifecycle, preserving Segregation of Duties between "Construction certifies
-/// the work" and "Finance actually books the receivable."
+/// established. Certification raises a real Draft invoice in Finance — a Contract-type IPC raises an AR
+/// Invoice against the Project's Customer (<c>Modules.Finance.Contracts.ICustomerInvoicingService</c>), a
+/// Subcontract-type IPC raises an AP Invoice against the Subcontract's own Subcontractor
+/// (<c>Modules.Finance.Contracts.IVendorInvoicingService</c>) — the two cross-module *write* Contracts
+/// interfaces in this system, mirror images of each other. Both leave the invoice in Draft, never
+/// auto-posted — a human in Finance still submits/approves/posts it through the normal invoice lifecycle,
+/// preserving Segregation of Duties between "Construction certifies the work" and "Finance actually books
+/// the ledger effect." Still stops at Approved, not the spec's further "Paid" step — that needs a
+/// real Customer Receipt (built) or vendor Payment (already built) allocation against the raised invoice,
+/// a separate manual step for now.
 ///
 /// The money waterfall is deliberately simple relative to the spec's own step numbering: Retention and
 /// Advance Recovery are both calculated as a straight percentage of THIS PERIOD's certified value (not the
@@ -61,14 +62,27 @@ public sealed class Ipc : BusinessObject
 
     public Guid? ReceivableAccountId { get; private set; }
 
+    /// <summary>Mirror of <see cref="RevenueAccountId"/>/<see cref="ReceivableAccountId"/> for a
+    /// Subcontract-type IPC's eventual AP Invoice — required at creation for a Subcontract IPC, always null
+    /// for a Contract IPC (no AP billing happens on that side).</summary>
+    public Guid? ExpenseAccountId { get; private set; }
+
+    public Guid? PayableAccountId { get; private set; }
+
+    /// <summary>Shared by both directions — the tax rate mechanics are identical, only which side of the
+    /// journal entry the VAT account lands on differs (handled entirely inside ARInvoiceService/
+    /// APInvoiceService, not here).</summary>
     public Guid? TaxCodeId { get; private set; }
 
     public Guid? VatAccountId { get; private set; }
 
-    /// <summary>Set once, when this IPC is certified and its AR Invoice is raised — see
-    /// <c>IpcService.ApproveInternalAsync</c>. Null for a Subcontract IPC (no AR invoice ever raised) and
-    /// for a Contract IPC that hasn't reached Approved yet.</summary>
+    /// <summary>Set once, when a Contract-type IPC is certified and its AR Invoice is raised — see
+    /// <c>IpcService.ApproveInternalAsync</c>. Null for a Subcontract IPC and for a Contract IPC that hasn't
+    /// reached Approved yet.</summary>
     public Guid? LinkedArInvoiceId { get; private set; }
+
+    /// <summary>Mirror of <see cref="LinkedArInvoiceId"/> for a Subcontract-type IPC's AP Invoice.</summary>
+    public Guid? LinkedApInvoiceId { get; private set; }
 
     public IReadOnlyCollection<IpcLine> Lines => _lines.AsReadOnly();
 
@@ -83,7 +97,8 @@ public sealed class Ipc : BusinessObject
         string createdBy, Guid projectId, CommercialDocumentType commercialDocumentType, Guid commercialDocumentId,
         Guid measurementSheetId, DateOnly periodStart, DateOnly periodEnd,
         decimal? retentionPercentageApplied, decimal? advancePaymentPercentageApplied, decimal otherDeductions,
-        Guid? revenueAccountId = null, Guid? receivableAccountId = null, Guid? taxCodeId = null, Guid? vatAccountId = null)
+        Guid? revenueAccountId = null, Guid? receivableAccountId = null, Guid? taxCodeId = null, Guid? vatAccountId = null,
+        Guid? expenseAccountId = null, Guid? payableAccountId = null)
         : base(createdBy)
     {
         if (periodEnd < periodStart)
@@ -108,6 +123,8 @@ public sealed class Ipc : BusinessObject
         ReceivableAccountId = receivableAccountId;
         TaxCodeId = taxCodeId;
         VatAccountId = vatAccountId;
+        ExpenseAccountId = expenseAccountId;
+        PayableAccountId = payableAccountId;
     }
 
     /// <summary>Reserved for ORM materialization — see <see cref="BusinessObject"/>'s parameterless
@@ -135,6 +152,9 @@ public sealed class Ipc : BusinessObject
     /// <summary>Records the AR Invoice raised for this IPC on certification — see
     /// <c>IpcService.ApproveInternalAsync</c>. Only ever called once, for a Contract-type IPC.</summary>
     public void LinkArInvoice(Guid arInvoiceId) => LinkedArInvoiceId = arInvoiceId;
+
+    /// <summary>Mirror of <see cref="LinkArInvoice"/> for a Subcontract-type IPC's AP Invoice.</summary>
+    public void LinkApInvoice(Guid apInvoiceId) => LinkedApInvoiceId = apInvoiceId;
 
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 

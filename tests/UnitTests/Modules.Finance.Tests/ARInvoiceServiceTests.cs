@@ -1,4 +1,5 @@
 using Modules.Finance.Application;
+using Modules.Finance.Domain;
 using Modules.MasterData.Contracts;
 using Platform.Audit;
 using Platform.Core;
@@ -96,7 +97,7 @@ public class ARInvoiceServiceTests
         var invoiceService = new ARInvoiceService(
             invoiceRepo, invoiceNumberRanges, auditRecorder, workflowEngine, workflowInstances,
             authorizationService, actorRoles, BuildBusinessPartnerLookup(), glLookup, costCenterLookup,
-            BuildTaxCodeLookup(), journalEntryService);
+            BuildTaxCodeLookup(), journalEntryService, new FakeCustomerReceiptRepository());
 
         return (invoiceService, journalEntryService, invoiceRepo, journalRepo);
     }
@@ -258,5 +259,86 @@ public class ARInvoiceServiceTests
     {
         var (invoices, _, _, _) = BuildServices();
         Assert.Null(await invoices.GetAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task OutstandingBalance_reduces_after_a_Posted_customer_receipt_allocates_against_it()
+    {
+        var invoiceRepo = new FakeARInvoiceRepository();
+        var journalRepo = new FakeJournalEntryRepository();
+        var receiptRepo = new FakeCustomerReceiptRepository();
+        var bankAccountRepo = new FakeBankAccountRepository();
+        var auditRecorder = new AuditRecorder(new InMemoryAuditLog());
+        var workflowInstances = new FakeWorkflowInstanceRepository();
+        var bankGLAccountId = Guid.NewGuid();
+
+        var workflowCatalog = new InMemoryWorkflowDefinitionCatalog(new[]
+        {
+            JournalEntryWorkflow.SubmitApprovalDefinition,
+            ARInvoiceWorkflow.SubmitApprovalDefinition,
+            CustomerReceiptWorkflow.SubmitApprovalDefinition,
+        });
+        var workflowEngine = new WorkflowEngine(workflowCatalog, new RoleBasedWorkflowEligibilityService(new InMemoryDelegationRegistry()));
+
+        var securityCatalog = new InMemorySecurityCatalog(
+            new[]
+            {
+                JournalEntrySecurity.MaintainerRole, JournalEntrySecurity.ApproverRole,
+                ARInvoiceSecurity.MaintainerRole, ARInvoiceSecurity.ApproverRole,
+                CustomerReceiptSecurity.MaintainerRole, CustomerReceiptSecurity.ApproverRole,
+            },
+            new[]
+            {
+                JournalEntrySecurity.MaintainerDuty, JournalEntrySecurity.ApproverDuty,
+                ARInvoiceSecurity.MaintainerDuty, ARInvoiceSecurity.ApproverDuty,
+                CustomerReceiptSecurity.MaintainerDuty, CustomerReceiptSecurity.ApproverDuty,
+            });
+        var authorizationService = new AuthorizationService(securityCatalog);
+        var actorRoles = new InMemoryActorRoleAssignmentStore(new Dictionary<string, IReadOnlyCollection<string>>
+        {
+            ["ahmer.bilal"] = new[] { ARInvoiceSecurity.MaintainerRoleKey, JournalEntrySecurity.MaintainerRoleKey, CustomerReceiptSecurity.MaintainerRoleKey },
+            ["finance.manager"] = new[] { ARInvoiceWorkflow.ApproverRoleKey, JournalEntryWorkflow.ApproverRoleKey, CustomerReceiptWorkflow.ApproverRoleKey },
+        });
+
+        var glLookup = BuildGLAccountLookup();
+        glLookup.Add(new GLAccountSummary(bankGLAccountId, "1010", "Bank - Al Rajhi Current", "Debit", IsPostable: true, IsActive: true));
+        var costCenterLookup = new FakeCostCenterLookup();
+
+        var journalNumberRanges = new InMemoryNumberRangeService(new[] { new NumberRangeDefinition(JournalEntryService.NumberRangeKey, "FIN", "JE") });
+        var journalEntryService = new JournalEntryService(
+            journalRepo, journalNumberRanges, auditRecorder, workflowEngine, workflowInstances, authorizationService, actorRoles, glLookup, costCenterLookup);
+
+        var invoiceNumberRanges = new InMemoryNumberRangeService(new[] { new NumberRangeDefinition(ARInvoiceService.NumberRangeKey, "FIN", "AR") });
+        var invoiceService = new ARInvoiceService(
+            invoiceRepo, invoiceNumberRanges, auditRecorder, workflowEngine, workflowInstances,
+            authorizationService, actorRoles, BuildBusinessPartnerLookup(), glLookup, costCenterLookup,
+            BuildTaxCodeLookup(), journalEntryService, receiptRepo);
+
+        var receiptNumberRanges = new InMemoryNumberRangeService(new[] { new NumberRangeDefinition(CustomerReceiptService.NumberRangeKey, "FIN", "CR") });
+        var receiptService = new CustomerReceiptService(
+            receiptRepo, invoiceRepo, bankAccountRepo, receiptNumberRanges, auditRecorder, workflowEngine, workflowInstances,
+            authorizationService, actorRoles, BuildBusinessPartnerLookup(), new FakeLookupCatalog(), journalEntryService);
+
+        var invoice = await invoiceService.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await invoiceService.SubmitAsync(invoice.Id, "ahmer.bilal");
+        await invoiceService.ApproveAsync(invoice.Id, "finance.manager");
+        var postedInvoice = await invoiceService.PostAsync(invoice.Id, "finance.manager");
+        Assert.Equal(1000m, postedInvoice.OutstandingBalance);
+
+        var bankAccount = new BankAccount("ahmer.bilal", "BANK-001", "Al Rajhi Current Account", "Al Rajhi Bank", bankGLAccountId);
+        bankAccount.Submit("ahmer.bilal");
+        bankAccount.Approve("finance.manager");
+        bankAccountRepo.Add(bankAccount);
+
+        var receiptRequest = new CreateCustomerReceiptRequest(
+            CustomerId, bankAccount.Id, InvoiceDate.AddDays(1), "BankTransfer",
+            new[] { new CreateCustomerReceiptAllocationRequest(invoice.Id, 400m) });
+        var receipt = await receiptService.CreateAsync(receiptRequest, "ahmer.bilal", "C001");
+        await receiptService.SubmitAsync(receipt.Id, "ahmer.bilal");
+        await receiptService.ApproveAsync(receipt.Id, "finance.manager");
+        await receiptService.PostAsync(receipt.Id, "finance.manager");
+
+        var reloaded = await invoiceService.GetAsync(invoice.Id);
+        Assert.Equal(600m, reloaded!.OutstandingBalance);
     }
 }

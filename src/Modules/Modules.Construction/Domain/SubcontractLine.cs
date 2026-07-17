@@ -51,4 +51,14 @@ public sealed class SubcontractLine
         Description = null!;
         UnitOfMeasure = null!;
     }
+
+    /// <summary>Applied by an Approved <see cref="VariationOrder"/> line against this line — mirrors
+    /// <see cref="BoqLine.AdjustQuantity"/>.</summary>
+    internal void AdjustQuantity(decimal delta)
+    {
+        var updated = Quantity + delta;
+        if (updated <= 0)
+            throw new ArgumentException($"Adjusting line '{Code}' by {delta} would bring its quantity to {updated}, which is not allowed.");
+        Quantity = updated;
+    }
 }

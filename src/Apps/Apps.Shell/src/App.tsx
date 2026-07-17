@@ -14,6 +14,8 @@ import { APInvoicesPage } from "./pages/APInvoicesPage";
 import { ARInvoicesPage } from "./pages/ARInvoicesPage";
 import { BankAccountsPage } from "./pages/BankAccountsPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
+import { CustomerReceiptsPage } from "./pages/CustomerReceiptsPage";
+import { VariationOrdersPage } from "./pages/VariationOrdersPage";
 import { VendorPrequalificationsPage } from "./pages/VendorPrequalificationsPage";
 import { PurchaseRequisitionsPage } from "./pages/PurchaseRequisitionsPage";
 import { RequestsForQuotationPage } from "./pages/RequestsForQuotationPage";
@@ -35,7 +37,7 @@ import { LANGUAGE_NAMES } from "./i18n/languageNames";
 // Which page a nav item's #anchor selects. No router library yet — deliberately deferred until a THIRD
 // navigable screen exists (two is easy to hand-wire; see docs/architecture/02-business-object-model.md for the same
 // "extract once a second/third real consumer proves the shape" philosophy applied to components).
-type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "ar-invoices" | "bank-accounts" | "payments" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "contracts" | "subcontracts" | "measurement-sheets" | "ipcs" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
+type PageKey = "home" | "system-status" | "business-partners" | "gl-accounts" | "items" | "cost-centers" | "tax-codes" | "journal-entries" | "ap-invoices" | "ar-invoices" | "bank-accounts" | "payments" | "customer-receipts" | "vendor-prequalifications" | "purchase-requisitions" | "requests-for-quotation" | "purchase-orders" | "goods-receipt-notes" | "projects" | "contracts" | "subcontracts" | "measurement-sheets" | "ipcs" | "variation-orders" | "lookup-data" | "lookup-country" | "lookup-business-role-type" | "lookup-address-type" | "lookup-unit-of-measure" | "lookup-subcontractor-trade" | "lookup-supplier-trade" | "lookup-consultant-trade" | "users";
 
 function currentPageFromHash(): PageKey {
   if (window.location.hash === "#system-status") return "system-status";
@@ -49,6 +51,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#ar-invoices") return "ar-invoices";
   if (window.location.hash === "#bank-accounts") return "bank-accounts";
   if (window.location.hash === "#payments") return "payments";
+  if (window.location.hash === "#customer-receipts") return "customer-receipts";
   if (window.location.hash === "#vendor-prequalifications") return "vendor-prequalifications";
   if (window.location.hash === "#purchase-requisitions") return "purchase-requisitions";
   if (window.location.hash === "#requests-for-quotation") return "requests-for-quotation";
@@ -59,6 +62,7 @@ function currentPageFromHash(): PageKey {
   if (window.location.hash === "#subcontracts") return "subcontracts";
   if (window.location.hash === "#measurement-sheets") return "measurement-sheets";
   if (window.location.hash === "#ipcs") return "ipcs";
+  if (window.location.hash === "#variation-orders") return "variation-orders";
   if (window.location.hash === "#lookup-data") return "lookup-data";
   if (window.location.hash === "#lookup-country") return "lookup-country";
   if (window.location.hash === "#lookup-business-role-type") return "lookup-business-role-type";
@@ -331,6 +335,18 @@ function App() {
             },
           ],
         },
+        {
+          key: "customer-receipts",
+          label: t("nav.customerReceiptsArea", language),
+          items: [
+            {
+              key: "all-customer-receipts",
+              label: t("nav.allCustomerReceipts", language),
+              href: "#customer-receipts",
+              isActive: page === "customer-receipts",
+            },
+          ],
+        },
       ],
     },
     {
@@ -469,6 +485,18 @@ function App() {
             },
           ],
         },
+        {
+          key: "variation-orders",
+          label: t("vo.heading", language),
+          items: [
+            {
+              key: "all-variation-orders",
+              label: t("vo.heading", language),
+              href: "#variation-orders",
+              isActive: page === "variation-orders",
+            },
+          ],
+        },
       ],
     },
   ];
@@ -517,6 +545,8 @@ function App() {
             <BankAccountsPage language={language} />
           ) : page === "payments" ? (
             <PaymentsPage language={language} />
+          ) : page === "customer-receipts" ? (
+            <CustomerReceiptsPage language={language} />
           ) : page === "vendor-prequalifications" ? (
             <VendorPrequalificationsPage language={language} />
           ) : page === "purchase-requisitions" ? (
@@ -537,6 +567,8 @@ function App() {
             <MeasurementSheetsPage language={language} />
           ) : page === "ipcs" ? (
             <IpcsPage language={language} />
+          ) : page === "variation-orders" ? (
+            <VariationOrdersPage language={language} />
           ) : page === "lookup-data" ? (
             <LookupDataPage language={language} />
           ) : page === "lookup-country" ? (

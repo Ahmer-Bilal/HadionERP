@@ -23,6 +23,8 @@ public sealed class FinanceDbContext : DbContext
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
     public DbSet<Payment> Payments => Set<Payment>();
     internal DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
+    public DbSet<CustomerReceipt> CustomerReceipts => Set<CustomerReceipt>();
+    internal DbSet<CustomerReceiptAllocation> CustomerReceiptAllocations => Set<CustomerReceiptAllocation>();
     // WorkflowInstance is a Platform.Workflow kernel type, persisted here for the same "storage-agnostic
     // port, persisted by whichever module actually has a database" reasoning as
     // Modules.MasterData.Infrastructure.MasterDataDbContext — but in Finance's own schema/table, not
@@ -257,6 +259,57 @@ public sealed class FinanceDbContext : DbContext
             entity.Property(e => e.APInvoiceId).HasColumnName("ap_invoice_id");
             entity.Property(e => e.AllocatedAmount).HasColumnName("allocated_amount").HasColumnType("numeric(18,2)");
             entity.Property<Guid>("PaymentId").HasColumnName("payment_id");
+        });
+
+        modelBuilder.Entity<CustomerReceipt>(entity =>
+        {
+            entity.ToTable("customer_receipts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.CustomerId).HasColumnName("customer_id");
+            entity.Property(e => e.BankAccountId).HasColumnName("bank_account_id");
+            entity.Property(e => e.ReceiptDate).HasColumnName("receipt_date");
+            entity.Property(e => e.PaymentMethod).HasColumnName("payment_method").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Reference).HasColumnName("reference").HasMaxLength(200);
+            entity.Property(e => e.LinkedJournalEntryId).HasColumnName("linked_journal_entry_id");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Allocations)
+                .WithOne()
+                .HasForeignKey("CustomerReceiptId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Allocations)
+                .HasField("_allocations")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.Amount);
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<CustomerReceiptAllocation>(entity =>
+        {
+            entity.ToTable("customer_receipt_allocations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.ARInvoiceId).HasColumnName("ar_invoice_id");
+            entity.Property(e => e.AllocatedAmount).HasColumnName("allocated_amount").HasColumnType("numeric(18,2)");
+            entity.Property<Guid>("CustomerReceiptId").HasColumnName("customer_receipt_id");
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

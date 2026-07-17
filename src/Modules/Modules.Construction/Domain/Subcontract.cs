@@ -110,6 +110,33 @@ public sealed class Subcontract : BusinessObject
         return backCharge;
     }
 
+    /// <summary>Increases (or decreases) an existing line's quantity — the write-through an Approved
+    /// <see cref="VariationOrder"/> performs. Mirrors <see cref="Contract.AdjustBoqLineQuantity"/>.</summary>
+    public void AdjustLineQuantity(Guid lineId, decimal quantityDelta)
+    {
+        if (Status != BusinessObjectStatus.Approved)
+            throw new InvalidOperationException("Line quantities can only be adjusted against an Approved subcontract.");
+        var line = _lines.FirstOrDefault(l => l.Id == lineId)
+            ?? throw new ArgumentException($"Line {lineId} does not belong to this subcontract.", nameof(lineId));
+        line.AdjustQuantity(quantityDelta);
+    }
+
+    /// <summary>Adds a wholly new line via an Approved <see cref="VariationOrder"/>. Mirrors
+    /// <see cref="Contract.AddBoqLineFromVariationOrder"/>.</summary>
+    public SubcontractLine AddLineFromVariationOrder(
+        string code, string description, string? descriptionArabic, string unitOfMeasure,
+        decimal quantity, decimal rate, Guid wbsElementId)
+    {
+        if (Status != BusinessObjectStatus.Approved)
+            throw new InvalidOperationException("New lines can only be added via a Variation Order against an Approved subcontract.");
+        if (_lines.Any(l => l.Code.Equals(code, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException($"Line code '{code}' is already used in this subcontract.", nameof(code));
+
+        var line = new SubcontractLine(code, description, descriptionArabic, unitOfMeasure, quantity, rate, wbsElementId);
+        _lines.Add(line);
+        return line;
+    }
+
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 
     public void Approve(string actor) => Transition(BusinessObjectTransition.Approve, actor);

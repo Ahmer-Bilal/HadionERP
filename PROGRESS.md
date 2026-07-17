@@ -41,10 +41,10 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice + AR Invoice (all post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording, AR Invoice added 2026-07-17 and wired to Construction's IPC the same day via the new `ICustomerInvoicingService` Contracts interface (not yet wired to a Customer Receipt — OutstandingBalance is Gross-Amount-only until one exists). Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-17 |
+| Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice + AR Invoice (all post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording, AR Invoice, and now `CustomerReceipt` (the AR mirror of `Payment`, built 2026-07-17) — `ARInvoiceDto.OutstandingBalance` is now a real computed figure from Posted receipt allocations, not just Gross Amount. Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-17 |
 | Phase 2 — Procurement | **Exit criteria met** — full procure-to-pay cycle (BusinessRoles/Vendor Prequal → PR → RFQ → PO → GRN) built, tested, and live-verified, with a working 3-way match against AP closing the loop. Real Budget Control enforcement and a real line-by-line invoice match remain deferred Finance/Procurement depth, not required for Phase 2's exit bar | 2026-07-15 |
 | **Checkpoint** — UI/Visual Density Pass | **Paused by explicit user instruction** — teal identity (design-tokens.css) + `Platform.UI.SplitView` are live and retrofitted on `PurchaseOrdersPage`/`BusinessPartnersPage`, but the user judged this insufficient to compete visually with Fiori/Dynamics (color tokens + one layout mechanic, no icons/status pills/KPIs/avatars — see `feedback_visual_richness_gap` in memory) and told the AI to stop touching it and move to roadmap phases instead. Left as-is, not reverted. Resume only when the user explicitly asks for the visual pass again, with real surface richness this time | 2026-07-15 |
-| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, its Subcontracts slice (retention %/mobilization advance %/back-charges) built 2026-07-16, its Site Progress/Measurement slice (`MeasurementSheet`, polymorphic over Contract/Subcontract, `IsBillingElement` finally enforced) built 2026-07-17, and its IPC slice (`Ipc`, the real billing waterfall — gross-to-date/retention/advance-recovery/net-payable — computed from Measurement, same polymorphism) built 2026-07-17, followed same day by wiring a Contract-type IPC's certification to automatically raise a real Draft AR Invoice in Finance (`ICustomerInvoicingService`, the system's first cross-module write Contracts call) — all tested and live-verified. Variation Orders, real Retention withholding/release, Extension of Time, a Customer Receipt Business Object, Fiscal-Period/Budget-Check depth, and Networks/Activities for ProjectManagement all remain not started | 2026-07-17 |
+| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, its Subcontracts slice (retention %/mobilization advance %/back-charges) built 2026-07-16, its Site Progress/Measurement slice (`MeasurementSheet`, polymorphic over Contract/Subcontract, `IsBillingElement` finally enforced) built 2026-07-17, and its IPC slice (`Ipc`, the real billing waterfall) built 2026-07-17, followed same day by wiring both directions of IPC certification to Finance — a Contract-type IPC raises a real Draft AR Invoice (`ICustomerInvoicingService`) and a Subcontract-type IPC raises a real Draft AP Invoice (`IVendorInvoicingService`, its mirror-image write Contracts interface) — plus a `CustomerReceipt` Business Object (the AR mirror of `Payment`) that finally makes `ARInvoiceDto.OutstandingBalance` real, and a `VariationOrder` Business Object (Draft→Submitted→Approved/Rejected, polymorphic over Contract/Subcontract) whose approval writes an existing BOQ/Subcontract line's quantity delta or a wholly new line straight through to the underlying commercial document. All tested and live-verified end to end. Real Retention withholding/release, Extension of Time, Fiscal-Period/Budget-Check depth, and Networks/Activities for ProjectManagement all remain not started | 2026-07-17 |
 | **Checkpoint** — Lookup Data / Admin Panel | **Completed** — a real, admin-configurable picklist engine (`LookupType`/`LookupValue`, `LookupService`, `LookupsController`) replaced the hardcoded `BusinessRoleType`/`AddressType` enums and unvalidated `Country`/`UnitOfMeasure` free text; a genuine multi-page Admin Panel (`LookupDataPage.tsx`, inline-editable SAP-style grids, one nav entry per type) lets an administrator add/edit/deactivate/delete lookup values and even define brand-new lookup types, with in-use delete protection. Live-verified end-to-end, EN+AR | 2026-07-15 |
 | **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, resolved) and AP Payment Recording (§16, now also resolved — see below) | 2026-07-15 |
 | **Checkpoint** — Real Authentication & Identity | **Completed** — closes audit §1/§3. `Modules.Identity` (JWT bearer auth, persisted Users, global default-deny) replaced every hardcoded actor literal solution-wide; role assignment now runs real Segregation of Duties conflict checking for the first time ever (block → override-with-reason → succeed, live-verified). Live-verified end-to-end, EN+AR, zero regressions (22 test projects) | 2026-07-15 |
@@ -58,6 +58,66 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-17 — Finance module completed (CustomerReceipt + Subcontract IPC→AP wiring) and Variation Orders built
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 1 — Master Data + Finance Core (completed) / Phase 3 — Construction, Project Accounting & Accounts Receivable
+- Status: Completed
+- What changed: Continuing the same day as the Contract-side IPC→AR wiring entry below, per explicit user
+  instruction to finish the Finance module completely before touching anything else, then move straight to
+  Variation Orders, batching several slices together and testing once at the end rather than per-slice.
+  - **`CustomerReceipt`** (`Modules.Finance.Domain`) — the AR mirror of `Payment`, same shape
+    (`CustomerReceiptAllocation` collection, computed `Amount`, Draft→Submit→Approve→Post→Reverse,
+    `CustomerReceiptService` with `NumberRangeKey = "FIN-CR"`). `PostAsync` generates a real linked Journal
+    Entry — Debit the receiving Bank Account's G/L account, Credit each allocated AR Invoice's own Receivable
+    account — the mirror image of `Payment.PostAsync`'s Debit Payable/Credit Bank. `ARInvoiceService` gained
+    `ComputeOutstandingBalanceAsync`, summing Posted receipt allocations against Gross Amount, so
+    `ARInvoiceDto.OutstandingBalance` finally means something real instead of always equalling Gross Amount.
+  - **Subcontract IPC → AP Invoice wiring** — the AP mirror of the Contract-side AR wiring built earlier the
+    same day. New `Modules.Finance.Contracts.IVendorInvoicingService` (implemented by
+    `ApInvoiceVendorInvoicingService`, a thin adapter into `APInvoiceService.CreateAsync`) is the system's
+    second cross-module *write* Contracts interface. `Ipc` gained `ExpenseAccountId`/`PayableAccountId`/
+    `LinkedApInvoiceId`; `IpcService.CreateAsync` now requires Expense+Payable accounts for a Subcontract-type
+    IPC (mirroring Contract's Revenue+Receivable requirement), and `ApproveInternalAsync` resolves the
+    Subcontract's own `SubcontractorId` via the already-injected `ISubcontractRepository` and raises a real
+    Draft AP Invoice on certification, exactly mirroring the AR path.
+  - **`VariationOrder`** (`Modules.Construction.Domain`) — a scope/quantity change against an Approved
+    Contract or Subcontract, the mechanism `MeasurementSheetService`'s over-measurement guard already
+    referenced ("An approved Variation Order must increase the line's quantity first") but that didn't exist
+    yet until now. Polymorphic over commercial document like `MeasurementSheet`/`Ipc`. Deliberately simple
+    lifecycle for this first slice — Draft→Submitted→Approved/Rejected only, no Post/Reverse, since a
+    Variation Order never itself raises an invoice; its effect is a BOQ/scope change that later Measurement/
+    IPC cycles bill against. Each line either adjusts an existing BOQ/Subcontract line's quantity by a delta
+    (may be negative, an omission — rate snapshotted from the document at creation time) or introduces a
+    wholly new line. Approval writes through to the underlying document via two new domain methods —
+    `Contract.AdjustBoqLineQuantity`/`Contract.AddBoqLineFromVariationOrder` and their `Subcontract` mirrors —
+    the one place in this module an already-Approved commercial document's own lines change after the fact.
+  - Generated and applied 3 new EF migrations (`AddIpcApBillingAccounts`, `AddCustomerReceipt`,
+    `AddVariationOrder`) to both `erp_platform_dev` and `erp_platform_test`.
+  - Frontend: `CustomerReceiptsPage.tsx` + `customerReceiptApi.ts` (new nav entry), `ARInvoicesPage.tsx`
+    gained a Receipts tab (mirroring `APInvoicesPage.tsx`'s Payments tab), `IpcsPage.tsx`'s create form now
+    shows Expense/Payable account fields for Subcontract-type IPCs and the detail view shows
+    `LinkedApInvoiceId`, and a new `VariationOrdersPage.tsx` + `variationOrderApi.ts` (SplitView master-
+    detail, same pattern as `IpcsPage.tsx`) with a line-builder supporting both adjustment and new-line modes.
+  - One full `dotnet test` run at the end covering this entire batch: all 23 test projects pass, zero
+    regressions. One live end-to-end verification pass (Python/`urllib`, no browser tool available) against
+    the real running backend + real Postgres confirmed: a Customer Receipt posts and correctly reduces its AR
+    Invoice's `OutstandingBalance`; a Subcontract IPC's certification raises a real Draft AP Invoice against
+    the correct Subcontractor; a Variation Order's approval both increases an existing Subcontract line's
+    quantity and adds a wholly new line, both persisted.
+- Files touched: `src/Modules/Modules.Finance/{Domain,Application,Infrastructure,Api,Contracts}/*CustomerReceipt*`,
+  `ApInvoiceVendorInvoicingService.cs`, `IVendorInvoicingService.cs`, `ARInvoiceService.cs`;
+  `src/Modules/Modules.Construction/{Domain,Application,Infrastructure,Api}/*VariationOrder*`, `Ipc.cs`,
+  `IpcDto.cs`, `IpcService.cs`, `Contract.cs`, `BoqLine.cs`, `Subcontract.cs`, `SubcontractLine.cs`,
+  `ConstructionDbContext.cs`; `src/Gateway/Gateway.Api/Program.cs`; new EF migrations in both modules;
+  `src/Apps/Apps.Shell/src/{api,pages}/{customerReceiptApi,CustomerReceiptsPage,variationOrderApi,VariationOrdersPage}.ts(x)`,
+  `ARInvoicesPage.tsx`, `IpcsPage.tsx`, `ipcApi.ts`, `App.tsx`, `i18n/content.ts`; new/extended tests across
+  `tests/UnitTests/Modules.{Finance,Construction}.Tests` and `tests/IntegrationTests/Modules.{Finance,Construction}.IntegrationTests`.
+- Next: Real Retention withholding/release, Extension of Time, Fiscal-Period/Budget-Check depth for
+  Construction; a proper role-assignment admin surface (the bootstrap `admin` user's role set is currently
+  frozen at first-ever startup — new Business Objects' Maintainer/Approver roles must be granted by hand,
+  e.g. direct SQL, until this exists).
 
 ### 2026-07-17 — IPC→AR Invoice wiring: certifying a Contract IPC now raises a real Draft AR Invoice (resolves the 2026-07-16 open decision)
 
