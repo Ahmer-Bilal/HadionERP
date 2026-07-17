@@ -37,11 +37,13 @@ the whole kernel actually works before any real business logic touched it.
 
 Business Partners, Chart of Accounts, Items, Cost Centers, Tax Codes, and Number Ranges as real persisted
 data — the first business data in the system, replacing the in-memory kernel scaffolding everything before
-it ran on. Finance's General Ledger and Accounts Payable both run the full Draft → Submit → Approve → Post
-→ Reverse lifecycle with a real audit trail, and Bank Accounts plus AP Payment Recording were added on top
-once that gap was identified — a company can now record that an invoice was actually paid, not just that it
-was approved. Accounts Receivable, Document Splitting, Parallel Ledgers, Budget Control, and Results
-Analysis remain later Finance depth, not required for this phase's own exit bar.
+it ran on. Finance's General Ledger, Accounts Payable, and Accounts Receivable all run the full Draft →
+Submit → Approve → Post → Reverse lifecycle with a real audit trail, and Bank Accounts plus AP Payment
+Recording were added on top once that gap was identified — a company can now record that an invoice was
+actually paid, not just that it was approved (the AR-side mirror, a real Customer Receipt, is still open —
+AR Invoice's `OutstandingBalance` today only ever reflects Gross Amount, since nothing yet reduces it).
+Document Splitting, Parallel Ledgers, Budget Control, and Results Analysis remain later Finance depth, not
+required for this phase's own exit bar.
 
 ## Phase 2 — Procurement — Exit criteria met
 
@@ -57,20 +59,26 @@ that exists today is a deliberate pass-through stub, disclosed rather than hidde
 Project Management's WBS foundation is built — a project and its hierarchical Work Breakdown Structure,
 each element carrying the planning/account-assignment/billing flags that decide what role it plays.
 Construction's Customer Contract and Bill of Quantities are built on top of it, followed by Subcontracts
-with their own retention, mobilization-advance, and back-charge terms, and then Site Progress/Measurement —
-a Measurement Sheet recording certified quantities against a Contract or Subcontract's lines, built
+with their own retention, mobilization-advance, and back-charge terms, then Site Progress/Measurement — a
+Measurement Sheet recording certified quantities against a Contract or Subcontract's lines, built
 polymorphic over "commercial document" from day one and the first place the `IsBillingElement` WBS flag is
-actually enforced. What's still ahead in this phase: IPC billing (which Measurement now unblocks),
-Variation Orders, real Retention withholding and release, and Extension of Time/Claims on the Construction
-side; and on the Finance side, the Accounts Receivable depth this phase was deliberately
-expanded to include — Interim Payment Certificates as their own document type distinct from a plain AR
-invoice, Fiscal Year/Period management, a real Budget Check replacing today's pass-through stub, and a
-generic Statement pattern (opening balance → transactions → running balance → aging) built once and reused
-for both customers and suppliers rather than rebuilt per module later. The detailed process design for
-everything still ahead in this phase — the exact IPC calculation, the two-party measurement certification
-workflow, the Client↔Main Contractor↔Subcontractor billing hierarchy, Extension of Time as its own document
-type — lives in `construction-commercial-processes-spec.md` and
-`docs/architecture/07-integrated-project-controlling.md`; read both before starting any of it.
+actually enforced — and then IPC, the Interim Payment Certificate that consumes a Certified Measurement
+Sheet and computes the real billing waterfall (gross value to date, retention, advance recovery, net
+payable), also polymorphic over Contract/Subcontract, also stopping at Certified rather than the further
+"Paid" step. On the Finance side, `ARInvoice` is now built too — the customer-billing mirror of `APInvoice`,
+same lifecycle, but **deliberately not yet wired to IPC** — whether IPC certification should raise an AR
+invoice immediately or through a separate WIP/unbilled-revenue step first is still an open decision (see
+`docs/module/finance.md` and `docs/module/construction.md`), so today an AR invoice against IPC-billed work
+has to be created manually. What's still ahead in this phase: Variation Orders, real Retention withholding
+and release, and Extension of Time/Claims on the Construction side; on the Finance side, actually wiring
+IPC→AR (resolving the open decision above), a Customer Receipt Business Object (the AR mirror of `Payment`),
+Fiscal Year/Period management, a real Budget Check replacing today's pass-through stub, and a generic
+Statement pattern (opening balance → transactions → running balance → aging) built once and reused for both
+customers and suppliers rather than rebuilt per module later. The detailed process design for everything
+still ahead in this phase — the two-party measurement certification workflow, the Client↔Main
+Contractor↔Subcontractor billing hierarchy, Extension of Time as its own document type — lives in
+`construction-commercial-processes-spec.md` and `docs/architecture/07-integrated-project-controlling.md`;
+read both before starting any of it.
 
 This phase's exit criteria: a project can be set up with a BOQ, subcontracted, progress-measured on site,
 and have variation orders flow through approval into cost; an Interim Payment Certificate can be submitted,

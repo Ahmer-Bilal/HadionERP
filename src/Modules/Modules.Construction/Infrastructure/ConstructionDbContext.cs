@@ -22,6 +22,8 @@ public sealed class ConstructionDbContext : DbContext
     internal DbSet<BackCharge> BackCharges => Set<BackCharge>();
     public DbSet<MeasurementSheet> MeasurementSheets => Set<MeasurementSheet>();
     internal DbSet<MeasurementLine> MeasurementLines => Set<MeasurementLine>();
+    public DbSet<Ipc> Ipcs => Set<Ipc>();
+    internal DbSet<IpcLine> IpcLines => Set<IpcLine>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
 
@@ -219,6 +221,70 @@ public sealed class ConstructionDbContext : DbContext
             entity.Property(e => e.QuantityCertified).HasColumnName("quantity_certified").HasColumnType("numeric(18,3)");
             entity.Property(e => e.Remarks).HasColumnName("remarks").HasMaxLength(1000);
             entity.Property<Guid>("MeasurementSheetId").HasColumnName("measurement_sheet_id");
+        });
+
+        modelBuilder.Entity<Ipc>(entity =>
+        {
+            entity.ToTable("ipcs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.CommercialDocumentType).HasColumnName("commercial_document_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.CommercialDocumentId).HasColumnName("commercial_document_id");
+            entity.Property(e => e.MeasurementSheetId).HasColumnName("measurement_sheet_id");
+            entity.Property(e => e.PeriodStart).HasColumnName("period_start");
+            entity.Property(e => e.PeriodEnd).HasColumnName("period_end");
+            entity.Property(e => e.RetentionPercentageApplied).HasColumnName("retention_percentage_applied").HasColumnType("numeric(5,2)");
+            entity.Property(e => e.AdvancePaymentPercentageApplied).HasColumnName("advance_payment_percentage_applied").HasColumnType("numeric(5,2)");
+            entity.Property(e => e.OtherDeductions).HasColumnName("other_deductions").HasColumnType("numeric(18,2)");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("IpcId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+            entity.Ignore(e => e.GrossValueToDate);
+            entity.Ignore(e => e.GrossValueThisPeriod);
+            entity.Ignore(e => e.GrossValuePreviousIpc);
+            entity.Ignore(e => e.RetentionAmount);
+            entity.Ignore(e => e.AdvanceRecoveryAmount);
+            entity.Ignore(e => e.NetPayable);
+        });
+
+        modelBuilder.Entity<IpcLine>(entity =>
+        {
+            entity.ToTable("ipc_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CommercialDocumentLineId).HasColumnName("commercial_document_line_id");
+            entity.Property(e => e.Rate).HasColumnName("rate").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.QuantityThisPeriod).HasColumnName("quantity_this_period").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.QuantityToDate).HasColumnName("quantity_to_date").HasColumnType("numeric(18,3)");
+            entity.Property<Guid>("IpcId").HasColumnName("ipc_id");
+
+            entity.Ignore(e => e.ValueThisPeriod);
+            entity.Ignore(e => e.ValueToDate);
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

@@ -135,6 +135,7 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 TaxCodeSecurity.MaintainerRole, TaxCodeSecurity.ApproverRole,
                 JournalEntrySecurity.MaintainerRole, JournalEntrySecurity.ApproverRole,
                 APInvoiceSecurity.MaintainerRole, APInvoiceSecurity.ApproverRole,
+                ARInvoiceSecurity.MaintainerRole, ARInvoiceSecurity.ApproverRole,
                 VendorPrequalificationSecurity.MaintainerRole,
                 VendorPrequalificationSecurity.CommercialReviewerRole, VendorPrequalificationSecurity.LegalReviewerRole,
                 VendorPrequalificationSecurity.TechnicalReviewerRole, VendorPrequalificationSecurity.HseReviewerRole,
@@ -149,7 +150,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 PaymentSecurity.MaintainerRole, PaymentSecurity.ApproverRole,
                 ContractSecurity.MaintainerRole, ContractSecurity.ApproverRole,
                 SubcontractSecurity.MaintainerRole, SubcontractSecurity.ApproverRole,
-                MeasurementSheetSecurity.MaintainerRole, MeasurementSheetSecurity.ApproverRole },
+                MeasurementSheetSecurity.MaintainerRole, MeasurementSheetSecurity.ApproverRole,
+                IpcSecurity.MaintainerRole, IpcSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -157,6 +159,7 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 TaxCodeSecurity.MaintainerDuty, TaxCodeSecurity.ApproverDuty,
                 JournalEntrySecurity.MaintainerDuty, JournalEntrySecurity.ApproverDuty,
                 APInvoiceSecurity.MaintainerDuty, APInvoiceSecurity.ApproverDuty,
+                ARInvoiceSecurity.MaintainerDuty, ARInvoiceSecurity.ApproverDuty,
                 VendorPrequalificationSecurity.MaintainerDuty,
                 VendorPrequalificationSecurity.CommercialReviewerDuty, VendorPrequalificationSecurity.LegalReviewerDuty,
                 VendorPrequalificationSecurity.TechnicalReviewerDuty, VendorPrequalificationSecurity.HseReviewerDuty,
@@ -171,7 +174,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 PaymentSecurity.MaintainerDuty, PaymentSecurity.ApproverDuty,
                 ContractSecurity.MaintainerDuty, ContractSecurity.ApproverDuty,
                 SubcontractSecurity.MaintainerDuty, SubcontractSecurity.ApproverDuty,
-                MeasurementSheetSecurity.MaintainerDuty, MeasurementSheetSecurity.ApproverDuty });
+                MeasurementSheetSecurity.MaintainerDuty, MeasurementSheetSecurity.ApproverDuty,
+                IpcSecurity.MaintainerDuty, IpcSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -192,6 +196,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         TaxCodeSecurity.MaintainerApproverConflict,
         JournalEntrySecurity.MaintainerApproverConflict,
         APInvoiceSecurity.MaintainerApproverConflict,
+        ARInvoiceSecurity.MaintainerApproverConflict,
         VendorPrequalificationSecurity.MaintainerCommercialReviewerConflict,
         VendorPrequalificationSecurity.MaintainerLegalReviewerConflict,
         VendorPrequalificationSecurity.MaintainerTechnicalReviewerConflict,
@@ -207,6 +212,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         ContractSecurity.MaintainerApproverConflict,
         SubcontractSecurity.MaintainerApproverConflict,
         MeasurementSheetSecurity.MaintainerApproverConflict,
+        IpcSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
@@ -229,6 +235,7 @@ var allRegisteredRoleKeys = new[]
     TaxCodeSecurity.MaintainerRoleKey, TaxCodeWorkflow.ApproverRoleKey,
     JournalEntrySecurity.MaintainerRoleKey, JournalEntryWorkflow.ApproverRoleKey,
     APInvoiceSecurity.MaintainerRoleKey, APInvoiceWorkflow.ApproverRoleKey,
+    ARInvoiceSecurity.MaintainerRoleKey, ARInvoiceWorkflow.ApproverRoleKey,
     VendorPrequalificationSecurity.MaintainerRoleKey,
     VendorPrequalificationWorkflow.CommercialReviewerRoleKey, VendorPrequalificationWorkflow.LegalReviewerRoleKey,
     VendorPrequalificationWorkflow.TechnicalReviewerRoleKey, VendorPrequalificationWorkflow.HseReviewerRoleKey,
@@ -256,6 +263,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         TaxCodeWorkflow.SubmitApprovalDefinition,
         JournalEntryWorkflow.SubmitApprovalDefinition,
         APInvoiceWorkflow.SubmitApprovalDefinition,
+        ARInvoiceWorkflow.SubmitApprovalDefinition,
         VendorPrequalificationWorkflow.SubmitApprovalDefinition,
         PurchaseRequisitionWorkflow.SubmitApprovalDefinition,
         RequestForQuotationWorkflow.SubmitApprovalDefinition,
@@ -267,6 +275,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         ContractWorkflow.SubmitApprovalDefinition,
         SubcontractWorkflow.SubmitApprovalDefinition,
         MeasurementSheetWorkflow.SubmitApprovalDefinition,
+        IpcWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -415,6 +424,26 @@ builder.Services.AddScoped<Modules.Finance.Application.APInvoiceService>(sp => n
     sp.GetRequiredService<ITaxCodeLookup>(),
     sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>(),
     sp.GetRequiredService<Modules.Finance.Application.IPaymentRepository>()));
+builder.Services.AddScoped<Modules.Finance.Application.IARInvoiceRepository, Modules.Finance.Infrastructure.EfARInvoiceRepository>();
+// AR Invoice: the customer-billing mirror of AP Invoice, closing docs/module/finance.md's own "AR as its
+// own document type" gap — same JournalEntryService reuse for posting (Dr Receivable, Cr Revenue[/VAT
+// Output], the mirror image of AP's Dr Expense[/VAT Input], Cr Payable). Deliberately not yet wired to
+// Construction's IPC — see ARInvoice's own doc comment.
+builder.Services.AddScoped<Modules.Finance.Application.ARInvoiceService>(sp => new Modules.Finance.Application.ARInvoiceService(
+    sp.GetRequiredService<Modules.Finance.Application.IARInvoiceRepository>(),
+    new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
+        new[] { new NumberRangeDefinition(Modules.Finance.Application.ARInvoiceService.NumberRangeKey, "FIN", "AR") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IBusinessPartnerLookup>(),
+    sp.GetRequiredService<IGLAccountLookup>(),
+    sp.GetRequiredService<ICostCenterLookup>(),
+    sp.GetRequiredService<ITaxCodeLookup>(),
+    sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
 
 // Bank Accounts & Payments — closes MISSING-FEATURES-AUDIT.md Part 2 §16 ("no way anywhere in this system to
 // record that an AP invoice was actually paid"). Both live in Modules.Finance (same reasoning as JournalEntry/
@@ -652,6 +681,25 @@ builder.Services.AddScoped<MeasurementSheetService>(sp => new MeasurementSheetSe
     sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IProjectLookup>()));
+
+// IPC: Phase 3's next slice on top of Measurement — generated entirely from an Approved Measurement Sheet
+// plus the commercial document it measures against, so it depends on IMeasurementSheetRepository/
+// IContractRepository/ISubcontractRepository directly (same module, no cross-module lookup needed), not
+// IProjectLookup — the project/WBS validation already happened when the Measurement Sheet was created.
+builder.Services.AddScoped<IIpcRepository, Modules.Construction.Infrastructure.EfIpcRepository>();
+builder.Services.AddScoped<IpcService>(sp => new IpcService(
+    sp.GetRequiredService<IIpcRepository>(),
+    sp.GetRequiredService<IMeasurementSheetRepository>(),
+    sp.GetRequiredService<IContractRepository>(),
+    sp.GetRequiredService<ISubcontractRepository>(),
+    new Modules.Construction.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>(),
+        new[] { new NumberRangeDefinition(IpcService.NumberRangeKey, "CON", "IPC") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Construction.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>()));
 
 var app = builder.Build();
 

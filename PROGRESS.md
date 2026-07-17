@@ -41,10 +41,10 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 |---|---|---|
 | Architecture Baseline | Completed | 2026-07-13 |
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
-| Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice (both post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording (2026-07-16). AR, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-16 |
+| Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice + AR Invoice (all post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording (2026-07-16), AR Invoice added 2026-07-17 (not yet wired to a Customer Receipt — OutstandingBalance is Gross-Amount-only until one exists). Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-17 |
 | Phase 2 — Procurement | **Exit criteria met** — full procure-to-pay cycle (BusinessRoles/Vendor Prequal → PR → RFQ → PO → GRN) built, tested, and live-verified, with a working 3-way match against AP closing the loop. Real Budget Control enforcement and a real line-by-line invoice match remain deferred Finance/Procurement depth, not required for Phase 2's exit bar | 2026-07-15 |
 | **Checkpoint** — UI/Visual Density Pass | **Paused by explicit user instruction** — teal identity (design-tokens.css) + `Platform.UI.SplitView` are live and retrofitted on `PurchaseOrdersPage`/`BusinessPartnersPage`, but the user judged this insufficient to compete visually with Fiori/Dynamics (color tokens + one layout mechanic, no icons/status pills/KPIs/avatars — see `feedback_visual_richness_gap` in memory) and told the AI to stop touching it and move to roadmap phases instead. Left as-is, not reverted. Resume only when the user explicitly asks for the visual pass again, with real surface richness this time | 2026-07-15 |
-| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, its Subcontracts slice (retention %/mobilization advance %/back-charges) built 2026-07-16, and its Site Progress/Measurement slice (`MeasurementSheet`, polymorphic over Contract/Subcontract, `IsBillingElement` finally enforced) built, tested, and live-verified 2026-07-17. IPC/Variation Orders/real Retention withholding/Extension of Time, the AR/Fiscal-Period/Budget-Check depth this phase was expanded to include, and Networks/Activities for ProjectManagement all remain not started | 2026-07-17 |
+| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, its Subcontracts slice (retention %/mobilization advance %/back-charges) built 2026-07-16, its Site Progress/Measurement slice (`MeasurementSheet`, polymorphic over Contract/Subcontract, `IsBillingElement` finally enforced) built 2026-07-17, and its IPC slice (`Ipc`, the real billing waterfall — gross-to-date/retention/advance-recovery/net-payable — computed from Measurement, same polymorphism) built, tested, and live-verified 2026-07-17. Finance's `ARInvoice` (Phase 1 row above) is deliberately NOT wired to IPC yet — that integration, Variation Orders, real Retention withholding/release, Extension of Time, Fiscal-Period/Budget-Check depth, and Networks/Activities for ProjectManagement all remain not started | 2026-07-17 |
 | **Checkpoint** — Lookup Data / Admin Panel | **Completed** — a real, admin-configurable picklist engine (`LookupType`/`LookupValue`, `LookupService`, `LookupsController`) replaced the hardcoded `BusinessRoleType`/`AddressType` enums and unvalidated `Country`/`UnitOfMeasure` free text; a genuine multi-page Admin Panel (`LookupDataPage.tsx`, inline-editable SAP-style grids, one nav entry per type) lets an administrator add/edit/deactivate/delete lookup values and even define brand-new lookup types, with in-use delete protection. Live-verified end-to-end, EN+AR | 2026-07-15 |
 | **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, resolved) and AP Payment Recording (§16, now also resolved — see below) | 2026-07-15 |
 | **Checkpoint** — Real Authentication & Identity | **Completed** — closes audit §1/§3. `Modules.Identity` (JWT bearer auth, persisted Users, global default-deny) replaced every hardcoded actor literal solution-wide; role assignment now runs real Segregation of Duties conflict checking for the first time ever (block → override-with-reason → succeed, live-verified). Live-verified end-to-end, EN+AR, zero regressions (22 test projects) | 2026-07-15 |
@@ -58,6 +58,134 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-17 — Modules.Construction slice 4: IPC built + Modules.Finance: AR Invoice built (both built together, tests deferred to the end, then run once for both — explicit user instruction to move fast)
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 3 — Construction, Project Accounting & Accounts Receivable / Phase 1 — Master Data + Finance Core
+- Status: In Progress (Phase 3) / this AR piece of Phase 1 complete but not yet wired to Construction
+- What changed: Continuing the same session as the Measurement slice below, the user first asked to read
+  through `docs/`, `MISSING-FEATURES-AUDIT.md`, and `ROADMAP.md` in full, then pointed out two real gaps
+  found by cross-checking `docs/architecture/07-integrated-project-controlling.md` §11's own summary table
+  (which explicitly calls itself "the master checklist for ROADMAP.md") against what `ROADMAP.md` actually
+  scoped: Labor Costing/Timesheet had no roadmap home at all, and Legal/Dispute tracking wasn't scoped
+  anywhere either. Both fixed in `ROADMAP.md` (Labor Costing joined the Phase 3–4 checkpoint as a WBS
+  cost-collector alongside Fixed Assets/Equipment/Materials; Legal/Dispute joined the deferred-not-urgent
+  list per doc 07 §10's own "thin cross-cutting layer, not a full module" recommendation), plus a smaller
+  mislabel in `docs/architecture/08-cost-code-design.md` (it cited `MISSING-FEATURES-AUDIT.md` §18 as where
+  Cost Codes are scoped; §18 is actually the unrelated Cost Center/Internal Order gap — corrected to point
+  at `ROADMAP.md`'s checkpoint instead, since Cost Codes were never a numbered audit finding). Committed
+  separately from the implementation work below.
+  - Then continued Phase 3 per the prior session's own "Next" note: IPC is the slice after Measurement.
+    User then gave an explicit instruction mid-build to also start Finance's AR module directly afterward,
+    before running the test suite — i.e. build both slices' code first, defer the deferred-work testing
+    pass to cover both together, rather than the usual "test each slice before moving to the next" pattern.
+    Followed that instruction: built IPC fully (domain/application/infrastructure/API/frontend/docs), then
+    immediately built AR Invoice fully the same way, then wrote unit+integration tests and ran the full
+    suite once at the end, then did one combined live-verification pass covering both.
+  - **Built `Ipc`** inside `Modules.Construction` — generated entirely from one Approved (Certified)
+    `MeasurementSheet` plus the commercial document it measures against, never from caller-supplied lines
+    (every IPC figure is derived, not entered by hand, extending doc 02's "computed values are never
+    entered by hand" rule to whole documents). Same Contract/Subcontract polymorphism as Measurement, for
+    the same reason. One IPC per Measurement Sheet enforced (`IIpcRepository.ExistsForMeasurementSheetAsync`)
+    so a period can never be double-billed. The waterfall (spec §3): `IpcLine` carries a `Rate` snapshot
+    plus `QuantityThisPeriod` (the source sheet's own certified quantity) and `QuantityToDate` (cumulative
+    certified quantity across every Approved sheet ever measured against that line — the same cross-sheet
+    aggregation Measurement's over-measurement guard already computes, reused not duplicated); the header's
+    `GrossValueToDate`/`GrossValueThisPeriod`/`GrossValuePreviousIpc` are all computed from lines.
+    Interpreted the spec's literal "Retention = Gross Value to Date × Retention%" step as a per-period
+    deduction (`GrossValueThisPeriod × RetentionPercentageApplied`) rather than a cumulative one, since a
+    literal cumulative reading doesn't arithmetically reconcile with "this period's" net payable and
+    standard real-world IPC practice deducts retention pro-rata per certified amount — documented as an
+    explicit interpretation, not silently assumed. `RetentionPercentageApplied`/`AdvancePaymentPercentageApplied`
+    are snapshotted from the Contract/Subcontract header at IPC creation time, same "freeze financial facts"
+    pattern as `APInvoice.TaxRate`. `OtherDeductions` is genuinely manual entry this slice (LDs/back-charges/
+    over-certification corrections have no source mechanism yet). Reuses the platform's Draft→Submitted→
+    Approved/Rejected lifecycle for the spec's Draft→Submitted→Certified workflow — stops there, deliberately
+    short of the spec's further "Paid" step, since closing that loop needs a real AR/WIP posting and
+    PROGRESS.md's 2026-07-16 entry explicitly left "does certification raise an AR invoice immediately, or a
+    WIP step first" as an open decision, not guessed here.
+  - Number range key `CON-IPC` → `CON-IPC-2026-000001`.
+  - **Built `ARInvoice`** inside the existing `Modules.Finance` module — the customer-billing mirror of
+    `APInvoice`, same Draft→Submit→Approve→Post→Reverse lifecycle, same "pick Revenue/Receivable accounts
+    explicitly, no hidden defaults" design, same tax-rate-snapshot pattern. Posting generates a real linked
+    Journal Entry via the same `JournalEntryService.CreateSystemGeneratedAsync` AP already uses, but the
+    debit/credit direction is AP's mirror image: Dr Receivable (Gross), Cr Revenue (Net), Cr VAT Output
+    (Tax) if a Tax Code applies — AR credits the government VAT liability where AP debits the recoverable
+    input VAT. Only Business Partners holding the `Client` role are eligible (`ReceivableEligibleRoles`),
+    the exact mirror of AP's vendor-family role list (which itself excludes `Client`). `OutstandingBalance`
+    is simpler than AP's — just Gross Amount once Posted, no reduction mechanism, since there's no Customer
+    Receipt Business Object yet (the AR mirror of `Payment`) to record that a customer actually paid.
+    **Deliberately not wired to IPC** — `ARInvoice` exists as the standalone capability the eventual IPC→AR
+    integration decision will call into, exactly the relationship `APInvoice` had to Procurement's
+    three-way match before that integration was built. Confirmed live (see below) that an AR invoice can
+    already be raised manually against a certified IPC's net payable amount as a real, if manual, bridge.
+  - Number range key `FIN-AR` → `FIN-AR-2026-000001`.
+- Verified: full solution `dotnet test` after both slices — 24 test projects, zero regressions. Added 43 new
+  tests: `IpcTests` (13, domain-level — period/percentage/deduction validation, line rate/quantity
+  validation, Draft-only line add, the full waterfall computed correctly from lines and header percentages
+  including the null-percentage-defaults-to-zero-deduction case, full lifecycle, reject path) and
+  `IpcServiceTests` (12 — document-type/sheet-not-Approved/duplicate-IPC-per-sheet rejections, cumulative
+  QuantityToDate proven correct across two sibling sheets, the Contract/Subcontract polymorphism itself
+  proven, actor authorization, audit entry) plus 3 new integration tests (`IpcPersistenceTests` — full
+  round-trip through Draft→Submitted→Approved including line money-math, cascade delete, RowVersion);
+  `ARInvoiceTests` (9, domain) and `ARInvoiceServiceTests` (11 — role-eligibility/Approved-status/inactive-
+  account/tax-code-requires-VAT-account rejections, the AR debit/credit direction explicitly asserted
+  against a real generated Journal Entry's lines — Receivable debited gross, VAT Output credited not
+  debited, actor authorization, reversal zeroing OutstandingBalance) plus 3 new integration tests
+  (`ARInvoicePersistenceTests`). Generated and applied two new EF migrations (`AddIpc`, `AddARInvoice`) to
+  both `erp_platform_dev` and `erp_platform_test`. Live end-to-end cycle (the same Python-HTTP-driver
+  approach as the Measurement session, since the scenario chains ~30 real requests): built a Project→
+  Contract→Measurement chain, certified 40 of a 100-quantity/50-rate BOQ line, created an IPC and confirmed
+  its `grossValueThisPeriod` (2000) and `advanceRecoveryAmount` (300, i.e. 15% of 2000) matched hand
+  calculation, certified it; created a second Measurement Sheet certifying the remaining 60 and a second IPC,
+  confirmed `grossValueToDate` (5000), `grossValuePreviousIpc` (2000), and `grossValueThisPeriod` (3000) all
+  correctly reflected the cumulative math; confirmed a third IPC attempt against the already-billed first
+  sheet is correctly rejected with 400; created and approved a real `Client`-role Business Partner and two
+  new GL accounts (Receivable, VAT Payable), created an AR invoice for the first IPC's net payable (1700)
+  with 15% VAT, posted it, and fetched the real generated Journal Entry to directly assert the Receivable
+  line was debited the full gross amount (1955) and the VAT line was credited (not debited) 15% — confirming
+  the AR/AP mirror-image posting logic actually works, not just compiles; reversed the invoice and confirmed
+  `OutstandingBalance` correctly dropped to 0. Frontend: `IpcsPage.tsx` (list/create-from-Measurement-Sheet/
+  detail with a Calculation FastTab showing the full waterfall) and `ARInvoicesPage.tsx` (mirrors
+  `APInvoicesPage.tsx`'s list/create/details shape, Customer instead of Vendor, Revenue/Receivable instead
+  of Expense/Payable, no Payments tab since there's no Customer Receipt yet) both built — `npx tsc -b` and
+  the hardcoded-Arabic-text check both pass clean, both pages' modules transform through the Vite dev server
+  without an error overlay, but **no live Playwright/browser pass was run this session**, same deliberate,
+  disclosed deviation as the Measurement session for the same reason (explicit user instruction to minimize
+  spend; the backend's full business-rule surface was proven end-to-end via the real HTTP cycle above
+  instead). Same known operational gap as every module-adding session before this one: bootstrap admin's
+  roles aren't retroactively synced when new roles get registered — worked around via
+  `POST /api/v1/identity/users/{id}/roles` with an explicit SoD override reason, same as always.
+- Files touched (implementation): `src/Modules/Modules.Construction/Domain/IpcLine.cs`, `Ipc.cs` (new);
+  `Application/IpcDto.cs`, `IIpcRepository.cs`, `IpcSecurity.cs`, `IpcWorkflow.cs`, `IpcService.cs` (new);
+  `Infrastructure/EfIpcRepository.cs` (new), `ConstructionDbContext.cs` (new tables), migration
+  `20260717010409_AddIpc`; `Api/IpcsController.cs` (new); `src/Modules/Modules.Finance/Domain/ARInvoice.cs`
+  (new); `Application/ARInvoiceDto.cs`, `IARInvoiceRepository.cs`, `ARInvoiceSecurity.cs`,
+  `ARInvoiceWorkflow.cs`, `ARInvoiceService.cs` (new); `Infrastructure/EfARInvoiceRepository.cs` (new),
+  `FinanceDbContext.cs` (new table), migration `20260717011211_AddARInvoice`; `Api/ARInvoicesController.cs`
+  (new); `src/Gateway/Gateway.Api/Program.cs` (security/workflow/SoD/number-range/DI wiring for both);
+  `tests/UnitTests/Modules.Construction.Tests/IpcTests.cs`, `IpcServiceTests.cs`, `FakeIpcRepository.cs`
+  (new); `tests/IntegrationTests/Modules.Construction.IntegrationTests/IpcPersistenceTests.cs` (new),
+  `TestDatabase.cs` (reset coverage); `tests/UnitTests/Modules.Finance.Tests/ARInvoiceTests.cs`,
+  `ARInvoiceServiceTests.cs`, `FakeARInvoiceRepository.cs` (new);
+  `tests/IntegrationTests/Modules.Finance.IntegrationTests/ARInvoicePersistenceTests.cs` (new),
+  `TestDatabase.cs` (reset coverage); frontend `src/Apps/Apps.Shell/src/api/ipcApi.ts`, `arInvoiceApi.ts`
+  (new), `pages/IpcsPage.tsx`, `ARInvoicesPage.tsx` (new), `App.tsx` (nav/routing for both), `i18n/content.ts`
+  (`ipc.*`/`ar.*`/`nav.ipcsArea*`/`nav.arInvoicesArea*` keys, EN+AR); `docs/module/construction.md` (IPC
+  section + Deferred list update), `docs/module/finance.md` (AR Invoice section + Deferred list update);
+  `ROADMAP.md` (Phase 1 and Phase 3 paragraphs updated); `PROGRESS.md` (this entry, Phase Status Summary
+  rows for Phase 1 and Phase 3).
+- Next: the IPC→AR wiring decision is now the single most valuable next piece — it would close the loop
+  this session deliberately left open and finally let Construction's billing actually reach Finance's
+  ledger automatically rather than through the manual bridge proven above. A Customer Receipt Business
+  Object (AR's mirror of `Payment`) is the natural companion piece once that's decided. On the pure
+  Construction side, Variation Orders is next per the roadmap's dependency order (needed before real
+  Retention withholding/release can be meaningfully built, since retention release ties to milestone events
+  a VO can affect). A live Playwright/browser verification pass on both `IpcsPage.tsx` and
+  `ARInvoicesPage.tsx` (skipped this session and the one before it) should happen before too many more
+  screens accumulate without one. Also still open from prior entries: Fiscal Year/Period management, real
+  Budget Check, amount-conditioned approval matrices, and the generic Statement pattern design.
 
 ### 2026-07-17 — Documentation reorg cleanup (broken cross-references) + Modules.Construction slice 3: Site Progress/Measurement built, tested, live-verified
 

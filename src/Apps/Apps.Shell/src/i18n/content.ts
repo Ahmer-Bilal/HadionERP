@@ -245,6 +245,8 @@ type TranslationKey =
   | "je.statusReversed"
   | "nav.apInvoicesArea"
   | "nav.allAPInvoices"
+  | "nav.arInvoicesArea"
+  | "nav.allARInvoices"
   | "ap.heading"
   | "ap.newHeading"
   | "ap.emptyState"
@@ -276,6 +278,36 @@ type TranslationKey =
   | "ap.columnTaxAmount"
   | "ap.linkedJournalEntry"
   | "ap.columnOutstandingBalance"
+  | "ar.heading"
+  | "ar.newHeading"
+  | "ar.emptyState"
+  | "ar.actionNew"
+  | "ar.actionCreate"
+  | "ar.actionBack"
+  | "ar.actionSubmit"
+  | "ar.actionApprove"
+  | "ar.actionReject"
+  | "ar.actionPost"
+  | "ar.actionReverse"
+  | "ar.columnDocumentNumber"
+  | "ar.columnInvoiceDate"
+  | "ar.columnCustomer"
+  | "ar.columnGrossAmount"
+  | "ar.columnStatus"
+  | "ar.fieldCustomer"
+  | "ar.fieldCustomerReference"
+  | "ar.fieldInvoiceDate"
+  | "ar.fieldDescription"
+  | "ar.fieldRevenueAccount"
+  | "ar.fieldReceivableAccount"
+  | "ar.fieldTaxCode"
+  | "ar.fieldVatAccount"
+  | "ar.fieldNetAmount"
+  | "ar.noTaxCode"
+  | "ar.columnNetAmount"
+  | "ar.columnTaxAmount"
+  | "ar.linkedJournalEntry"
+  | "ar.columnOutstandingBalance"
   | "nav.bankAccountsArea"
   | "nav.allBankAccounts"
   | "bank.heading"
@@ -342,6 +374,8 @@ type TranslationKey =
   | "nav.allSubcontracts"
   | "nav.measurementSheetsArea"
   | "nav.allMeasurementSheets"
+  | "nav.ipcsArea"
+  | "nav.allIpcs"
   | "nav.lookupDataArea"
   | "nav.allLookupTypes"
   | "nav.lookupCountries"
@@ -617,6 +651,38 @@ type TranslationKey =
   | "meas.columnPeriod"
   | "meas.columnStatus"
   | "meas.tabLines"
+  | "ipc.heading"
+  | "ipc.newHeading"
+  | "ipc.emptyState"
+  | "ipc.selectHint"
+  | "ipc.noEligibleSheetsHint"
+  | "ipc.actionNew"
+  | "ipc.actionCreate"
+  | "ipc.actionBack"
+  | "ipc.actionSubmit"
+  | "ipc.actionCertify"
+  | "ipc.actionReject"
+  | "ipc.fieldProject"
+  | "ipc.fieldDocumentType"
+  | "ipc.fieldDocument"
+  | "ipc.fieldMeasurementSheet"
+  | "ipc.fieldOtherDeductions"
+  | "ipc.columnDocumentNumber"
+  | "ipc.columnProject"
+  | "ipc.columnNetPayable"
+  | "ipc.columnStatus"
+  | "ipc.tabWaterfall"
+  | "ipc.fieldGrossValueToDate"
+  | "ipc.fieldGrossValuePreviousIpc"
+  | "ipc.fieldGrossValueThisPeriod"
+  | "ipc.fieldRetentionAmount"
+  | "ipc.fieldAdvanceRecoveryAmount"
+  | "ipc.fieldNetPayable"
+  | "ipc.fieldLineRate"
+  | "ipc.fieldLineQuantityThisPeriod"
+  | "ipc.fieldLineValueThisPeriod"
+  | "ipc.fieldLineQuantityToDate"
+  | "ipc.fieldLineValueToDate"
   | "lookup.hubHeading"
   | "lookup.newTypeHeading"
   | "lookup.columnCode"
@@ -929,6 +995,8 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "je.statusReversed": { en: "Reversed", ar: "معكوس" },
   "nav.apInvoicesArea": { en: "AP Invoices", ar: "فواتير الموردين" },
   "nav.allAPInvoices": { en: "All AP Invoices", ar: "جميع فواتير الموردين" },
+  "nav.arInvoicesArea": { en: "AR Invoices", ar: "فواتير العملاء" },
+  "nav.allARInvoices": { en: "All AR Invoices", ar: "جميع فواتير العملاء" },
   "ap.heading": { en: "AP Invoices", ar: "فواتير الموردين" },
   "ap.newHeading": { en: "New AP Invoice", ar: "فاتورة مورّد جديدة" },
   "ap.emptyState": { en: "No AP invoices yet.", ar: "لا توجد فواتير موردين حتى الآن." },
@@ -960,6 +1028,36 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "ap.columnTaxAmount": { en: "Tax", ar: "الضريبة" },
   "ap.linkedJournalEntry": { en: "Linked Journal Entry", ar: "قيد اليومية المرتبط" },
   "ap.columnOutstandingBalance": { en: "Outstanding Balance", ar: "الرصيد المستحق" },
+  "ar.heading": { en: "AR Invoices", ar: "فواتير العملاء" },
+  "ar.newHeading": { en: "New AR Invoice", ar: "فاتورة عميل جديدة" },
+  "ar.emptyState": { en: "No AR invoices yet.", ar: "لا توجد فواتير عملاء حتى الآن." },
+  "ar.actionNew": { en: "New", ar: "جديد" },
+  "ar.actionCreate": { en: "Create", ar: "إنشاء" },
+  "ar.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "ar.actionSubmit": { en: "Submit for Approval", ar: "إرسال للاعتماد" },
+  "ar.actionApprove": { en: "Approve", ar: "اعتماد" },
+  "ar.actionReject": { en: "Reject", ar: "رفض" },
+  "ar.actionPost": { en: "Post", ar: "ترحيل" },
+  "ar.actionReverse": { en: "Reverse", ar: "عكس القيد" },
+  "ar.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "ar.columnInvoiceDate": { en: "Invoice Date", ar: "تاريخ الفاتورة" },
+  "ar.columnCustomer": { en: "Customer", ar: "العميل" },
+  "ar.columnGrossAmount": { en: "Gross Amount", ar: "المبلغ الإجمالي" },
+  "ar.columnStatus": { en: "Status", ar: "الحالة" },
+  "ar.fieldCustomer": { en: "Customer", ar: "العميل" },
+  "ar.fieldCustomerReference": { en: "Customer Reference", ar: "مرجع العميل" },
+  "ar.fieldInvoiceDate": { en: "Invoice Date", ar: "تاريخ الفاتورة" },
+  "ar.fieldDescription": { en: "Description", ar: "الوصف" },
+  "ar.fieldRevenueAccount": { en: "Revenue Account", ar: "حساب الإيرادات" },
+  "ar.fieldReceivableAccount": { en: "Receivable Account", ar: "حساب المدينين" },
+  "ar.fieldTaxCode": { en: "Tax Code", ar: "الرمز الضريبي" },
+  "ar.fieldVatAccount": { en: "VAT Account", ar: "حساب ضريبة القيمة المضافة" },
+  "ar.fieldNetAmount": { en: "Net Amount", ar: "المبلغ الصافي" },
+  "ar.noTaxCode": { en: "No tax", ar: "بدون ضريبة" },
+  "ar.columnNetAmount": { en: "Net Amount", ar: "المبلغ الصافي" },
+  "ar.columnTaxAmount": { en: "Tax Amount", ar: "مبلغ الضريبة" },
+  "ar.linkedJournalEntry": { en: "Linked Journal Entry", ar: "قيد اليومية المرتبط" },
+  "ar.columnOutstandingBalance": { en: "Outstanding Balance", ar: "الرصيد المستحق" },
 
   "nav.bankAccountsArea": { en: "Bank Accounts", ar: "الحسابات البنكية" },
   "nav.allBankAccounts": { en: "All Bank Accounts", ar: "جميع الحسابات البنكية" },
@@ -1028,6 +1126,8 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.allSubcontracts": { en: "All Subcontracts", ar: "جميع عقود الباطن" },
   "nav.measurementSheetsArea": { en: "Site Progress", ar: "تقدم الموقع" },
   "nav.allMeasurementSheets": { en: "Measurement Sheets", ar: "كشوفات القياس" },
+  "nav.ipcsArea": { en: "Billing", ar: "الفوترة" },
+  "nav.allIpcs": { en: "IPCs", ar: "شهادات الدفع المرحلية" },
   "nav.allProjects": { en: "All Projects", ar: "جميع المشاريع" },
   "nav.lookupDataArea": { en: "Lookup Data", ar: "بيانات القوائم" },
   "nav.allLookupTypes": { en: "All Lookup Types", ar: "جميع أنواع القوائم" },
@@ -1315,6 +1415,38 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "meas.columnPeriod": { en: "Period", ar: "الفترة" },
   "meas.columnStatus": { en: "Status", ar: "الحالة" },
   "meas.tabLines": { en: "Lines", ar: "البنود" },
+  "ipc.heading": { en: "Interim Payment Certificates", ar: "شهادات الدفع المرحلية" },
+  "ipc.newHeading": { en: "New IPC", ar: "شهادة دفع مرحلية جديدة" },
+  "ipc.emptyState": { en: "No IPCs yet.", ar: "لا توجد شهادات دفع مرحلية حتى الآن." },
+  "ipc.selectHint": { en: "Select an IPC from the list to see its details.", ar: "اختر شهادة دفع مرحلية من القائمة لعرض تفاصيلها." },
+  "ipc.noEligibleSheetsHint": { en: "No Certified measurement sheet is available to bill for this document (or all have already been billed).", ar: "لا يوجد كشف قياس معتمد متاح للفوترة لهذا المستند (أو تم إصدار فواتير لجميعها بالفعل)." },
+  "ipc.actionNew": { en: "New", ar: "جديد" },
+  "ipc.actionCreate": { en: "Create", ar: "إنشاء" },
+  "ipc.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "ipc.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "ipc.actionCertify": { en: "Certify", ar: "اعتماد" },
+  "ipc.actionReject": { en: "Reject", ar: "رفض" },
+  "ipc.fieldProject": { en: "Project", ar: "المشروع" },
+  "ipc.fieldDocumentType": { en: "Document Type", ar: "نوع المستند" },
+  "ipc.fieldDocument": { en: "Contract / Subcontract", ar: "العقد / عقد الباطن" },
+  "ipc.fieldMeasurementSheet": { en: "Measurement Sheet", ar: "كشف القياس" },
+  "ipc.fieldOtherDeductions": { en: "Other Deductions", ar: "خصومات أخرى" },
+  "ipc.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "ipc.columnProject": { en: "Project", ar: "المشروع" },
+  "ipc.columnNetPayable": { en: "Net Payable", ar: "صافي المستحق" },
+  "ipc.columnStatus": { en: "Status", ar: "الحالة" },
+  "ipc.tabWaterfall": { en: "Calculation", ar: "الاحتساب" },
+  "ipc.fieldGrossValueToDate": { en: "Gross Value to Date", ar: "القيمة الإجمالية حتى تاريخه" },
+  "ipc.fieldGrossValuePreviousIpc": { en: "Less: Previous IPCs", ar: "ناقص: الشهادات السابقة" },
+  "ipc.fieldGrossValueThisPeriod": { en: "Gross Value This Period", ar: "القيمة الإجمالية لهذه الفترة" },
+  "ipc.fieldRetentionAmount": { en: "Less: Retention", ar: "ناقص: الاحتجاز" },
+  "ipc.fieldAdvanceRecoveryAmount": { en: "Less: Advance Recovery", ar: "ناقص: استرداد الدفعة المقدمة" },
+  "ipc.fieldNetPayable": { en: "Net Payable This IPC", ar: "صافي المستحق لهذه الشهادة" },
+  "ipc.fieldLineRate": { en: "Rate", ar: "السعر" },
+  "ipc.fieldLineQuantityThisPeriod": { en: "Qty This Period", ar: "الكمية لهذه الفترة" },
+  "ipc.fieldLineValueThisPeriod": { en: "Value This Period", ar: "القيمة لهذه الفترة" },
+  "ipc.fieldLineQuantityToDate": { en: "Qty To Date", ar: "الكمية حتى تاريخه" },
+  "ipc.fieldLineValueToDate": { en: "Value To Date", ar: "القيمة حتى تاريخه" },
   "lookup.hubHeading": { en: "Lookup Data", ar: "بيانات القوائم" },
   "lookup.newTypeHeading": { en: "Create a new lookup type", ar: "إنشاء نوع قائمة جديد" },
   "lookup.columnCode": { en: "Code", ar: "الرمز" },

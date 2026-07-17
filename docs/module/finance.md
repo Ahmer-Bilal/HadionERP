@@ -31,13 +31,34 @@ undoes the ledger's balance rather than just changing a status flag on the origi
 straight to Posted without a second human approval, the same way SAP's own document-reversal transaction
 works — reversing something that was already properly approved once doesn't need a second approval to undo.
 
+## AR Invoice — the customer-billing mirror of AP Invoice
+
+`ARInvoice` closes the "Accounts Receivable as its own document type" half of this module's original gap —
+same Draft → Submit → Approve → Post → Reverse lifecycle as `APInvoice`, same "pick the accounts explicitly,
+no hidden defaults" design, same tax-rate-snapshot-at-creation pattern. Posting generates a real linked
+Journal Entry, but the debit/credit direction mirrors AP's exactly: Dr Receivable (Gross), Cr Revenue (Net),
+Cr VAT Output (Tax) if a Tax Code applies — the opposite ledger direction from AP's Dr Expense/Dr VAT
+Input/Cr Payable, since AR credits the government VAT liability while AP debits the recoverable input VAT.
+Only a Business Partner holding the `Client` role is eligible, the exact mirror of AP's vendor-family role
+list (which itself excludes `Client`).
+
+`OutstandingBalance` is simpler than AP's — it's just Gross Amount once Posted, with no reduction mechanism,
+because there's no Customer Receipt Business Object yet to record that a customer actually paid (the same
+gap `Payment` closed for AP, not yet closed on the AR side). This module deliberately does **not** yet wire
+into Construction's IPC — PROGRESS.md's 2026-07-16 entry explicitly left "does IPC certification raise an
+AR invoice immediately, or a WIP/unbilled-revenue step first" as an open decision pending real usage
+patterns, not guessed here. `ARInvoice` exists as the standalone capability that decision will eventually
+call into, exactly the same relationship `APInvoice` had to Procurement's three-way match before that
+integration was built.
+
 ## What's still ahead
 
-Everything named in this module's intended scope beyond the Journal Entry itself — Accounts Payable and
-Accounts Receivable as their own document types, Fixed Assets, Cash & Bank, Document Splitting, Parallel
-Ledgers, Cost Centers/Internal Orders/Profitability Segments as real Controlling objects, Budget Control,
-and Results Analysis — is designed but not yet built. Results Analysis in particular shouldn't be attempted
-in isolation from the rest of the system: it's a cross-module read (actual project cost from Materials,
-Labor, Equipment, and Subcontracts; billed revenue from Construction's IPCs) producing a Finance-only
-posting, not something Construction or Project Management should try to calculate themselves. See
-`docs/architecture/07-integrated-project-controlling.md` §7 before building it.
+Fixed Assets, Cash & Bank depth beyond what `BankAccount`/`Payment` already cover, Document Splitting,
+Parallel Ledgers, Cost Centers/Internal Orders/Profitability Segments as real Controlling objects, Budget
+Control, and Results Analysis — is designed but not yet built. A Customer Receipt Business Object (the AR
+mirror of `Payment`) is the natural next AR-side piece, and wiring IPC certification to actually raise an
+AR invoice is the natural next Construction-side piece — both still open. Results Analysis in particular
+shouldn't be attempted in isolation from the rest of the system: it's a cross-module read (actual project
+cost from Materials, Labor, Equipment, and Subcontracts; billed revenue from Construction's IPCs/AR
+invoices) producing a Finance-only posting, not something Construction or Project Management should try to
+calculate themselves. See `docs/architecture/07-integrated-project-controlling.md` §7 before building it.

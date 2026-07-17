@@ -82,20 +82,44 @@ quantity for a given BOQ/Subcontract line, summed across every Approved sheet th
 it, can never exceed that line's own `Quantity` — an approved Variation Order (not yet built) would be the
 only way to raise that ceiling once it's reached.
 
+## IPC — turning certified progress into an actual bill
+
+An `Ipc` is generated from exactly one Approved (Certified) `MeasurementSheet` — never from caller-supplied
+lines, since every figure on an IPC is derived, not entered by hand (`02-business-object-model.md`'s
+"computed values are never entered by hand" rule applies to whole documents here, not just header totals).
+One IPC per Measurement Sheet is enforced (`IIpcRepository.ExistsForMeasurementSheetAsync`), so the same
+certified period can never be billed twice. Same polymorphism as Measurement (Contract or Subcontract), for
+the same reason — a Subcontract runs its own independent IPC cycle against the main contractor, not a child
+of the main Contract's IPC (spec §6c).
+
+The money waterfall (spec §3) is computed, not stored by hand, from each `IpcLine`'s snapshotted `Rate` and
+two quantities: `QuantityThisPeriod` (the source sheet's own certified quantity) and `QuantityToDate` (the
+cumulative certified quantity across every Approved sheet ever measured against that line — the same
+cross-sheet aggregation `MeasurementSheetService`'s over-measurement guard already computes, reused here
+rather than duplicated). Retention and Advance Recovery are both a straight percentage of *this period's*
+certified value — snapshotted from the Contract/Subcontract's own header percentages at IPC creation time,
+not read live, so an IPC's arithmetic stays stable even if those header terms could theoretically change
+later. `OtherDeductions` (liquidated damages, back-charges, prior over-certification corrections) is
+genuinely manual entry this slice — none of those source mechanisms exist yet.
+
+Same lifecycle convention as Measurement: Draft → Submitted → Approved/Rejected, where Approved *is*
+"Certified" (the Engineer issuing the Payment Certificate that legally obligates payment). The IPC stops
+there, deliberately short of the spec's further "Paid" step — closing that loop means raising a real AR/
+Customer Invoice or WIP entry in Finance, and PROGRESS.md's 2026-07-16 entry explicitly left "does
+certification raise an AR invoice immediately, or a WIP step first" as an open decision pending Finance's
+still-nonexistent AR module, not guessed here.
+
 ## What's still deliberately absent
 
-Everything downstream of "progress has been measured and certified" is still to be built. There's no way yet
-to actually bill a customer or pay a subcontractor for work done — IPC (Interim Payment Certificate), which
-consumes a certified Measurement Sheet, doesn't exist as a document type yet, so a Contract, Subcontract, and
-now a Measurement Sheet all currently describe what was agreed or measured, not what's been paid for.
-Retention exists today only as a percentage term recorded on a Subcontract's header; the running
-withheld-balance and release-event mechanics described in the commercial-process spec aren't built, and
-depend on IPC existing first. Variation Orders and Extension of Time/Claims don't exist as document types
-yet at all — a change in scope or a delay currently has nowhere to be formally recorded against a Contract
-or Subcontract, and the over-measurement guard above will hard-block legitimate additional scope until a VO
-can raise a line's quantity. Cumulative certified-to-date and percent-complete are deliberately not exposed
-anywhere on the Measurement Sheet API/UI yet — IPC's own "Gross Value of Work Done to Date" calculation needs
-the same cross-sheet aggregation, so it's built once there rather than duplicated now.
+Everything downstream of "an IPC has been certified" is still to be built. There's no way yet to actually
+record that a customer paid an IPC or a subcontractor was paid against one — that's the "Paid" step above,
+blocked on Finance's AR module not existing yet. Retention exists today only as a percentage term recorded
+on a Subcontract's header, applied per-IPC as a deduction; the running withheld-balance-owed-back and
+release-event mechanics described in the commercial-process spec aren't built (an IPC computes how much
+retention was withheld *this period*, but nothing yet tracks the cumulative balance or ever releases it).
+Variation Orders and Extension of Time/Claims don't exist as document types yet at all — a change in scope
+or a delay currently has nowhere to be formally recorded against a Contract or Subcontract, and the
+over-measurement guard will hard-block legitimate additional scope until a VO can raise a line's quantity.
 
 A couple of smaller, disclosed rough edges worth knowing about rather than tripping over: `PaymentTerms`
 is genuinely free text right now, not sourced from a real Payment Terms field on the Business Partner
