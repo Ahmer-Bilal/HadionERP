@@ -26,7 +26,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ```
 ### {YYYY-MM-DD} — {short title}
 - Agent: {who/what did this — name the AI tool/model, or the human}
-- Phase: {Phase 0 / Phase 1 / ... / Architecture, from docs/architecture/06-roadmap.md}
+- Phase: {Phase 0 / Phase 1 / ... / Architecture, from ROADMAP.md}
 - Status: {Not Started | In Progress | Blocked | Completed}
 - What changed: {1-3 sentences, plain language}
 - Files touched: {paths}
@@ -44,7 +44,7 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice (both post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording (2026-07-16). AR, Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-16 |
 | Phase 2 — Procurement | **Exit criteria met** — full procure-to-pay cycle (BusinessRoles/Vendor Prequal → PR → RFQ → PO → GRN) built, tested, and live-verified, with a working 3-way match against AP closing the loop. Real Budget Control enforcement and a real line-by-line invoice match remain deferred Finance/Procurement depth, not required for Phase 2's exit bar | 2026-07-15 |
 | **Checkpoint** — UI/Visual Density Pass | **Paused by explicit user instruction** — teal identity (design-tokens.css) + `Platform.UI.SplitView` are live and retrofitted on `PurchaseOrdersPage`/`BusinessPartnersPage`, but the user judged this insufficient to compete visually with Fiori/Dynamics (color tokens + one layout mechanic, no icons/status pills/KPIs/avatars — see `feedback_visual_richness_gap` in memory) and told the AI to stop touching it and move to roadmap phases instead. Left as-is, not reverted. Resume only when the user explicitly asks for the visual pass again, with real surface richness this time | 2026-07-15 |
-| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, and its Subcontracts slice (retention %/mobilization advance %/back-charges) built, tested, and live-verified 2026-07-16. Site Progress/Variation Orders/real Retention withholding/IPC, the AR/Fiscal-Period/Budget-Check depth this phase was expanded to include, and Networks/Activities for ProjectManagement all remain not started | 2026-07-16 |
+| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, its Subcontracts slice (retention %/mobilization advance %/back-charges) built 2026-07-16, and its Site Progress/Measurement slice (`MeasurementSheet`, polymorphic over Contract/Subcontract, `IsBillingElement` finally enforced) built, tested, and live-verified 2026-07-17. IPC/Variation Orders/real Retention withholding/Extension of Time, the AR/Fiscal-Period/Budget-Check depth this phase was expanded to include, and Networks/Activities for ProjectManagement all remain not started | 2026-07-17 |
 | **Checkpoint** — Lookup Data / Admin Panel | **Completed** — a real, admin-configurable picklist engine (`LookupType`/`LookupValue`, `LookupService`, `LookupsController`) replaced the hardcoded `BusinessRoleType`/`AddressType` enums and unvalidated `Country`/`UnitOfMeasure` free text; a genuine multi-page Admin Panel (`LookupDataPage.tsx`, inline-editable SAP-style grids, one nav entry per type) lets an administrator add/edit/deactivate/delete lookup values and even define brand-new lookup types, with in-use delete protection. Live-verified end-to-end, EN+AR | 2026-07-15 |
 | **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, resolved) and AP Payment Recording (§16, now also resolved — see below) | 2026-07-15 |
 | **Checkpoint** — Real Authentication & Identity | **Completed** — closes audit §1/§3. `Modules.Identity` (JWT bearer auth, persisted Users, global default-deny) replaced every hardcoded actor literal solution-wide; role assignment now runs real Segregation of Duties conflict checking for the first time ever (block → override-with-reason → succeed, live-verified). Live-verified end-to-end, EN+AR, zero regressions (22 test projects) | 2026-07-15 |
@@ -53,11 +53,117 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase 5 — Reporting, Analytics & Mobile | Not Started | — |
 | Phase 6 — Extensibility Ecosystem & Advanced Capabilities | Not Started | — |
 
-(Phase definitions and exit criteria: `docs/architecture/06-roadmap.md`)
+(Phase definitions and exit criteria: `ROADMAP.md`)
 
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-17 — Documentation reorg cleanup (broken cross-references) + Modules.Construction slice 3: Site Progress/Measurement built, tested, live-verified
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 3 — Construction, Project Accounting & Accounts Receivable
+- Status: In Progress — this slice (Measurement) is complete; IPC, Variation Orders, real Retention
+  withholding, and Extension of Time/Claims remain not started
+- What changed: Two pieces of work this session. First, a large uncommitted documentation reorg the user had
+  already staged (consolidating `ARCHITECTURE-AUDIT.md` + two dated audit files into one
+  `MISSING-FEATURES-AUDIT.md`; replacing `docs/architecture/06-roadmap.md` with root `ROADMAP.md`;
+  renumbering `docs/architecture/*.md`; adding `docs/module/*.md`, one file per business module) had left
+  roughly 150 dangling references scattered across docs, source-code comments, and READMEs — old filenames,
+  a `docs/modules/` (plural) path that no longer existed now that the folder was `docs/module/` (singular),
+  and citations to the deleted `ARCHITECTURE-AUDIT.md`'s old section scheme. Deleted the 24 now-redundant
+  per-module/platform `README.md` files (`src/Modules/*/README.md`, `src/Platform/*/README.md`,
+  `tests/ArchitectureTests/Platform.ArchitectureTests/README.md`), since `docs/module/*.md` and
+  `docs/architecture/*.md` already cover the same ground, and repointed every stale reference this uncovered
+  (root `ARCHITECTURE.md`'s own Document Map/ADR footnotes were also stale from before this session — no
+  code implemented yet at all — and got the same mechanical fix, though its "Status" line was also updated
+  to stop asserting a fixed point-in-time state and just point at `PROGRESS.md` instead). One near-miss:
+  `src/Modules/Modules.Construction/construction-commercial-processes-spec.md` was sitting deleted in the
+  working tree but still cited by name as required reading in `AGENTS.md`/`ROADMAP.md`/
+  `MISSING-FEATURES-AUDIT.md`/two `docs/module/*.md` files — restored from the last commit (`cbbbe19`, where
+  it was already tracked) rather than left as a dangling reference to nothing. `PROGRESS.md` itself was left
+  untouched apart from its own living Phase Status Summary table and template header (both explicitly
+  exempted from the append-only rule) — every historical Entry Log entry correctly cites whatever file names
+  existed when it was written, and rewriting those would violate this file's own stated convention.
+  - Second, continued Phase 3 implementation per the prior session's own adopted build order
+    (`construction-commercial-processes-spec.md` §7: Site Progress/Measurement → IPC → Retention →
+    Variation Orders → EOT/Claims → Subcontract rework) — Measurement was next. Built
+    **`MeasurementSheet`** inside the existing `Modules.Construction` module, polymorphic over "commercial
+    document" (`CommercialDocumentType` enum: Contract/Subcontract, + `CommercialDocumentId`) from this
+    first slice per the spec's §6c/§7/§8 and the prior session's own resolved decision on this — a
+    Subcontract needs its own independent measurement cycle against the main contractor, and building
+    Contract-only first would have meant reworking every measurement/IPC table when Subcontracts needed the
+    same shape later. Reuses the platform's Draft→Submitted→Approved/Rejected lifecycle unchanged for the
+    spec's two-party certification workflow (site QS submits, Client's Engineer certifies — "Approved" here
+    literally *is* "Certified," not a new status, per `docs/architecture/02-business-object-model.md` §1.1's
+    "no module invents its own status names"). Each `MeasurementLine` carries both `QuantitySubmitted` and
+    `QuantityCertified` as separate fields (the Engineer certifying lower than submitted is routine per the
+    spec, not an edge case) — the certify action (`MeasurementSheetService.CertifyAsync`) takes an explicit
+    per-line certified quantity for every line, the one place this module deviates from every other
+    module's parameterless Approve. This slice is also the first time `IsBillingElement` (a WBS flag every
+    earlier Construction BO accepted-but-ignored, exactly as disclosed) actually gets enforced — a line
+    referencing a non-billing-element WBS element is rejected at creation. A real cross-aggregate guardrail
+    runs at certify time: cumulative certified quantity for a given BOQ/Subcontract line, summed across
+    every other Approved sheet that has ever measured against it, can't exceed that line's own `Quantity`
+    (`IMeasurementSheetRepository.ListByCommercialDocumentAsync` + `MeasurementSheetService.
+    ValidateNoOverMeasurementAsync`) — only an approved Variation Order (not yet built) could raise that
+    ceiling. Deliberately NOT built this slice, disclosed in `docs/module/construction.md`: cumulative
+    certified-to-date and percent-complete aren't exposed on the API/UI at all, since IPC's own "Gross Value
+    of Work Done to Date" needs the identical cross-sheet aggregation and building it twice would be waste.
+  - Number range key `CON-MEASUREMENT` → `CON-MEAS-2026-000001`.
+- Verified: full solution `dotnet test` — 24 test projects, zero regressions. Added 23 new unit tests
+  (`MeasurementSheetTests` domain-level — period validation, duplicate-line rejection, Draft-only line add,
+  certified-quantities-must-cover-every-line-exactly-once, lower-than-submitted certification, full
+  lifecycle, reject path; `MeasurementSheetServiceTests` — unknown document-type rejection, cross-project
+  document rejection, line-not-belonging-to-document rejection, non-billing-element rejection, the
+  Contract/Subcontract polymorphism itself proven by one test creating a sheet against each, actor
+  authorization, the over-measurement guard proven across two sibling sheets exactly at and one unit past the
+  boundary) and 3 new integration tests against real PostgreSQL (`MeasurementSheetPersistenceTests` —
+  round-trip through the full Draft→Submitted→Approved cycle including certified quantities, cascade delete,
+  RowVersion increments). Generated and applied a new EF migration (`AddMeasurementSheet`) to both
+  `erp_platform_dev` and `erp_platform_test`. Live end-to-end cycle (a Python script driving real HTTP calls,
+  not curl one-liners, since the scenario needed real JSON parsing across ~15 chained requests): created and
+  approved a Project with one billing-flagged and one non-billing-flagged WBS element, created and approved
+  a Contract with a BOQ line against each; confirmed a Measurement line against the non-billing WBS element
+  is correctly rejected with 400; created a sheet submitting 40 of a 100-quantity line, submitted it, then
+  certified it at 35 (lower than submitted) and confirmed it reached Approved; created a second sheet
+  submitting 70 more, certified it at 65 (cumulative 35+65=100, exactly the line's own quantity) and
+  confirmed it succeeded; created a third sheet attempting to certify even 1 more unit and confirmed a 400
+  rejection with a message naming the exact cumulative figure; confirmed the plain Submit→Reject path
+  reaches Rejected. Frontend: `MeasurementSheetsPage.tsx` built (list/create/detail with a Lines FastTab, the
+  create form's document dropdown driven by the selected Project+CommercialDocumentType, per-line certified-
+  quantity inputs appearing only while Submitted) — `npx tsc -b` and the hardcoded-Arabic-text check both
+  pass clean, and the page/API-client modules transform through the Vite dev server without an error overlay,
+  but **no live Playwright/browser pass was run this session** (deliberately skipped, disclosed rather than
+  silently omitted, given explicit user instruction this session to minimize spend — the backend's full
+  business-rule surface was instead proven end-to-end via the real HTTP cycle above). Same known operational
+  gap as every module-adding session before this one: bootstrap admin's roles aren't retroactively synced
+  when new roles get registered — worked around via `POST /api/v1/identity/users/{id}/roles` with an
+  explicit SoD override reason, same as always.
+- Files touched (implementation): `src/Modules/Modules.Construction/Domain/CommercialDocumentType.cs`,
+  `MeasurementSheet.cs`, `MeasurementLine.cs` (new); `Application/MeasurementSheetDto.cs`,
+  `IMeasurementSheetRepository.cs`, `MeasurementSheetSecurity.cs`, `MeasurementSheetWorkflow.cs`,
+  `MeasurementSheetService.cs` (new); `Infrastructure/EfMeasurementSheetRepository.cs` (new),
+  `ConstructionDbContext.cs` (new tables), migration `20260717002258_AddMeasurementSheet`;
+  `Api/MeasurementSheetsController.cs` (new); `src/Gateway/Gateway.Api/Program.cs` (security/workflow/SoD/
+  number-range/DI wiring); `tests/UnitTests/Modules.Construction.Tests/MeasurementSheetTests.cs`,
+  `MeasurementSheetServiceTests.cs`, `FakeMeasurementSheetRepository.cs` (new);
+  `tests/IntegrationTests/Modules.Construction.IntegrationTests/MeasurementSheetPersistenceTests.cs` (new),
+  `TestDatabase.cs` (reset coverage); frontend `src/Apps/Apps.Shell/src/api/measurementSheetApi.ts` (new),
+  `pages/MeasurementSheetsPage.tsx` (new), `App.tsx` (nav/routing), `i18n/content.ts` (`meas.*`/
+  `nav.measurementSheets*` keys, EN+AR); `docs/module/construction.md` (new section + Deferred list update);
+  `ROADMAP.md` (Phase 3 paragraph updated); `PROGRESS.md` (this entry, Phase Status Summary row).
+- Files touched (doc-reorg cleanup, no runtime behavior changed): 24 README.md deletions listed above;
+  ~110 files with `docs/modules/`→`docs/module/`, old-numbered-doc-filename, or `ARCHITECTURE-AUDIT.md`→
+  `MISSING-FEATURES-AUDIT.md` reference fixes across `docs/`, `src/`, `tests/`, and root-level `.md` files;
+  `ARCHITECTURE.md` (Document Map, ADR footnotes, repo layout, status line).
+- Next: IPC is the next named Construction piece per the roadmap's dependency order — it directly consumes
+  Measurement (the "Gross Value of Work Done to Date" calculation needs the same cumulative-certified
+  aggregation this session deliberately didn't duplicate) and is what actually unblocks Finance's AR gap. A
+  live Playwright/browser verification pass on `MeasurementSheetsPage.tsx` (skipped this session, see above)
+  should happen before or alongside whichever session builds IPC, since IPC's own UI will sit right next to
+  it. Also still open from prior entries: Fiscal Year/Period management, real Budget Check, amount-
+  conditioned approval matrices, and the generic Statement pattern design.
 
 ### 2026-07-16 — Construction commercial-process spec reviewed, open decisions resolved, roadmap sequenced
 

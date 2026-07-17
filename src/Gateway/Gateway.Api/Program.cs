@@ -148,7 +148,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 BankAccountSecurity.MaintainerRole, BankAccountSecurity.ApproverRole,
                 PaymentSecurity.MaintainerRole, PaymentSecurity.ApproverRole,
                 ContractSecurity.MaintainerRole, ContractSecurity.ApproverRole,
-                SubcontractSecurity.MaintainerRole, SubcontractSecurity.ApproverRole },
+                SubcontractSecurity.MaintainerRole, SubcontractSecurity.ApproverRole,
+                MeasurementSheetSecurity.MaintainerRole, MeasurementSheetSecurity.ApproverRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -169,7 +170,8 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 BankAccountSecurity.MaintainerDuty, BankAccountSecurity.ApproverDuty,
                 PaymentSecurity.MaintainerDuty, PaymentSecurity.ApproverDuty,
                 ContractSecurity.MaintainerDuty, ContractSecurity.ApproverDuty,
-                SubcontractSecurity.MaintainerDuty, SubcontractSecurity.ApproverDuty });
+                SubcontractSecurity.MaintainerDuty, SubcontractSecurity.ApproverDuty,
+                MeasurementSheetSecurity.MaintainerDuty, MeasurementSheetSecurity.ApproverDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -204,6 +206,7 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         PaymentSecurity.MaintainerApproverConflict,
         ContractSecurity.MaintainerApproverConflict,
         SubcontractSecurity.MaintainerApproverConflict,
+        MeasurementSheetSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
@@ -263,6 +266,7 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         PaymentWorkflow.SubmitApprovalDefinition,
         ContractWorkflow.SubmitApprovalDefinition,
         SubcontractWorkflow.SubmitApprovalDefinition,
+        MeasurementSheetWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -629,6 +633,25 @@ builder.Services.AddScoped<SubcontractService>(sp => new SubcontractService(
     sp.GetRequiredService<IProjectLookup>(),
     sp.GetRequiredService<IBusinessPartnerLookup>(),
     sp.GetRequiredService<ILookupCatalog>()));
+
+// Measurement Sheet: Phase 3's Site Progress/Measurement slice — the first Construction BO polymorphic
+// over "commercial document" (Contract or Subcontract), per construction-commercial-processes-spec.md §6c
+// and ROADMAP.md's sequencing decision. Depends on IContractRepository/ISubcontractRepository directly
+// (same module, no cross-module lookup needed) to resolve whichever document a sheet measures against.
+builder.Services.AddScoped<IMeasurementSheetRepository, Modules.Construction.Infrastructure.EfMeasurementSheetRepository>();
+builder.Services.AddScoped<MeasurementSheetService>(sp => new MeasurementSheetService(
+    sp.GetRequiredService<IMeasurementSheetRepository>(),
+    sp.GetRequiredService<IContractRepository>(),
+    sp.GetRequiredService<ISubcontractRepository>(),
+    new Modules.Construction.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>(),
+        new[] { new NumberRangeDefinition(MeasurementSheetService.NumberRangeKey, "CON", "MEAS") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Construction.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IProjectLookup>()));
 
 var app = builder.Build();
 

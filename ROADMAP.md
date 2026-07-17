@@ -57,9 +57,12 @@ that exists today is a deliberate pass-through stub, disclosed rather than hidde
 Project Management's WBS foundation is built — a project and its hierarchical Work Breakdown Structure,
 each element carrying the planning/account-assignment/billing flags that decide what role it plays.
 Construction's Customer Contract and Bill of Quantities are built on top of it, followed by Subcontracts
-with their own retention, mobilization-advance, and back-charge terms. What's still ahead in this phase:
-Site Progress/Measurement, Variation Orders, real Retention withholding and release, and IPC billing on the
-Construction side; and on the Finance side, the Accounts Receivable depth this phase was deliberately
+with their own retention, mobilization-advance, and back-charge terms, and then Site Progress/Measurement —
+a Measurement Sheet recording certified quantities against a Contract or Subcontract's lines, built
+polymorphic over "commercial document" from day one and the first place the `IsBillingElement` WBS flag is
+actually enforced. What's still ahead in this phase: IPC billing (which Measurement now unblocks),
+Variation Orders, real Retention withholding and release, and Extension of Time/Claims on the Construction
+side; and on the Finance side, the Accounts Receivable depth this phase was deliberately
 expanded to include — Interim Payment Certificates as their own document type distinct from a plain AR
 invoice, Fiscal Year/Period management, a real Budget Check replacing today's pass-through stub, and a
 generic Statement pattern (opening balance → transactions → running balance → aging) built once and reused

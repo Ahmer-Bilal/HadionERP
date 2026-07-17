@@ -20,6 +20,8 @@ public sealed class ConstructionDbContext : DbContext
     public DbSet<Subcontract> Subcontracts => Set<Subcontract>();
     internal DbSet<SubcontractLine> SubcontractLines => Set<SubcontractLine>();
     internal DbSet<BackCharge> BackCharges => Set<BackCharge>();
+    public DbSet<MeasurementSheet> MeasurementSheets => Set<MeasurementSheet>();
+    internal DbSet<MeasurementLine> MeasurementLines => Set<MeasurementLine>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
 
@@ -165,6 +167,58 @@ public sealed class ConstructionDbContext : DbContext
             entity.Property(e => e.Amount).HasColumnName("amount").HasColumnType("numeric(18,2)");
             entity.Property(e => e.DateIncurred).HasColumnName("date_incurred");
             entity.Property<Guid>("SubcontractId").HasColumnName("subcontract_id");
+        });
+
+        modelBuilder.Entity<MeasurementSheet>(entity =>
+        {
+            entity.ToTable("measurement_sheets");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.CommercialDocumentType).HasColumnName("commercial_document_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.CommercialDocumentId).HasColumnName("commercial_document_id");
+            entity.Property(e => e.PeriodStart).HasColumnName("period_start");
+            entity.Property(e => e.PeriodEnd).HasColumnName("period_end");
+            entity.Property(e => e.Notes).HasColumnName("notes").HasMaxLength(1000);
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey("MeasurementSheetId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Lines)
+                .HasField("_lines")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<MeasurementLine>(entity =>
+        {
+            entity.ToTable("measurement_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CommercialDocumentLineId).HasColumnName("commercial_document_line_id");
+            entity.Property(e => e.QuantitySubmitted).HasColumnName("quantity_submitted").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.QuantityCertified).HasColumnName("quantity_certified").HasColumnType("numeric(18,3)");
+            entity.Property(e => e.Remarks).HasColumnName("remarks").HasMaxLength(1000);
+            entity.Property<Guid>("MeasurementSheetId").HasColumnName("measurement_sheet_id");
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

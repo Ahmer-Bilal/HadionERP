@@ -61,20 +61,41 @@ Subcontract that hasn't been approved yet is rejected. A Subcontract's net payab
 computed as its line total minus its accumulated back charges, never entered directly, for the same
 reason a Contract's value is never typed in by hand.
 
+## Site Progress / Measurement — recording what was actually done
+
+A `MeasurementSheet` records physical progress measured on site during one period (`PeriodStart`/
+`PeriodEnd`) against either a Contract's BOQ lines or a Subcontract's own lines — built polymorphic over
+"commercial document" (`CommercialDocumentType` + `CommercialDocumentId`) from this first slice, per the
+commercial-process spec's §6c/§7/§8 sequencing decision (ROADMAP.md), since a Subcontract needs its own
+independent measurement cycle against the main contractor and retrofitting this after a Contract-only build
+would have meant reworking every measurement/IPC table later. This is also the first place in the module
+where the `IsBillingElement` WBS flag is actually enforced, not just carried — a line referencing a WBS
+element that isn't flagged as a billing element is rejected outright.
+
+The workflow reuses the platform's own Draft → Submitted → Approved/Rejected lifecycle unchanged for the
+spec's two-party certification process (site QS submits, the Client's Engineer certifies) — "Approved" here
+*is* the domain's "Certified," not a new status. Each line carries both `QuantitySubmitted` and
+`QuantityCertified` as separate fields, because the Engineer certifying a lower quantity than what was
+submitted is routine, not an edge case — the certify action takes an explicit per-line quantity for every
+line on the sheet, not a blanket approve. A real guardrail runs at certify time: the cumulative certified
+quantity for a given BOQ/Subcontract line, summed across every Approved sheet that has ever measured against
+it, can never exceed that line's own `Quantity` — an approved Variation Order (not yet built) would be the
+only way to raise that ceiling once it's reached.
+
 ## What's still deliberately absent
 
-Everything downstream of "the scope exists and is priced" is still to be built, and none of it should be
-assumed to exist by anyone extending this module today. There's no way yet to record physical progress
-against a BOQ or Subcontract line (Site Progress/Measurement), which means there's also no way yet to
-actually bill a customer or pay a subcontractor for work done (IPC) — a Contract and a Subcontract both
-currently describe what was agreed, not what's actually happened since. Retention exists today only as a
-percentage term recorded on a Subcontract's header; the running withheld-balance and release-event
-mechanics described in the commercial-process spec aren't built. Variation Orders and Extension of
-Time/Claims don't exist as document types yet at all — a change in scope or a delay currently has nowhere
-to be formally recorded against a Contract or Subcontract. And BOQ/Subcontract lines aren't yet restricted
-to WBS elements specifically flagged as billing elements — any of a project's WBS elements can currently
-receive a line, which is a reasonable simplification for now but is explicitly meant to be tightened once
-Site Progress/Measurement is built and that distinction actually starts to matter.
+Everything downstream of "progress has been measured and certified" is still to be built. There's no way yet
+to actually bill a customer or pay a subcontractor for work done — IPC (Interim Payment Certificate), which
+consumes a certified Measurement Sheet, doesn't exist as a document type yet, so a Contract, Subcontract, and
+now a Measurement Sheet all currently describe what was agreed or measured, not what's been paid for.
+Retention exists today only as a percentage term recorded on a Subcontract's header; the running
+withheld-balance and release-event mechanics described in the commercial-process spec aren't built, and
+depend on IPC existing first. Variation Orders and Extension of Time/Claims don't exist as document types
+yet at all — a change in scope or a delay currently has nowhere to be formally recorded against a Contract
+or Subcontract, and the over-measurement guard above will hard-block legitimate additional scope until a VO
+can raise a line's quantity. Cumulative certified-to-date and percent-complete are deliberately not exposed
+anywhere on the Measurement Sheet API/UI yet — IPC's own "Gross Value of Work Done to Date" calculation needs
+the same cross-sheet aggregation, so it's built once there rather than duplicated now.
 
 A couple of smaller, disclosed rough edges worth knowing about rather than tripping over: `PaymentTerms`
 is genuinely free text right now, not sourced from a real Payment Terms field on the Business Partner

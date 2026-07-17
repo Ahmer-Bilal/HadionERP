@@ -340,6 +340,8 @@ type TranslationKey =
   | "nav.allContracts"
   | "nav.subcontractsArea"
   | "nav.allSubcontracts"
+  | "nav.measurementSheetsArea"
+  | "nav.allMeasurementSheets"
   | "nav.lookupDataArea"
   | "nav.allLookupTypes"
   | "nav.lookupCountries"
@@ -585,6 +587,36 @@ type TranslationKey =
   | "sub.columnStatus"
   | "sub.tabLines"
   | "sub.tabBackCharges"
+  | "meas.heading"
+  | "meas.newHeading"
+  | "meas.emptyState"
+  | "meas.selectHint"
+  | "meas.selectDocumentFirstHint"
+  | "meas.actionNew"
+  | "meas.actionCreate"
+  | "meas.actionBack"
+  | "meas.actionSubmit"
+  | "meas.actionCertify"
+  | "meas.actionReject"
+  | "meas.actionAddLine"
+  | "meas.actionRemoveLine"
+  | "meas.fieldProject"
+  | "meas.fieldDocumentType"
+  | "meas.fieldDocument"
+  | "meas.documentTypeContract"
+  | "meas.documentTypeSubcontract"
+  | "meas.fieldPeriodStart"
+  | "meas.fieldPeriodEnd"
+  | "meas.fieldNotes"
+  | "meas.fieldLineDocumentLine"
+  | "meas.fieldLineQuantitySubmitted"
+  | "meas.fieldLineQuantityCertified"
+  | "meas.fieldLineRemarks"
+  | "meas.columnDocumentNumber"
+  | "meas.columnProject"
+  | "meas.columnPeriod"
+  | "meas.columnStatus"
+  | "meas.tabLines"
   | "lookup.hubHeading"
   | "lookup.newTypeHeading"
   | "lookup.columnCode"
@@ -994,6 +1026,8 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "nav.allContracts": { en: "All Contracts", ar: "جميع العقود" },
   "nav.subcontractsArea": { en: "Subcontracts", ar: "عقود الباطن" },
   "nav.allSubcontracts": { en: "All Subcontracts", ar: "جميع عقود الباطن" },
+  "nav.measurementSheetsArea": { en: "Site Progress", ar: "تقدم الموقع" },
+  "nav.allMeasurementSheets": { en: "Measurement Sheets", ar: "كشوفات القياس" },
   "nav.allProjects": { en: "All Projects", ar: "جميع المشاريع" },
   "nav.lookupDataArea": { en: "Lookup Data", ar: "بيانات القوائم" },
   "nav.allLookupTypes": { en: "All Lookup Types", ar: "جميع أنواع القوائم" },
@@ -1251,6 +1285,36 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "sub.columnStatus": { en: "Status", ar: "الحالة" },
   "sub.tabLines": { en: "Lines", ar: "البنود" },
   "sub.tabBackCharges": { en: "Back Charges", ar: "خصومات الاسترداد" },
+  "meas.heading": { en: "Measurement Sheets", ar: "كشوفات القياس" },
+  "meas.newHeading": { en: "New Measurement Sheet", ar: "كشف قياس جديد" },
+  "meas.emptyState": { en: "No measurement sheets yet.", ar: "لا توجد كشوفات قياس حتى الآن." },
+  "meas.selectHint": { en: "Select a measurement sheet from the list to see its details.", ar: "اختر كشف قياس من القائمة لعرض تفاصيله." },
+  "meas.selectDocumentFirstHint": { en: "Select a Contract or Subcontract above to measure progress against its lines.", ar: "اختر عقدًا أو عقد باطن أعلاه لقياس التقدم مقابل بنوده." },
+  "meas.actionNew": { en: "New", ar: "جديد" },
+  "meas.actionCreate": { en: "Create", ar: "إنشاء" },
+  "meas.actionBack": { en: "Back to list", ar: "العودة إلى القائمة" },
+  "meas.actionSubmit": { en: "Submit", ar: "إرسال" },
+  "meas.actionCertify": { en: "Certify", ar: "اعتماد القياس" },
+  "meas.actionReject": { en: "Reject", ar: "رفض" },
+  "meas.actionAddLine": { en: "Add Line", ar: "إضافة بند" },
+  "meas.actionRemoveLine": { en: "Remove", ar: "إزالة" },
+  "meas.fieldProject": { en: "Project", ar: "المشروع" },
+  "meas.fieldDocumentType": { en: "Document Type", ar: "نوع المستند" },
+  "meas.fieldDocument": { en: "Contract / Subcontract", ar: "العقد / عقد الباطن" },
+  "meas.documentTypeContract": { en: "Contract", ar: "عقد" },
+  "meas.documentTypeSubcontract": { en: "Subcontract", ar: "عقد باطن" },
+  "meas.fieldPeriodStart": { en: "Period Start", ar: "بداية الفترة" },
+  "meas.fieldPeriodEnd": { en: "Period End", ar: "نهاية الفترة" },
+  "meas.fieldNotes": { en: "Notes", ar: "ملاحظات" },
+  "meas.fieldLineDocumentLine": { en: "Line", ar: "البند" },
+  "meas.fieldLineQuantitySubmitted": { en: "Quantity Submitted", ar: "الكمية المقدمة" },
+  "meas.fieldLineQuantityCertified": { en: "Quantity Certified", ar: "الكمية المعتمدة" },
+  "meas.fieldLineRemarks": { en: "Remarks", ar: "ملاحظات" },
+  "meas.columnDocumentNumber": { en: "Number", ar: "الرقم" },
+  "meas.columnProject": { en: "Project", ar: "المشروع" },
+  "meas.columnPeriod": { en: "Period", ar: "الفترة" },
+  "meas.columnStatus": { en: "Status", ar: "الحالة" },
+  "meas.tabLines": { en: "Lines", ar: "البنود" },
   "lookup.hubHeading": { en: "Lookup Data", ar: "بيانات القوائم" },
   "lookup.newTypeHeading": { en: "Create a new lookup type", ar: "إنشاء نوع قائمة جديد" },
   "lookup.columnCode": { en: "Code", ar: "الرمز" },
