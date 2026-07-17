@@ -113,6 +113,35 @@ public class IpcTests
     }
 
     [Fact]
+    public void Billing_accounts_are_null_by_default_and_settable_via_the_constructor()
+    {
+        var withoutAccounts = NewIpc();
+        Assert.Null(withoutAccounts.RevenueAccountId);
+        Assert.Null(withoutAccounts.ReceivableAccountId);
+
+        var revenueAccountId = Guid.NewGuid();
+        var receivableAccountId = Guid.NewGuid();
+        var withAccounts = new Ipc(
+            "ahmer.bilal", ProjectId, CommercialDocumentType.Contract, CommercialDocumentId, MeasurementSheetId,
+            PeriodStart, PeriodEnd, 10m, 15m, 0m, revenueAccountId, receivableAccountId);
+
+        Assert.Equal(revenueAccountId, withAccounts.RevenueAccountId);
+        Assert.Equal(receivableAccountId, withAccounts.ReceivableAccountId);
+    }
+
+    [Fact]
+    public void LinkArInvoice_sets_the_link()
+    {
+        var ipc = NewIpc();
+        Assert.Null(ipc.LinkedArInvoiceId);
+
+        var arInvoiceId = Guid.NewGuid();
+        ipc.LinkArInvoice(arInvoiceId);
+
+        Assert.Equal(arInvoiceId, ipc.LinkedArInvoiceId);
+    }
+
+    [Fact]
     public void Full_lifecycle_draft_to_submitted_to_approved()
     {
         var ipc = NewIpc();

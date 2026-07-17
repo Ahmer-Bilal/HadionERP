@@ -66,13 +66,14 @@ actually enforced — and then IPC, the Interim Payment Certificate that consume
 Sheet and computes the real billing waterfall (gross value to date, retention, advance recovery, net
 payable), also polymorphic over Contract/Subcontract, also stopping at Certified rather than the further
 "Paid" step. On the Finance side, `ARInvoice` is now built too — the customer-billing mirror of `APInvoice`,
-same lifecycle, but **deliberately not yet wired to IPC** — whether IPC certification should raise an AR
-invoice immediately or through a separate WIP/unbilled-revenue step first is still an open decision (see
-`docs/module/finance.md` and `docs/module/construction.md`), so today an AR invoice against IPC-billed work
-has to be created manually. What's still ahead in this phase: Variation Orders, real Retention withholding
-and release, and Extension of Time/Claims on the Construction side; on the Finance side, actually wiring
-IPC→AR (resolving the open decision above), a Customer Receipt Business Object (the AR mirror of `Payment`),
-Fiscal Year/Period management, a real Budget Check replacing today's pass-through stub, and a generic
+same lifecycle — and **is wired to IPC**: certifying a Contract-type IPC automatically raises a real Draft
+AR Invoice via `Modules.Finance.Contracts.ICustomerInvoicingService` (the first cross-module *write*
+Contracts interface in the system), left in Draft for a human in Finance to review/submit/approve/post,
+never auto-posted (see `docs/module/finance.md` and `docs/module/construction.md`). What's still ahead in
+this phase: Variation Orders, real Retention withholding and release, and Extension of Time/Claims on the
+Construction side; on the Finance side, a Customer Receipt Business Object (the AR mirror of `Payment` —
+this is what closes the loop the IPC→AR wiring opens, letting `ARInvoice.OutstandingBalance` mean something
+real), Fiscal Year/Period management, a real Budget Check replacing today's pass-through stub, and a generic
 Statement pattern (opening balance → transactions → running balance → aging) built once and reused for both
 customers and suppliers rather than rebuilt per module later. The detailed process design for everything
 still ahead in this phase — the two-party measurement certification workflow, the Client↔Main

@@ -20,13 +20,17 @@ public class IpcPersistenceTests : IAsyncLifetime
         var contractId = Guid.NewGuid();
         var measurementSheetId = Guid.NewGuid();
         var contractLineId = Guid.NewGuid();
+        var revenueAccountId = Guid.NewGuid();
+        var receivableAccountId = Guid.NewGuid();
+        var arInvoiceId = Guid.NewGuid();
         Guid id;
         Guid lineId;
         await using (var writeContext = TestDatabase.CreateContext())
         {
             var ipc = new Ipc(
                 "ahmer.bilal", projectId, CommercialDocumentType.Contract, contractId, measurementSheetId,
-                PeriodStart, PeriodEnd, retentionPercentageApplied: 10m, advancePaymentPercentageApplied: 15m, otherDeductions: 50m);
+                PeriodStart, PeriodEnd, retentionPercentageApplied: 10m, advancePaymentPercentageApplied: 15m, otherDeductions: 50m,
+                revenueAccountId, receivableAccountId);
             var line = ipc.AddLine(contractLineId, 50m, 40m, 100m);
             ipc.AssignNumber("CON-IPC-2026-000001");
             writeContext.Ipcs.Add(ipc);
@@ -34,6 +38,7 @@ public class IpcPersistenceTests : IAsyncLifetime
 
             ipc.Submit("ahmer.bilal");
             await writeContext.SaveChangesAsync();
+            ipc.LinkArInvoice(arInvoiceId);
             ipc.Approve("engineer");
             await writeContext.SaveChangesAsync();
             id = ipc.Id;
@@ -51,6 +56,9 @@ public class IpcPersistenceTests : IAsyncLifetime
         Assert.Equal(10m, reloaded.RetentionPercentageApplied);
         Assert.Equal(15m, reloaded.AdvancePaymentPercentageApplied);
         Assert.Equal(50m, reloaded.OtherDeductions);
+        Assert.Equal(revenueAccountId, reloaded.RevenueAccountId);
+        Assert.Equal(receivableAccountId, reloaded.ReceivableAccountId);
+        Assert.Equal(arInvoiceId, reloaded.LinkedArInvoiceId);
         var reloadedLine = Assert.Single(reloaded.Lines);
         Assert.Equal(lineId, reloadedLine.Id);
         Assert.Equal(contractLineId, reloadedLine.CommercialDocumentLineId);

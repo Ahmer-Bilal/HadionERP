@@ -683,6 +683,10 @@ type TranslationKey =
   | "ipc.fieldLineValueThisPeriod"
   | "ipc.fieldLineQuantityToDate"
   | "ipc.fieldLineValueToDate"
+  | "ipc.billingAccountsHint"
+  | "ipc.fieldRevenueAccount"
+  | "ipc.fieldReceivableAccount"
+  | "ipc.linkedArInvoice"
   | "lookup.hubHeading"
   | "lookup.newTypeHeading"
   | "lookup.columnCode"
@@ -1447,6 +1451,10 @@ const content: Record<TranslationKey, Record<SupportedLanguageCode, string>> = {
   "ipc.fieldLineValueThisPeriod": { en: "Value This Period", ar: "القيمة لهذه الفترة" },
   "ipc.fieldLineQuantityToDate": { en: "Qty To Date", ar: "الكمية حتى تاريخه" },
   "ipc.fieldLineValueToDate": { en: "Value To Date", ar: "القيمة حتى تاريخه" },
+  "ipc.billingAccountsHint": { en: "Certifying this IPC will automatically raise a Draft AR Invoice for the customer — choose which accounts it should post to.", ar: "سيؤدي اعتماد هذه الشهادة إلى إصدار فاتورة عميل تلقائيًا كمسودة — اختر الحسابات التي يجب أن تُرحّل إليها." },
+  "ipc.fieldRevenueAccount": { en: "Revenue Account", ar: "حساب الإيرادات" },
+  "ipc.fieldReceivableAccount": { en: "Receivable Account", ar: "حساب المدينين" },
+  "ipc.linkedArInvoice": { en: "AR Invoice Raised", ar: "فاتورة العميل الصادرة" },
   "lookup.hubHeading": { en: "Lookup Data", ar: "بيانات القوائم" },
   "lookup.newTypeHeading": { en: "Create a new lookup type", ar: "إنشاء نوع قائمة جديد" },
   "lookup.columnCode": { en: "Code", ar: "الرمز" },

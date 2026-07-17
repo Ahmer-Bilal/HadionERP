@@ -427,8 +427,7 @@ builder.Services.AddScoped<Modules.Finance.Application.APInvoiceService>(sp => n
 builder.Services.AddScoped<Modules.Finance.Application.IARInvoiceRepository, Modules.Finance.Infrastructure.EfARInvoiceRepository>();
 // AR Invoice: the customer-billing mirror of AP Invoice, closing docs/module/finance.md's own "AR as its
 // own document type" gap — same JournalEntryService reuse for posting (Dr Receivable, Cr Revenue[/VAT
-// Output], the mirror image of AP's Dr Expense[/VAT Input], Cr Payable). Deliberately not yet wired to
-// Construction's IPC — see ARInvoice's own doc comment.
+// Output], the mirror image of AP's Dr Expense[/VAT Input], Cr Payable).
 builder.Services.AddScoped<Modules.Finance.Application.ARInvoiceService>(sp => new Modules.Finance.Application.ARInvoiceService(
     sp.GetRequiredService<Modules.Finance.Application.IARInvoiceRepository>(),
     new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
@@ -444,6 +443,11 @@ builder.Services.AddScoped<Modules.Finance.Application.ARInvoiceService>(sp => n
     sp.GetRequiredService<ICostCenterLookup>(),
     sp.GetRequiredService<ITaxCodeLookup>(),
     sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
+// Modules.Finance.Contracts.ICustomerInvoicingService: the first cross-module *write* Contracts interface
+// in this system — Construction's IpcService calls this to raise a real AR Invoice the moment a Contract-
+// type IPC is certified (docs/architecture/01-overview.md #3.2's "never reach past the interface into the
+// owning module's Infrastructure directly" rule, now exercised for a write, not just a read).
+builder.Services.AddScoped<Modules.Finance.Contracts.ICustomerInvoicingService, Modules.Finance.Infrastructure.ArInvoiceCustomerInvoicingService>();
 
 // Bank Accounts & Payments — closes MISSING-FEATURES-AUDIT.md Part 2 §16 ("no way anywhere in this system to
 // record that an AP invoice was actually paid"). Both live in Modules.Finance (same reasoning as JournalEntry/
@@ -684,8 +688,11 @@ builder.Services.AddScoped<MeasurementSheetService>(sp => new MeasurementSheetSe
 
 // IPC: Phase 3's next slice on top of Measurement — generated entirely from an Approved Measurement Sheet
 // plus the commercial document it measures against, so it depends on IMeasurementSheetRepository/
-// IContractRepository/ISubcontractRepository directly (same module, no cross-module lookup needed), not
-// IProjectLookup — the project/WBS validation already happened when the Measurement Sheet was created.
+// IContractRepository/ISubcontractRepository directly (same module, no cross-module lookup needed). Needs
+// IProjectLookup again here (unlike Measurement) to resolve the Project's Customer for a Contract-type
+// IPC's AR Invoice, and Modules.Finance.Contracts.ICustomerInvoicingService to actually raise it on
+// certification — the resolution of PROGRESS.md's 2026-07-16 "does certification raise an AR invoice"
+// open question, see Ipc's own doc comment.
 builder.Services.AddScoped<IIpcRepository, Modules.Construction.Infrastructure.EfIpcRepository>();
 builder.Services.AddScoped<IpcService>(sp => new IpcService(
     sp.GetRequiredService<IIpcRepository>(),
@@ -699,7 +706,9 @@ builder.Services.AddScoped<IpcService>(sp => new IpcService(
     sp.GetRequiredService<IWorkflowEngine>(),
     new Modules.Construction.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>()),
     sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
-    sp.GetRequiredService<IActorRoleAssignmentStore>()));
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IProjectLookup>(),
+    sp.GetRequiredService<Modules.Finance.Contracts.ICustomerInvoicingService>()));
 
 var app = builder.Build();
 

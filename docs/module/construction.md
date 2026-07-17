@@ -103,17 +103,28 @@ later. `OtherDeductions` (liquidated damages, back-charges, prior over-certifica
 genuinely manual entry this slice — none of those source mechanisms exist yet.
 
 Same lifecycle convention as Measurement: Draft → Submitted → Approved/Rejected, where Approved *is*
-"Certified" (the Engineer issuing the Payment Certificate that legally obligates payment). The IPC stops
-there, deliberately short of the spec's further "Paid" step — closing that loop means raising a real AR/
-Customer Invoice or WIP entry in Finance, and PROGRESS.md's 2026-07-16 entry explicitly left "does
-certification raise an AR invoice immediately, or a WIP step first" as an open decision pending Finance's
-still-nonexistent AR module, not guessed here.
+"Certified" (the Engineer issuing the Payment Certificate that legally obligates payment). PROGRESS.md's
+2026-07-16 "does certification raise an AR invoice immediately, or a WIP step first" question is now
+resolved: for a Contract-type IPC, certification automatically raises a real **Draft** AR Invoice via
+`Modules.Finance.Contracts.ICustomerInvoicingService` — the first cross-module *write* Contracts call in
+this system (every earlier one, `IProjectLookup`/`IBusinessPartnerLookup`/`IAPInvoiceLookup`/
+`IBudgetCheckService`, is read-only). The invoice is left in Draft, not auto-posted — a human in Finance
+still submits/approves/posts it through the normal AR Invoice lifecycle, preserving Segregation of Duties
+between "Construction certifies the work" and "Finance actually books the receivable." This only applies to
+a Contract IPC (billing the Customer); a Subcontract IPC represents a payable *to* a subcontractor, a
+separate, still-not-built AP-side integration, and needs no billing accounts at all. Because raising the
+invoice needs real Revenue/Receivable GL accounts (and optionally a Tax Code/VAT account), a Contract IPC
+now requires those to be chosen at Draft creation time — `IpcService.CreateAsync` rejects a Contract IPC
+without them, and separately rejects one whose Project has no Customer set, since there'd be nobody to bill.
+The IPC itself still stops at Approved, deliberately short of the spec's further "Paid" step — that needs a
+real Customer Receipt Business Object (the AR mirror of `Payment`), not yet built.
 
 ## What's still deliberately absent
 
-Everything downstream of "an IPC has been certified" is still to be built. There's no way yet to actually
-record that a customer paid an IPC or a subcontractor was paid against one — that's the "Paid" step above,
-blocked on Finance's AR module not existing yet. Retention exists today only as a percentage term recorded
+Everything downstream of "an IPC has been certified and its AR Invoice raised" is still to be built. There's
+no way yet to record that a customer actually paid an AR Invoice, or that a subcontractor was paid against
+their own IPC — the latter needs the AP-side integration mentioned above, the former needs a Customer
+Receipt Business Object. Retention exists today only as a percentage term recorded
 on a Subcontract's header, applied per-IPC as a deduction; the running withheld-balance-owed-back and
 release-event mechanics described in the commercial-process spec aren't built (an IPC computes how much
 retention was withheld *this period*, but nothing yet tracks the cumulative balance or ever releases it).

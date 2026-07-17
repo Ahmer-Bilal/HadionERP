@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Modules.Construction.Domain;
+using Modules.Finance.Contracts;
+using Modules.ProjectManagement.Contracts;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
@@ -32,6 +34,8 @@ public sealed class IpcService
     private readonly IWorkflowInstanceRepository _workflowInstanceRepository;
     private readonly IAuthorizationService _authorizationService;
     private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
+    private readonly IProjectLookup _projectLookup;
+    private readonly ICustomerInvoicingService _customerInvoicingService;
 
     public IpcService(
         IIpcRepository repository,
@@ -43,7 +47,9 @@ public sealed class IpcService
         IWorkflowEngine workflowEngine,
         IWorkflowInstanceRepository workflowInstanceRepository,
         IAuthorizationService authorizationService,
-        IActorRoleAssignmentStore actorRoleAssignmentStore)
+        IActorRoleAssignmentStore actorRoleAssignmentStore,
+        IProjectLookup projectLookup,
+        ICustomerInvoicingService customerInvoicingService)
     {
         _repository = repository;
         _measurementSheetRepository = measurementSheetRepository;
@@ -55,6 +61,8 @@ public sealed class IpcService
         _workflowInstanceRepository = workflowInstanceRepository;
         _authorizationService = authorizationService;
         _actorRoleAssignmentStore = actorRoleAssignmentStore;
+        _projectLookup = projectLookup;
+        _customerInvoicingService = customerInvoicingService;
     }
 
     public async Task<IpcDto> CreateAsync(
@@ -67,6 +75,24 @@ public sealed class IpcService
                 $"'{request.CommercialDocumentType}' is not a known commercial document type (Contract or Subcontract).");
         if (request.OtherDeductions < 0)
             throw new ArgumentException("Other deductions cannot be negative.", nameof(request.OtherDeductions));
+
+        // Only a Contract-type IPC ever raises an AR Invoice on certification (a Subcontract IPC is a
+        // payable to a subcontractor, a separate not-yet-built AP integration) — but the billing accounts
+        // must be chosen now, at Draft time, not guessed later at certification.
+        if (documentType == CommercialDocumentType.Contract)
+        {
+            if (request.RevenueAccountId is null || request.ReceivableAccountId is null)
+                throw new ArgumentException(
+                    "A Revenue account and a Receivable account are required for a Contract IPC, since certifying it raises a real AR Invoice.");
+            if (request.TaxCodeId is not null && request.VatAccountId is null)
+                throw new ArgumentException("A VAT account is required when a tax code is specified.");
+
+            var project = await _projectLookup.GetAsync(request.ProjectId, cancellationToken)
+                ?? throw new ArgumentException($"Project {request.ProjectId} was not found.");
+            if (project.CustomerId is null)
+                throw new ArgumentException(
+                    $"Project '{project.ProjectName}' has no Customer set — an AR Invoice cannot be raised without one.");
+        }
 
         var sheet = await _measurementSheetRepository.GetAsync(request.MeasurementSheetId, cancellationToken)
             ?? throw new ArgumentException($"Measurement sheet {request.MeasurementSheetId} was not found.");
@@ -89,7 +115,7 @@ public sealed class IpcService
         var ipc = new Ipc(
             actor, request.ProjectId, documentType, request.CommercialDocumentId, sheet.Id,
             sheet.PeriodStart, sheet.PeriodEnd, document.RetentionPercentage, document.AdvancePaymentPercentage,
-            request.OtherDeductions);
+            request.OtherDeductions, request.RevenueAccountId, request.ReceivableAccountId, request.TaxCodeId, request.VatAccountId);
 
         foreach (var line in sheet.Lines)
         {
@@ -183,13 +209,37 @@ public sealed class IpcService
         return ToDto(ipc);
     }
 
+    /// <summary>Certifies the IPC and, for a Contract-type IPC, raises the real AR Invoice first — see
+    /// <see cref="Ipc"/>'s own doc comment for why this happens here (certification is the moment the
+    /// spec says the customer becomes legally obligated to pay) and why it's left in Draft rather than
+    /// auto-posted. Runs before <c>ipc.Approve</c> deliberately: if raising the invoice fails (e.g. the
+    /// customer was deactivated after this IPC was created), the IPC itself must not silently certify with
+    /// no invoice behind it.</summary>
     private async Task ApproveInternalAsync(Ipc ipc, string actor, CancellationToken cancellationToken)
     {
+        if (ipc.CommercialDocumentType == CommercialDocumentType.Contract
+            && ipc.RevenueAccountId is { } revenueAccountId && ipc.ReceivableAccountId is { } receivableAccountId)
+        {
+            var project = await _projectLookup.GetAsync(ipc.ProjectId, cancellationToken)
+                ?? throw new InvalidOperationException($"Project {ipc.ProjectId} no longer exists.");
+            if (project.CustomerId is not { } customerId)
+                throw new InvalidOperationException($"Project '{project.ProjectName}' no longer has a Customer set.");
+
+            var arInvoiceId = await _customerInvoicingService.RaiseInvoiceAsync(
+                new RaiseCustomerInvoiceRequest(
+                    customerId, ipc.DocumentNumber, ipc.PeriodEnd, $"IPC {ipc.DocumentNumber} — {project.ProjectName}",
+                    revenueAccountId, receivableAccountId, ipc.NetPayable, CostCenterId: null, ipc.TaxCodeId, ipc.VatAccountId),
+                actor, "C001", cancellationToken);
+            ipc.LinkArInvoice(arInvoiceId);
+        }
+
         var fromStatus = ipc.Status;
         ipc.Approve(actor);
         await _repository.SaveChangesAsync(cancellationToken);
         _auditRecorder.RecordStatusTransition(AuditReference(ipc.Id), actor,
-            $"IPC '{ipc.DocumentNumber}' certified (net payable {ipc.NetPayable}).",
+            ipc.LinkedArInvoiceId is { } linkedArInvoiceId
+                ? $"IPC '{ipc.DocumentNumber}' certified (net payable {ipc.NetPayable}), AR Invoice {linkedArInvoiceId} raised."
+                : $"IPC '{ipc.DocumentNumber}' certified (net payable {ipc.NetPayable}).",
             JsonSerializer.Serialize(fromStatus.ToString()), JsonSerializer.Serialize(ipc.Status.ToString()), AuditSource);
     }
 
@@ -246,7 +296,8 @@ public sealed class IpcService
     private static IpcDto ToDto(Ipc i) => new(
         i.Id, i.DocumentNumber, i.Status.ToString(), i.ProjectId, i.CommercialDocumentType.ToString(), i.CommercialDocumentId,
         i.MeasurementSheetId, i.PeriodStart, i.PeriodEnd, i.RetentionPercentageApplied, i.AdvancePaymentPercentageApplied,
-        i.OtherDeductions, i.GrossValueToDate, i.GrossValueThisPeriod, i.GrossValuePreviousIpc, i.RetentionAmount,
+        i.OtherDeductions, i.RevenueAccountId, i.ReceivableAccountId, i.TaxCodeId, i.VatAccountId, i.LinkedArInvoiceId,
+        i.GrossValueToDate, i.GrossValueThisPeriod, i.GrossValuePreviousIpc, i.RetentionAmount,
         i.AdvanceRecoveryAmount, i.NetPayable,
         i.Lines.Select(l => new IpcLineDto(l.Id, l.CommercialDocumentLineId, l.Rate, l.QuantityThisPeriod, l.QuantityToDate, l.ValueThisPeriod, l.ValueToDate)).ToList(),
         i.CreatedAt, i.CreatedBy);

@@ -24,6 +24,11 @@ export interface Ipc {
   retentionPercentageApplied: number | null;
   advancePaymentPercentageApplied: number | null;
   otherDeductions: number;
+  revenueAccountId: string | null;
+  receivableAccountId: string | null;
+  taxCodeId: string | null;
+  vatAccountId: string | null;
+  linkedArInvoiceId: string | null;
   grossValueToDate: number;
   grossValueThisPeriod: number;
   grossValuePreviousIpc: number;
@@ -48,6 +53,10 @@ export interface CreateIpcInput {
   commercialDocumentId: string;
   measurementSheetId: string;
   otherDeductions: number;
+  revenueAccountId?: string;
+  receivableAccountId?: string;
+  taxCodeId?: string;
+  vatAccountId?: string;
 }
 
 const BASE_PATH = "/api/v1/construction/ipcs";

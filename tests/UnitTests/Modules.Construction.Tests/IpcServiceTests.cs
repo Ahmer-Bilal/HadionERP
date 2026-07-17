@@ -1,5 +1,6 @@
 using Modules.Construction.Application;
 using Modules.Construction.Domain;
+using Modules.ProjectManagement.Contracts;
 using Platform.Audit;
 using Platform.Core;
 using Platform.Core.NumberRanges;
@@ -13,7 +14,11 @@ public class IpcServiceTests
 {
     private static readonly int CurrentYear = DateTimeOffset.UtcNow.Year;
     private static readonly Guid ProjectId = Guid.NewGuid();
+    private static readonly Guid ProjectWithNoCustomerId = Guid.NewGuid();
+    private static readonly Guid CustomerId = Guid.NewGuid();
     private static readonly Guid WbsBillingId = Guid.NewGuid();
+    private static readonly Guid RevenueAccountId = Guid.NewGuid();
+    private static readonly Guid ReceivableAccountId = Guid.NewGuid();
     private static readonly DateOnly PeriodStart = new(2026, 7, 1);
     private static readonly DateOnly PeriodEnd = new(2026, 7, 31);
 
@@ -24,9 +29,17 @@ public class IpcServiceTests
             ["engineer"] = new[] { IpcWorkflow.ApproverRoleKey },
         });
 
-    private static Contract NewApprovedContract(FakeContractRepository contractRepository, decimal quantity = 100m, decimal rate = 50m)
+    private static FakeProjectLookup BuildProjectLookup()
     {
-        var contract = new Contract("ahmer.bilal", ProjectId, "LumpSum", null, 15m, null);
+        var lookup = new FakeProjectLookup();
+        lookup.Add(new ProjectSummary(ProjectId, "PM-PRJ-2026-000001", "Tower A Construction", null, CustomerId, "Approved", Array.Empty<WbsElementSummary>()));
+        lookup.Add(new ProjectSummary(ProjectWithNoCustomerId, "PM-PRJ-2026-000002", "Internal Capital Project", null, null, "Approved", Array.Empty<WbsElementSummary>()));
+        return lookup;
+    }
+
+    private static Contract NewApprovedContract(FakeContractRepository contractRepository, decimal quantity = 100m, decimal rate = 50m, Guid? projectId = null)
+    {
+        var contract = new Contract("ahmer.bilal", projectId ?? ProjectId, "LumpSum", null, 15m, null);
         contract.AddBoqLine("BOQ-001", "Excavation", null, "M3", quantity, rate, WbsBillingId);
         contract.AssignNumber("CON-CONTR-2026-000001");
         contract.Submit("ahmer.bilal");
@@ -39,10 +52,11 @@ public class IpcServiceTests
     /// MeasurementSheetService, which is unit-tested separately) so IpcServiceTests stays self-contained.</summary>
     private static MeasurementSheet NewCertifiedSheet(
         FakeMeasurementSheetRepository repository, Guid contractId, Guid lineId, decimal quantityCertified,
-        DateOnly? periodStart = null, DateOnly? periodEnd = null, string documentNumber = "CON-MEAS-2026-000001")
+        DateOnly? periodStart = null, DateOnly? periodEnd = null, string documentNumber = "CON-MEAS-2026-000001",
+        Guid? projectId = null, CommercialDocumentType documentType = CommercialDocumentType.Contract)
     {
         var sheet = new MeasurementSheet(
-            "ahmer.bilal", ProjectId, CommercialDocumentType.Contract, contractId,
+            "ahmer.bilal", projectId ?? ProjectId, documentType, contractId,
             periodStart ?? PeriodStart, periodEnd ?? PeriodEnd, notes: null);
         var line = sheet.AddLine(lineId, quantityCertified, remarks: null);
         sheet.AssignNumber(documentNumber);
@@ -56,12 +70,13 @@ public class IpcServiceTests
     private static IpcService BuildService(
         out FakeIpcRepository repository, out IAuditLog auditLog,
         out FakeContractRepository contractRepository, out FakeSubcontractRepository subcontractRepository,
-        out FakeMeasurementSheetRepository measurementSheetRepository)
+        out FakeMeasurementSheetRepository measurementSheetRepository, out FakeCustomerInvoicingService customerInvoicingService)
     {
         repository = new FakeIpcRepository();
         contractRepository = new FakeContractRepository();
         subcontractRepository = new FakeSubcontractRepository();
         measurementSheetRepository = new FakeMeasurementSheetRepository();
+        customerInvoicingService = new FakeCustomerInvoicingService();
         var numberRanges = new InMemoryNumberRangeService(new[]
         {
             new NumberRangeDefinition(IpcService.NumberRangeKey, "CON", "IPC")
@@ -79,16 +94,16 @@ public class IpcServiceTests
         return new IpcService(
             repository, measurementSheetRepository, contractRepository, subcontractRepository, numberRanges,
             new AuditRecorder(auditLog), workflowEngine, workflowInstances,
-            new AuthorizationService(securityCatalog), BuildActorRoles());
+            new AuthorizationService(securityCatalog), BuildActorRoles(), BuildProjectLookup(), customerInvoicingService);
     }
 
     private static CreateIpcRequest BuildRequest(Guid contractId, Guid sheetId, decimal otherDeductions = 0m) =>
-        new(ProjectId, "Contract", contractId, sheetId, otherDeductions);
+        new(ProjectId, "Contract", contractId, sheetId, otherDeductions, RevenueAccountId, ReceivableAccountId);
 
     [Fact]
     public async Task Create_assigns_a_document_number_and_computes_the_waterfall()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository, quantity: 100m, rate: 50m);
         var lineId = contract.BoqLines.Single().Id;
         var sheet = NewCertifiedSheet(sheetRepository, contract.Id, lineId, quantityCertified: 40m);
@@ -103,12 +118,15 @@ public class IpcServiceTests
         Assert.Equal(0m, created.GrossValuePreviousIpc);
         Assert.Equal(15m, created.AdvancePaymentPercentageApplied); // snapshotted from Contract
         Assert.Equal(300m, created.AdvanceRecoveryAmount); // 2000 * 15%
+        Assert.Equal(RevenueAccountId, created.RevenueAccountId);
+        Assert.Equal(ReceivableAccountId, created.ReceivableAccountId);
+        Assert.Null(created.LinkedArInvoiceId); // not raised until certified
     }
 
     [Fact]
     public async Task Create_rejects_an_unknown_commercial_document_type()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository);
         var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m);
 
@@ -117,9 +135,31 @@ public class IpcServiceTests
     }
 
     [Fact]
+    public async Task Create_rejects_a_Contract_ipc_with_no_revenue_or_receivable_account()
+    {
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
+        var contract = NewApprovedContract(contractRepository);
+        var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m);
+
+        var request = new CreateIpcRequest(ProjectId, "Contract", contract.Id, sheet.Id, 0m);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(request, "ahmer.bilal", "C001"));
+    }
+
+    [Fact]
+    public async Task Create_rejects_a_Contract_ipc_when_the_project_has_no_customer()
+    {
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
+        var contract = NewApprovedContract(contractRepository, projectId: ProjectWithNoCustomerId);
+        var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m, projectId: ProjectWithNoCustomerId);
+
+        var request = new CreateIpcRequest(ProjectWithNoCustomerId, "Contract", contract.Id, sheet.Id, 0m, RevenueAccountId, ReceivableAccountId);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(request, "ahmer.bilal", "C001"));
+    }
+
+    [Fact]
     public async Task Create_rejects_a_measurement_sheet_that_is_not_yet_Approved()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository);
         var sheet = new MeasurementSheet("ahmer.bilal", ProjectId, CommercialDocumentType.Contract, contract.Id, PeriodStart, PeriodEnd, null);
         sheet.AddLine(contract.BoqLines.Single().Id, 40m, null);
@@ -132,7 +172,7 @@ public class IpcServiceTests
     [Fact]
     public async Task Create_rejects_a_second_IPC_against_the_same_measurement_sheet()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository);
         var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m);
 
@@ -144,7 +184,7 @@ public class IpcServiceTests
     [Fact]
     public async Task Create_computes_QuantityToDate_cumulatively_across_sibling_sheets()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository, quantity: 100m, rate: 50m);
         var lineId = contract.BoqLines.Single().Id;
 
@@ -163,9 +203,9 @@ public class IpcServiceTests
     }
 
     [Fact]
-    public async Task Create_works_against_a_subcontract_too()
+    public async Task Create_works_against_a_subcontract_too_without_any_billing_accounts()
     {
-        var service = BuildService(out _, out _, out _, out var subcontractRepository, out var sheetRepository);
+        var service = BuildService(out _, out _, out _, out var subcontractRepository, out var sheetRepository, out _);
         var subcontract = new Subcontract("ahmer.bilal", ProjectId, null, Guid.NewGuid(), 10m, null, null);
         var line = subcontract.AddLine("SUB-001", "Formwork", null, "M2", 60m, 40m, WbsBillingId);
         subcontract.AssignNumber("CON-SUBCON-2026-000001");
@@ -186,12 +226,14 @@ public class IpcServiceTests
 
         Assert.Equal(800m, created.GrossValueThisPeriod); // 20 * 40
         Assert.Equal(10m, created.RetentionPercentageApplied); // snapshotted from Subcontract
+        Assert.Null(created.RevenueAccountId);
+        Assert.Null(created.ReceivableAccountId);
     }
 
     [Fact]
     public async Task CreateAsync_throws_for_an_actor_with_no_Maintainer_role()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository);
         var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m);
 
@@ -200,24 +242,55 @@ public class IpcServiceTests
     }
 
     [Fact]
-    public async Task Submit_then_approve_reaches_approved()
+    public async Task Submit_then_approve_reaches_approved_and_raises_a_real_AR_invoice_for_a_Contract_ipc()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
-        var contract = NewApprovedContract(contractRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out var customerInvoicing);
+        var contract = NewApprovedContract(contractRepository, quantity: 100m, rate: 50m);
         var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m);
         var created = await service.CreateAsync(BuildRequest(contract.Id, sheet.Id), "ahmer.bilal", "C001");
 
         var submitted = await service.SubmitAsync(created.Id, "ahmer.bilal");
         Assert.Equal("Submitted", submitted.Status);
+        Assert.Empty(customerInvoicing.RaisedInvoices); // not raised until certified
 
         var approved = await service.ApproveAsync(created.Id, "engineer");
         Assert.Equal("Approved", approved.Status);
+
+        var raised = Assert.Single(customerInvoicing.RaisedInvoices);
+        Assert.Equal(CustomerId, raised.CustomerId);
+        Assert.Equal(RevenueAccountId, raised.RevenueAccountId);
+        Assert.Equal(ReceivableAccountId, raised.ReceivableAccountId);
+        Assert.Equal(approved.NetPayable, raised.NetAmount);
+        Assert.NotNull(approved.LinkedArInvoiceId);
+    }
+
+    [Fact]
+    public async Task Approve_does_not_raise_an_AR_invoice_for_a_Subcontract_ipc()
+    {
+        var service = BuildService(out _, out _, out _, out var subcontractRepository, out var sheetRepository, out var customerInvoicing);
+        var subcontract = new Subcontract("ahmer.bilal", ProjectId, null, Guid.NewGuid(), 10m, null, null);
+        var line = subcontract.AddLine("SUB-001", "Formwork", null, "M2", 60m, 40m, WbsBillingId);
+        subcontract.AssignNumber("CON-SUBCON-2026-000001");
+        subcontract.Submit("ahmer.bilal");
+        subcontract.Approve("con.manager");
+        subcontractRepository.Add(subcontract);
+
+        var sheet = NewCertifiedSheet(sheetRepository, subcontract.Id, line.Id, 20m, documentType: CommercialDocumentType.Subcontract);
+        var request = new CreateIpcRequest(ProjectId, "Subcontract", subcontract.Id, sheet.Id, 0m);
+        var created = await service.CreateAsync(request, "ahmer.bilal", "C001");
+
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+        var approved = await service.ApproveAsync(created.Id, "engineer");
+
+        Assert.Equal("Approved", approved.Status);
+        Assert.Empty(customerInvoicing.RaisedInvoices);
+        Assert.Null(approved.LinkedArInvoiceId);
     }
 
     [Fact]
     public async Task Reject_after_submit_reaches_rejected()
     {
-        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository);
         var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m);
         var created = await service.CreateAsync(BuildRequest(contract.Id, sheet.Id), "ahmer.bilal", "C001");
@@ -230,7 +303,7 @@ public class IpcServiceTests
     [Fact]
     public async Task Create_records_an_audit_entry()
     {
-        var service = BuildService(out _, out var auditLog, out var contractRepository, out _, out var sheetRepository);
+        var service = BuildService(out _, out var auditLog, out var contractRepository, out _, out var sheetRepository, out _);
         var contract = NewApprovedContract(contractRepository);
         var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, 40m);
         var created = await service.CreateAsync(BuildRequest(contract.Id, sheet.Id), "ahmer.bilal", "C001");
@@ -243,7 +316,7 @@ public class IpcServiceTests
     [Fact]
     public async Task GetAsync_returns_null_for_unknown_id()
     {
-        var service = BuildService(out _, out _, out _, out _, out _);
+        var service = BuildService(out _, out _, out _, out _, out _, out _);
         Assert.Null(await service.GetAsync(Guid.NewGuid()));
     }
 }

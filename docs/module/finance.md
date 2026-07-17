@@ -44,21 +44,26 @@ list (which itself excludes `Client`).
 
 `OutstandingBalance` is simpler than AP's — it's just Gross Amount once Posted, with no reduction mechanism,
 because there's no Customer Receipt Business Object yet to record that a customer actually paid (the same
-gap `Payment` closed for AP, not yet closed on the AR side). This module deliberately does **not** yet wire
-into Construction's IPC — PROGRESS.md's 2026-07-16 entry explicitly left "does IPC certification raise an
-AR invoice immediately, or a WIP/unbilled-revenue step first" as an open decision pending real usage
-patterns, not guessed here. `ARInvoice` exists as the standalone capability that decision will eventually
-call into, exactly the same relationship `APInvoice` had to Procurement's three-way match before that
-integration was built.
+gap `Payment` closed for AP, not yet closed on the AR side).
+
+This module now **is** wired to Construction's IPC, closing PROGRESS.md's 2026-07-16 open question: this
+`Contracts` package publishes `ICustomerInvoicingService`, implemented by
+`Infrastructure.ArInvoiceCustomerInvoicingService` as a thin adapter around `ARInvoiceService.CreateAsync`
+(so every validation rule — Client role, Approved status, active/postable accounts, VAT-account-required-
+with-a-Tax-Code — lives in exactly one place, not duplicated for the cross-module caller). Construction's
+`IpcService` calls this the moment a Contract-type IPC is certified, raising a real AR Invoice in Draft —
+left there deliberately, not auto-posted, so a human in Finance still reviews/submits/approves/posts it.
+This is the first cross-module *write* Contracts interface in the system; every earlier one
+(`IAPInvoiceLookup`, `IBudgetCheckService`, and every other module's `I*Lookup`) is read-only.
 
 ## What's still ahead
 
 Fixed Assets, Cash & Bank depth beyond what `BankAccount`/`Payment` already cover, Document Splitting,
 Parallel Ledgers, Cost Centers/Internal Orders/Profitability Segments as real Controlling objects, Budget
 Control, and Results Analysis — is designed but not yet built. A Customer Receipt Business Object (the AR
-mirror of `Payment`) is the natural next AR-side piece, and wiring IPC certification to actually raise an
-AR invoice is the natural next Construction-side piece — both still open. Results Analysis in particular
-shouldn't be attempted in isolation from the rest of the system: it's a cross-module read (actual project
-cost from Materials, Labor, Equipment, and Subcontracts; billed revenue from Construction's IPCs/AR
-invoices) producing a Finance-only posting, not something Construction or Project Management should try to
-calculate themselves. See `docs/architecture/07-integrated-project-controlling.md` §7 before building it.
+mirror of `Payment`) is the natural next AR-side piece — it's what would let `OutstandingBalance` actually
+mean something and close the loop the IPC→AR wiring above opens. Results Analysis in particular shouldn't be
+attempted in isolation from the rest of the system: it's a cross-module read (actual project cost from
+Materials, Labor, Equipment, and Subcontracts; billed revenue from Construction's IPCs/AR invoices)
+producing a Finance-only posting, not something Construction or Project Management should try to calculate
+themselves. See `docs/architecture/07-integrated-project-controlling.md` §7 before building it.

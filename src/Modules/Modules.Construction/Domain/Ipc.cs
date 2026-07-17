@@ -14,11 +14,15 @@ namespace Modules.Construction.Domain;
 /// Reuses the platform's Draft → Submitted → Approved/Rejected lifecycle unchanged for the spec's Draft
 /// (contractor prepares) → Submitted (to Engineer) → Certified (Engineer issues the Payment Certificate)
 /// workflow — "Approved" here IS "Certified," same convention <see cref="MeasurementSheet"/> already
-/// established. Deliberately stops at Approved, not the spec's further "Paid" step — closing that loop
-/// means raising a real AR/Customer Invoice or WIP entry in Finance, and PROGRESS.md's 2026-07-16 entry
-/// explicitly left "does IPC certification raise an AR invoice immediately, or a WIP step first" as an open
-/// decision that depends on Finance's still-nonexistent AR module — not guessed here, disclosed in
-/// `docs/module/construction.md` as the next real gap this slice exposes rather than closes.
+/// established. Still stops at Approved, not the spec's further "Paid" step (that needs a real Customer
+/// Receipt Business Object, not yet built) — but PROGRESS.md's 2026-07-16 "does certification raise an AR
+/// invoice immediately, or a WIP step first" question is now resolved: for a Contract-type IPC (never
+/// Subcontract — that side is a payable to a subcontractor, a separate not-yet-built AP integration),
+/// <c>IpcService.ApproveInternalAsync</c> raises a real Draft AR Invoice the moment certification completes,
+/// via <c>Modules.Finance.Contracts.ICustomerInvoicingService</c> — the first cross-module *write* Contracts
+/// call in this system. Left in Draft, not auto-posted — a human in Finance still submits/approves/posts it
+/// through the normal AR Invoice lifecycle, preserving Segregation of Duties between "Construction certifies
+/// the work" and "Finance actually books the receivable."
 ///
 /// The money waterfall is deliberately simple relative to the spec's own step numbering: Retention and
 /// Advance Recovery are both calculated as a straight percentage of THIS PERIOD's certified value (not the
@@ -48,6 +52,24 @@ public sealed class Ipc : BusinessObject
     /// exist yet, so this is genuinely manual entry for this slice, not yet computed from anything.</summary>
     public decimal OtherDeductions { get; private set; }
 
+    /// <summary>Which accounts a Contract-type IPC's eventual AR Invoice should post to — required at
+    /// creation for a Contract IPC (validated by <c>IpcService.CreateAsync</c>), always null for a
+    /// Subcontract IPC (no AR billing happens on that side). Captured here rather than resolved fresh at
+    /// certification time so the accounts a maintainer chose at Draft time are exactly what gets billed,
+    /// the same "freeze financial facts" reasoning as <see cref="IpcLine.Rate"/>.</summary>
+    public Guid? RevenueAccountId { get; private set; }
+
+    public Guid? ReceivableAccountId { get; private set; }
+
+    public Guid? TaxCodeId { get; private set; }
+
+    public Guid? VatAccountId { get; private set; }
+
+    /// <summary>Set once, when this IPC is certified and its AR Invoice is raised — see
+    /// <c>IpcService.ApproveInternalAsync</c>. Null for a Subcontract IPC (no AR invoice ever raised) and
+    /// for a Contract IPC that hasn't reached Approved yet.</summary>
+    public Guid? LinkedArInvoiceId { get; private set; }
+
     public IReadOnlyCollection<IpcLine> Lines => _lines.AsReadOnly();
 
     public decimal GrossValueToDate => _lines.Sum(l => l.ValueToDate);
@@ -60,7 +82,8 @@ public sealed class Ipc : BusinessObject
     public Ipc(
         string createdBy, Guid projectId, CommercialDocumentType commercialDocumentType, Guid commercialDocumentId,
         Guid measurementSheetId, DateOnly periodStart, DateOnly periodEnd,
-        decimal? retentionPercentageApplied, decimal? advancePaymentPercentageApplied, decimal otherDeductions)
+        decimal? retentionPercentageApplied, decimal? advancePaymentPercentageApplied, decimal otherDeductions,
+        Guid? revenueAccountId = null, Guid? receivableAccountId = null, Guid? taxCodeId = null, Guid? vatAccountId = null)
         : base(createdBy)
     {
         if (periodEnd < periodStart)
@@ -81,6 +104,10 @@ public sealed class Ipc : BusinessObject
         RetentionPercentageApplied = retentionPercentageApplied;
         AdvancePaymentPercentageApplied = advancePaymentPercentageApplied;
         OtherDeductions = otherDeductions;
+        RevenueAccountId = revenueAccountId;
+        ReceivableAccountId = receivableAccountId;
+        TaxCodeId = taxCodeId;
+        VatAccountId = vatAccountId;
     }
 
     /// <summary>Reserved for ORM materialization — see <see cref="BusinessObject"/>'s parameterless
@@ -104,6 +131,10 @@ public sealed class Ipc : BusinessObject
         _lines.Add(line);
         return line;
     }
+
+    /// <summary>Records the AR Invoice raised for this IPC on certification — see
+    /// <c>IpcService.ApproveInternalAsync</c>. Only ever called once, for a Contract-type IPC.</summary>
+    public void LinkArInvoice(Guid arInvoiceId) => LinkedArInvoiceId = arInvoiceId;
 
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 

@@ -247,6 +247,11 @@ public sealed class ConstructionDbContext : DbContext
             entity.Property(e => e.RetentionPercentageApplied).HasColumnName("retention_percentage_applied").HasColumnType("numeric(5,2)");
             entity.Property(e => e.AdvancePaymentPercentageApplied).HasColumnName("advance_payment_percentage_applied").HasColumnType("numeric(5,2)");
             entity.Property(e => e.OtherDeductions).HasColumnName("other_deductions").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.RevenueAccountId).HasColumnName("revenue_account_id");
+            entity.Property(e => e.ReceivableAccountId).HasColumnName("receivable_account_id");
+            entity.Property(e => e.TaxCodeId).HasColumnName("tax_code_id");
+            entity.Property(e => e.VatAccountId).HasColumnName("vat_account_id");
+            entity.Property(e => e.LinkedArInvoiceId).HasColumnName("linked_ar_invoice_id");
 
             entity.Property(e => e.ExtensionFields)
                 .HasColumnName("extension_data")

@@ -13,6 +13,10 @@ import { listSubcontracts } from "../api/subcontractApi";
 import type { Subcontract } from "../api/subcontractApi";
 import { listMeasurementSheets } from "../api/measurementSheetApi";
 import type { MeasurementSheet } from "../api/measurementSheetApi";
+import { listGLAccounts } from "../api/glAccountApi";
+import type { GLAccount } from "../api/glAccountApi";
+import { listTaxCodes } from "../api/taxCodeApi";
+import type { TaxCode } from "../api/taxCodeApi";
 
 interface IpcsPageProps {
   language: SupportedLanguageCode;
@@ -39,6 +43,8 @@ export function IpcsPage({ language }: IpcsPageProps) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [subcontracts, setSubcontracts] = useState<Subcontract[]>([]);
   const [measurementSheets, setMeasurementSheets] = useState<MeasurementSheet[]>([]);
+  const [accounts, setAccounts] = useState<GLAccount[]>([]);
+  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -47,23 +53,31 @@ export function IpcsPage({ language }: IpcsPageProps) {
   const [documentId, setDocumentId] = useState("");
   const [measurementSheetId, setMeasurementSheetId] = useState("");
   const [otherDeductions, setOtherDeductions] = useState("0");
+  const [revenueAccountId, setRevenueAccountId] = useState("");
+  const [receivableAccountId, setReceivableAccountId] = useState("");
+  const [taxCodeId, setTaxCodeId] = useState("");
+  const [vatAccountId, setVatAccountId] = useState("");
 
   const load = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
-      const [ipcResult, projectResult, contractResult, subcontractResult, sheetResult] = await Promise.all([
+      const [ipcResult, projectResult, contractResult, subcontractResult, sheetResult, accountResult, taxCodeResult] = await Promise.all([
         listIpcs(200, 0),
         listProjects(200, 0),
         listContracts(200, 0),
         listSubcontracts(200, 0),
         listMeasurementSheets(200, 0),
+        listGLAccounts(200, 0),
+        listTaxCodes(200, 0),
       ]);
       setIpcs(ipcResult.items);
       setProjects(projectResult.items.filter((p) => p.status === "Approved"));
       setContracts(contractResult.items.filter((c) => c.status === "Approved"));
       setSubcontracts(subcontractResult.items.filter((s) => s.status === "Approved"));
       setMeasurementSheets(sheetResult.items.filter((s) => s.status === "Approved"));
+      setAccounts(accountResult.items);
+      setTaxCodes(taxCodeResult.items);
     } catch {
       setError(t("status.error", language));
     } finally {
@@ -103,6 +117,11 @@ export function IpcsPage({ language }: IpcsPageProps) {
 
   const sheetLabel = (id: string) => measurementSheets.find((s) => s.id === id)?.documentNumber ?? id;
 
+  const accountLabel = (id: string) => {
+    const account = accounts.find((a) => a.id === id);
+    return account ? `${account.accountCode} — ${account.accountName}` : id;
+  };
+
   const openDetails = (id: string) => setView({ kind: "browse", selectedId: id });
 
   const resetCreateForm = () => {
@@ -111,6 +130,10 @@ export function IpcsPage({ language }: IpcsPageProps) {
     setDocumentId("");
     setMeasurementSheetId("");
     setOtherDeductions("0");
+    setRevenueAccountId("");
+    setReceivableAccountId("");
+    setTaxCodeId("");
+    setVatAccountId("");
   };
 
   const handleCreate = async () => {
@@ -123,6 +146,10 @@ export function IpcsPage({ language }: IpcsPageProps) {
         commercialDocumentId: documentId,
         measurementSheetId,
         otherDeductions: Number(otherDeductions) || 0,
+        revenueAccountId: documentType === "Contract" ? revenueAccountId || undefined : undefined,
+        receivableAccountId: documentType === "Contract" ? receivableAccountId || undefined : undefined,
+        taxCodeId: documentType === "Contract" ? taxCodeId || undefined : undefined,
+        vatAccountId: documentType === "Contract" && taxCodeId ? vatAccountId || undefined : undefined,
       });
       resetCreateForm();
       await load();
@@ -152,8 +179,9 @@ export function IpcsPage({ language }: IpcsPageProps) {
   const inputStyle: React.CSSProperties = { display: "block", marginBlockEnd: "0.5rem", inlineSize: "100%", padding: "0.3rem" };
 
   if (view.kind === "create") {
+    const missingBillingAccounts = documentType === "Contract" && (!revenueAccountId || !receivableAccountId);
     const actions: ActionItem[] = [
-      { key: "create", label: t("ipc.actionCreate", language), onClick: handleCreate, variant: "primary", isDisabled: busy || !projectId || !documentType || !documentId || !measurementSheetId },
+      { key: "create", label: t("ipc.actionCreate", language), onClick: handleCreate, variant: "primary", isDisabled: busy || !projectId || !documentType || !documentId || !measurementSheetId || missingBillingAccounts },
       { key: "back", label: t("ipc.actionBack", language), onClick: () => setView({ kind: "browse", selectedId: null }) },
     ];
     return (
@@ -193,6 +221,37 @@ export function IpcsPage({ language }: IpcsPageProps) {
           <label>{t("ipc.fieldOtherDeductions", language)}
             <input type="number" min="0" step="0.01" style={inputStyle} value={otherDeductions} onChange={(e) => setOtherDeductions(e.target.value)} />
           </label>
+          {documentType === "Contract" && (
+            <>
+              <p>{t("ipc.billingAccountsHint", language)}</p>
+              <label>{t("ipc.fieldRevenueAccount", language)}
+                <select style={inputStyle} value={revenueAccountId} onChange={(e) => setRevenueAccountId(e.target.value)}>
+                  <option value=""></option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
+                </select>
+              </label>
+              <label>{t("ipc.fieldReceivableAccount", language)}
+                <select style={inputStyle} value={receivableAccountId} onChange={(e) => setReceivableAccountId(e.target.value)}>
+                  <option value=""></option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
+                </select>
+              </label>
+              <label>{t("ar.fieldTaxCode", language)}
+                <select style={inputStyle} value={taxCodeId} onChange={(e) => setTaxCodeId(e.target.value)}>
+                  <option value="">{t("ar.noTaxCode", language)}</option>
+                  {taxCodes.map((tc) => <option key={tc.id} value={tc.id}>{tc.taxCodeCode} — {tc.rate}%</option>)}
+                </select>
+              </label>
+              {taxCodeId && (
+                <label>{t("ar.fieldVatAccount", language)}
+                  <select style={inputStyle} value={vatAccountId} onChange={(e) => setVatAccountId(e.target.value)}>
+                    <option value=""></option>
+                    {accounts.map((a) => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
+                  </select>
+                </label>
+              )}
+            </>
+          )}
         </div>
       </section>
     );
@@ -270,6 +329,24 @@ export function IpcsPage({ language }: IpcsPageProps) {
                 <dd><bdi dir="ltr">{ipc.periodEnd}</bdi></dd>
                 <dt>{t("ipc.columnStatus", language)}</dt>
                 <dd>{translateStatus(ipc.status, language)}</dd>
+                {ipc.revenueAccountId && (
+                  <>
+                    <dt>{t("ipc.fieldRevenueAccount", language)}</dt>
+                    <dd><bdi dir="ltr">{accountLabel(ipc.revenueAccountId)}</bdi></dd>
+                  </>
+                )}
+                {ipc.receivableAccountId && (
+                  <>
+                    <dt>{t("ipc.fieldReceivableAccount", language)}</dt>
+                    <dd><bdi dir="ltr">{accountLabel(ipc.receivableAccountId)}</bdi></dd>
+                  </>
+                )}
+                {ipc.linkedArInvoiceId && (
+                  <>
+                    <dt>{t("ipc.linkedArInvoice", language)}</dt>
+                    <dd><bdi dir="ltr">{ipc.linkedArInvoiceId}</bdi></dd>
+                  </>
+                )}
               </dl>
             ),
           },
