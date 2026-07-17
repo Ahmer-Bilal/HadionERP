@@ -85,9 +85,12 @@ Management; Fixed Assets, built with time-dependent WBS cost-object assignment f
 simple asset register, since equipment depreciates on a fixed schedule but is used across multiple projects
 over its life; Equipment and Fleet cost allocation (the internal usage-rate mechanism, distinct from
 depreciation); Plant/Equipment Maintenance; Inventory/Warehouse Management, including the Goods Issue event
-that finally makes material cost postable to a specific project rather than just purchased; Cost Codes;
-WIP/percentage-of-completion revenue recognition (Results Analysis); and Multi-Company/Legal Entity
-structure. The full design reasoning for the Materials, Equipment, and Finance-integration pieces of this
+that finally makes material cost postable to a specific project rather than just purchased; Labor Costing
+(Timesheet + `LaborCostRate`, the mechanism that turns employee hours into a WBS-element cost line using a
+burdened costing rate distinct from the employee's actual Payroll pay rate — HR's mobilization/
+demobilization link in Phase 4 is a prerequisite for this, not a substitute for it); Cost Codes; WIP/
+percentage-of-completion revenue recognition (Results Analysis); and Multi-Company/Legal Entity structure.
+The full design reasoning for the Materials, Labor, Equipment, and Finance-integration pieces of this
 checkpoint is in `docs/architecture/07-integrated-project-controlling.md`.
 
 ## Phase 4 — HR & Payroll — Not started
@@ -118,9 +121,13 @@ External integration and extensibility framework — currently placeholder-only 
 ## Deliberately deferred, not urgent
 
 Multi-currency, Withholding Tax as a concept distinct from VAT, Document Control/Drawings/RFIs/Site
-Diary/HSE Incident Tracking, and wiring the already-built-but-unused ZATCA e-invoicing and Hijri calendar
-services into the screens that should use them — all real, disclosed gaps, none of them blocking any phase
-above.
+Diary/HSE Incident Tracking, wiring the already-built-but-unused ZATCA e-invoicing and Hijri calendar
+services into the screens that should use them, and Legal/Dispute tracking (a thin cross-cutting layer per
+`docs/architecture/07-integrated-project-controlling.md` §10 — a lightweight `Dispute` entity linked to a
+Contract/Subcontract/Claim, plus a handful of legal-metadata fields on Contract/Subcontract itself
+(`GoverningLaw`, `DisputeResolutionMechanism`, performance bond reference); deliberately not a full Legal
+module unless real usage later shows that's actually needed) — all real, disclosed gaps, none of them
+blocking any phase above.
 
 ## Open questions — need a direct answer before being scoped into a phase
 

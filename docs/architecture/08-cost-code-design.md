@@ -3,15 +3,21 @@
 Cost Codes are named throughout `02-business-object-model.md`, `03-module-boundaries.md`, and
 `07-integrated-project-controlling.md` as the dimension that answers "what kind of cost is this" —
 independent of "which project is this" (the WBS element's job). This document is the full design for that
-dimension itself: not yet built, scoped in `MISSING-FEATURES-AUDIT.md` §18 and the roadmap's Phase 3–4
-checkpoint, and this is the spec to build it against once that phase starts.
+dimension itself: not yet built, scoped directly in `ROADMAP.md`'s Phase 3–4 checkpoint (not a numbered
+`MISSING-FEATURES-AUDIT.md` finding — see the note under "Why Cost Codes need to be their own structured
+list" below for how this differs from the related Cost Center/Internal Order gap the audit does name), and
+this is the spec to build it against once that phase starts.
 
 ## Why Cost Codes need to be their own structured list, not a free-text field
 
 A company that only tags costs by WBS element can answer "how much did Project X cost." It cannot answer
 "how much did we spend on rebar across every project this year," or "is our labor cost as a percentage of
 total cost trending up," without a second, independent classification sitting alongside the project
-dimension. That second classification is the Cost Code. Real construction ERPs and accounting standards
+dimension. That second classification is the Cost Code — a distinct concept from the Cost
+Center/Profit Center/Internal Order gap `MISSING-FEATURES-AUDIT.md` §18 names (that section is about
+overhead cost objects not tied to any project; a Cost Code is a cost-type classification that applies
+*within* a project). Cost Codes themselves aren't a numbered audit finding — they're scoped directly in
+`ROADMAP.md`'s Phase 3–4 checkpoint. Real construction ERPs and accounting standards
 (SAP's Cost Elements, most industry Cost Code lists derived from or resembling CSI MasterFormat in the
 US, or company-specific equivalents elsewhere) all converge on the same shape: a **hierarchical**, company-
 maintained list — not a flat set of tags, and not free text, because free text can't be rolled up
