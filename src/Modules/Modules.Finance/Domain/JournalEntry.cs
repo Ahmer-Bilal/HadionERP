@@ -38,6 +38,21 @@ public sealed class JournalEntry : BusinessObject
     /// back to what it reverses without guessing from description text.</summary>
     public Guid? ReversalOfEntryId { get; private set; }
 
+    /// <summary>What raised this entry — one of the constants in <c>JournalEntrySourceDocumentTypes</c>
+    /// (Application layer; Domain only stores the string, it doesn't need to know the closed set). Null only
+    /// for entries created before this field existed; every entry created through
+    /// <c>JournalEntryService.CreateAsync</c> (a human, tagged "Manual") or
+    /// <c>CreateSystemGeneratedAsync</c> (another Finance document's own posting) now sets it. Answers the
+    /// gap analysis's "what created this entry" question (Journal Entry detail's Document Flow panel,
+    /// Journal List's Source column) without the UI having to guess from description text or reach across
+    /// modules to ask every document type "did you create this."</summary>
+    public string? SourceDocumentType { get; private set; }
+
+    /// <summary>The specific document's own Id when <see cref="SourceDocumentType"/> names a real document
+    /// type (an AP/AR Invoice, a Payment, a Customer Receipt) — null for "Manual" (there is no other
+    /// document) and for entries predating this field.</summary>
+    public Guid? SourceDocumentId { get; private set; }
+
     /// <summary>The lines making up this entry — 0..n child collection, only exists through this parent,
     /// same pattern as Modules.MasterData's <c>BusinessPartner.Addresses</c>.</summary>
     public IReadOnlyCollection<JournalLine> Lines => _lines.AsReadOnly();
@@ -86,6 +101,18 @@ public sealed class JournalEntry : BusinessObject
     }
 
     public void MarkAsReversalOf(Guid originalEntryId) => ReversalOfEntryId = originalEntryId;
+
+    /// <summary>Records what raised this entry. Callable only while Draft — same "set once, before the
+    /// entry starts its real lifecycle" timing as <see cref="MarkAsReversalOf"/> — since a document's
+    /// origin is a fact about its creation, not something that should ever change afterward.</summary>
+    public void MarkSourceDocument(string sourceDocumentType, Guid? sourceDocumentId)
+    {
+        if (Status != BusinessObjectStatus.Draft)
+            throw new InvalidOperationException("The source document can only be set while the journal entry is in Draft.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceDocumentType);
+        SourceDocumentType = sourceDocumentType;
+        SourceDocumentId = sourceDocumentId;
+    }
 
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 

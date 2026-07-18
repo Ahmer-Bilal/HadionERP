@@ -16,7 +16,13 @@ public sealed record RaiseCustomerInvoiceRequest(
     decimal NetAmount,
     Guid? CostCenterId,
     Guid? TaxCodeId,
-    Guid? VatAccountId);
+    Guid? VatAccountId,
+    // What actually raised this invoice from the caller's own perspective — "Ipc" or "RetentionRelease"
+    // today, more as Construction grows. Flows straight through to ARInvoice.SourceDocumentType, the same
+    // "what created this" trace JournalEntry.SourceDocumentType already established one level down the
+    // chain (see that field's own doc comment).
+    string SourceDocumentType,
+    Guid SourceDocumentId);
 
 /// <summary>
 /// The first cross-module *write* Contracts interface in this system (every other Contracts interface so

@@ -20,6 +20,8 @@ export interface ARInvoice {
   grossAmount: number;
   outstandingBalance: number;
   linkedJournalEntryId: string | null;
+  sourceDocumentType: string | null;
+  sourceDocumentId: string | null;
   createdAt: string;
   createdBy: string;
 }

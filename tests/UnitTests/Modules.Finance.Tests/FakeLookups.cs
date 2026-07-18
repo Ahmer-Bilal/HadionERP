@@ -14,6 +14,9 @@ internal sealed class FakeGLAccountLookup : IGLAccountLookup
 
     public Task<GLAccountSummary?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_accounts.GetValueOrDefault(id));
+
+    public Task<IReadOnlyList<GLAccountSummary>> ListAllAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<GLAccountSummary>>(_accounts.Values.ToList());
 }
 
 internal sealed class FakeCostCenterLookup : ICostCenterLookup

@@ -37,6 +37,7 @@ internal static class TestDatabase
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE construction.measurement_sheets CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE construction.ipcs CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE construction.variation_orders CASCADE");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE construction.retention_releases CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE construction.number_range_counters");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE construction.workflow_instances");
     }

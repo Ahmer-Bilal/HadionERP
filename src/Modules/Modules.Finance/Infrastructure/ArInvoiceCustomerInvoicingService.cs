@@ -26,7 +26,8 @@ public sealed class ArInvoiceCustomerInvoicingService : ICustomerInvoicingServic
                 request.CustomerId, request.CustomerReference, request.InvoiceDate, request.Description,
                 request.RevenueAccountId, request.ReceivableAccountId, request.NetAmount,
                 request.CostCenterId, request.TaxCodeId, request.VatAccountId),
-            actor, companyId, cancellationToken);
+            actor, companyId, cancellationToken,
+            sourceDocumentType: request.SourceDocumentType, sourceDocumentId: request.SourceDocumentId);
 
         return created.Id;
     }

@@ -161,6 +161,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Construction.IntegrationTests", "tests\IntegrationTests\Modules.Construction.IntegrationTests\Modules.Construction.IntegrationTests.csproj", "{6A15833F-886D-4AF0-9EBE-B615734347D2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Modules.Identity.Contracts", "src\Modules\Modules.Identity\Contracts\Modules.Identity.Contracts.csproj", "{C60B75C9-EAE0-4EA1-B436-58E59F99B3C3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -414,6 +416,10 @@ Global
 		{6A15833F-886D-4AF0-9EBE-B615734347D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A15833F-886D-4AF0-9EBE-B615734347D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A15833F-886D-4AF0-9EBE-B615734347D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C60B75C9-EAE0-4EA1-B436-58E59F99B3C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C60B75C9-EAE0-4EA1-B436-58E59F99B3C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C60B75C9-EAE0-4EA1-B436-58E59F99B3C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C60B75C9-EAE0-4EA1-B436-58E59F99B3C3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{233429C3-B14A-4C2A-B3EF-E65C8EEB8D95} = {0AF46503-DB3B-4090-9D0D-4CA13E9ECD37}
@@ -488,5 +494,6 @@ Global
 		{23E1F568-AE76-4A8B-8977-7F3ED9FEE222} = {C3A6A757-F9E4-4D8E-8B1C-D9768C0A1C21}
 		{0C803421-02A9-4E7A-AE87-46D5A46BAF91} = {E42834AC-3E49-4525-9850-8995C362CF17}
 		{6A15833F-886D-4AF0-9EBE-B615734347D2} = {2EFDDE05-5390-4BB4-9B47-FDA22F889FD6}
+		{C60B75C9-EAE0-4EA1-B436-58E59F99B3C3} = {77FA8D77-91A4-44C5-B2DA-E95D5D546483}
 	EndGlobalSection
 EndGlobal

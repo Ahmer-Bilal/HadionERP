@@ -17,8 +17,16 @@ public sealed class EfGLAccountLookup : IGLAccountLookup
         var account = await _dbContext.GLAccounts.AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
-        return account is null
-            ? null
-            : new GLAccountSummary(account.Id, account.AccountCode, account.AccountName, account.NormalBalance, account.IsPostable, account.IsActive);
+        return account is null ? null : ToSummary(account);
     }
+
+    public async Task<IReadOnlyList<GLAccountSummary>> ListAllAsync(CancellationToken cancellationToken = default)
+    {
+        var accounts = await _dbContext.GLAccounts.AsNoTracking().ToListAsync(cancellationToken);
+        return accounts.Select(ToSummary).ToList();
+    }
+
+    private static GLAccountSummary ToSummary(Domain.GLAccount account) => new(
+        account.Id, account.AccountCode, account.AccountName, account.NormalBalance,
+        account.IsPostable, account.IsActive, account.AccountType.ToString(), account.ParentAccountId);
 }

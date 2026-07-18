@@ -25,6 +25,7 @@ public sealed class JournalEntryService
     private readonly IActorRoleAssignmentStore _actorRoleAssignmentStore;
     private readonly IGLAccountLookup _glAccountLookup;
     private readonly ICostCenterLookup _costCenterLookup;
+    private readonly IFiscalYearRepository _fiscalYearRepository;
 
     public JournalEntryService(
         IJournalEntryRepository repository,
@@ -35,7 +36,8 @@ public sealed class JournalEntryService
         IAuthorizationService authorizationService,
         IActorRoleAssignmentStore actorRoleAssignmentStore,
         IGLAccountLookup glAccountLookup,
-        ICostCenterLookup costCenterLookup)
+        ICostCenterLookup costCenterLookup,
+        IFiscalYearRepository fiscalYearRepository)
     {
         _repository = repository;
         _numberRangeService = numberRangeService;
@@ -46,6 +48,7 @@ public sealed class JournalEntryService
         _actorRoleAssignmentStore = actorRoleAssignmentStore;
         _glAccountLookup = glAccountLookup;
         _costCenterLookup = costCenterLookup;
+        _fiscalYearRepository = fiscalYearRepository;
     }
 
     public async Task<JournalEntryDto> CreateAsync(
@@ -62,6 +65,7 @@ public sealed class JournalEntryService
             await ValidateLineReferencesAsync(line.GLAccountId, line.CostCenterId, cancellationToken);
             entry.AddLine(line.GLAccountId, line.CostCenterId, line.DebitAmount, line.CreditAmount, line.LineDescription);
         }
+        entry.MarkSourceDocument(JournalEntrySourceDocumentTypes.Manual, sourceDocumentId: null);
 
         var documentNumber = _numberRangeService.GetNext(NumberRangeKey, companyId, DateTimeOffset.UtcNow.Year);
         entry.AssignNumber(documentNumber);
@@ -150,6 +154,7 @@ public sealed class JournalEntryService
     {
         RequireAuthorization(actor, JournalEntrySecurity.ApprovePrivilegeKey);
         var entry = await RequireEntryAsync(id, cancellationToken);
+        await EnsurePeriodIsOpenAsync(entry.PostingDate, cancellationToken);
         var fromStatus = entry.Status;
         entry.Post(actor);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -179,7 +184,8 @@ public sealed class JournalEntryService
             .ToList();
         var mirror = await CreateSystemGeneratedAsync(
             reversalDate, $"Reversal of {original.DocumentNumber}: {original.Description}",
-            mirrorLines, original.Id, actor, cancellationToken);
+            mirrorLines, original.Id, actor, cancellationToken,
+            sourceDocumentType: original.SourceDocumentType, sourceDocumentId: original.SourceDocumentId);
 
         var fromStatus = original.Status;
         original.Reverse(actor);
@@ -205,8 +211,11 @@ public sealed class JournalEntryService
     /// </summary>
     public async Task<JournalEntryDto> CreateSystemGeneratedAsync(
         DateOnly postingDate, string description, IReadOnlyList<CreateJournalLineRequest> lines,
-        Guid? reversalOfEntryId, string actor, CancellationToken cancellationToken = default)
+        Guid? reversalOfEntryId, string actor, CancellationToken cancellationToken = default,
+        string? sourceDocumentType = null, Guid? sourceDocumentId = null)
     {
+        await EnsurePeriodIsOpenAsync(postingDate, cancellationToken);
+
         var entry = new JournalEntry(actor, postingDate, description);
         foreach (var line in lines)
         {
@@ -214,6 +223,7 @@ public sealed class JournalEntryService
             entry.AddLine(line.GLAccountId, line.CostCenterId, line.DebitAmount, line.CreditAmount, line.LineDescription);
         }
         if (reversalOfEntryId is { } originalId) entry.MarkAsReversalOf(originalId);
+        if (sourceDocumentType is not null) entry.MarkSourceDocument(sourceDocumentType, sourceDocumentId);
 
         var documentNumber = _numberRangeService.GetNext(NumberRangeKey, "C001", DateTimeOffset.UtcNow.Year);
         entry.AssignNumber(documentNumber);
@@ -272,6 +282,22 @@ public sealed class JournalEntryService
             throw new ArgumentException($"Cost center '{costCenter.CostCenterCode}' is a header/grouping cost center and cannot be posted to.");
     }
 
+    /// <summary>The one choke point every real posting in this platform goes through — a manual entry
+    /// (<see cref="PostAsync"/>) or a system-generated one (<see cref="CreateSystemGeneratedAsync"/>, which
+    /// every AP/AR Invoice, Payment, and Customer Receipt posting reuses) — so Period Closing only ever
+    /// needs to be enforced in this one place. No <see cref="Domain.FiscalYear"/> covering
+    /// <paramref name="postingDate"/> at all means Period Closing isn't configured yet — allowed through,
+    /// the same opt-in-not-enforced reasoning <c>RealBudgetCheckService</c> uses for "no budget on file."
+    /// </summary>
+    private async Task EnsurePeriodIsOpenAsync(DateOnly postingDate, CancellationToken cancellationToken)
+    {
+        var period = await _fiscalYearRepository.GetPeriodByDateAsync(postingDate, cancellationToken);
+        if (period is not null && !period.IsOpen)
+            throw new InvalidOperationException(
+                $"Posting date {postingDate} falls in period {period.PeriodNumber} of fiscal year " +
+                $"{postingDate.Year}, which is closed. Reopen the period first, or use a different posting date.");
+    }
+
     private void RequireAuthorization(string actor, string privilegeKey)
     {
         var result = _authorizationService.Authorize(BuildPrincipal(actor), privilegeKey);
@@ -289,6 +315,7 @@ public sealed class JournalEntryService
 
     private static JournalEntryDto ToDto(JournalEntry e) => new(
         e.Id, e.DocumentNumber, e.Status.ToString(), e.PostingDate, e.Description, e.ReversalOfEntryId,
+        e.SourceDocumentType, e.SourceDocumentId,
         e.TotalDebits, e.TotalCredits, e.IsBalanced,
         e.Lines.Select(l => new JournalLineDto(l.Id, l.GLAccountId, l.CostCenterId, l.DebitAmount, l.CreditAmount, l.LineDescription)).ToList(),
         e.CreatedAt, e.CreatedBy);

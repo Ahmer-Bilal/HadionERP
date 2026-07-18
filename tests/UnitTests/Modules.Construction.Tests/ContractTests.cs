@@ -31,6 +31,20 @@ public class ContractTests
     }
 
     [Fact]
+    public void Retention_percentage_outside_0_to_100_is_rejected()
+    {
+        Assert.Throws<ArgumentException>(() => new Contract("ahmer.bilal", Guid.NewGuid(), "LumpSum", null, null, null, 150m));
+        Assert.Throws<ArgumentException>(() => new Contract("ahmer.bilal", Guid.NewGuid(), "LumpSum", null, null, null, -1m));
+    }
+
+    [Fact]
+    public void Retention_percentage_is_settable_via_the_constructor()
+    {
+        var contract = new Contract("ahmer.bilal", Guid.NewGuid(), "LumpSum", null, null, null, 10m);
+        Assert.Equal(10m, contract.RetentionPercentage);
+    }
+
+    [Fact]
     public void AddBoqLine_computes_amount_and_rolls_up_contract_value()
     {
         var contract = new Contract("ahmer.bilal", Guid.NewGuid(), "LumpSum", null, null, null);

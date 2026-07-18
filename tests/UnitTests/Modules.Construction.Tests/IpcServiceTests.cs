@@ -129,6 +129,28 @@ public class IpcServiceTests
     }
 
     [Fact]
+    public async Task Create_snapshots_a_Contracts_own_retention_percentage_not_just_a_Subcontracts()
+    {
+        // Regression test: LoadCommercialDocumentAsync used to always pass null for a Contract's retention
+        // percentage, since Contract had no such field — meaning a Contract-type IPC never withheld any
+        // retention at all, only a Subcontract-type one did. Contract.RetentionPercentage (added alongside
+        // RetentionRelease) closes that gap.
+        var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _, out _);
+        var contract = new Contract("ahmer.bilal", ProjectId, "LumpSum", null, 15m, null, retentionPercentage: 10m);
+        contract.AddBoqLine("BOQ-001", "Excavation", null, "M3", 100m, 50m, WbsBillingId);
+        contract.AssignNumber("CON-CONTR-2026-000002");
+        contract.Submit("ahmer.bilal");
+        contract.Approve("con.manager");
+        contractRepository.Add(contract);
+
+        var sheet = NewCertifiedSheet(sheetRepository, contract.Id, contract.BoqLines.Single().Id, quantityCertified: 40m);
+        var created = await service.CreateAsync(BuildRequest(contract.Id, sheet.Id), "ahmer.bilal", "C001");
+
+        Assert.Equal(10m, created.RetentionPercentageApplied);
+        Assert.Equal(200m, created.RetentionAmount); // 40 * 50 * 10%
+    }
+
+    [Fact]
     public async Task Create_rejects_an_unknown_commercial_document_type()
     {
         var service = BuildService(out _, out _, out var contractRepository, out _, out var sheetRepository, out _, out _);

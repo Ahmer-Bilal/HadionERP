@@ -1,0 +1,481 @@
+/* ===========================
+   HADION ERP LOGIN
+   Written with CSS logical properties (inline-start/end, block-start/end) throughout, same discipline as
+   every other page in this app, so it flips correctly under Arabic RTL with zero extra rules — see
+   App.css's own comment for the same reasoning. The right panel (form) intentionally uses the app's real
+   --pi-* design tokens (not a fixed palette) specifically so the manual light/dark toggle actually changes
+   it — this is what closes the "white background in dark mode" bug: previously the card was hardcoded to
+   `background: white`, which would have looked broken the moment a dark-mode toggle existed. The left hero
+   panel is deliberately a fixed dark gradient regardless of the toggle — marketing/brand imagery staying
+   constant while the interior UI re-themes is a common, deliberate pattern, not an oversight.
+=========================== */
+
+.login-page {
+  display: grid;
+  grid-template-columns: 58% 42%;
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+  font-family: var(--pi-font-family);
+}
+
+/* --- Left: brand hero, fixed dark identity --- */
+.login-left {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(60rem 40rem at 15% 90%, rgba(45, 143, 224, 0.18), transparent),
+    radial-gradient(50rem 30rem at 90% 10%, rgba(123, 95, 224, 0.16), transparent),
+    linear-gradient(160deg, #050b24 0%, #071857 55%, #0a1f6b 100%);
+  color: #eef2ff;
+  padding: 3.5rem 3rem;
+  display: flex;
+  align-items: center;
+}
+
+/* A faint dotted texture, same "give the panel some depth" reasoning as App.css's own accent wash. */
+.login-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  max-inline-size: 34rem;
+  margin-inline: auto;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-block-end: 2.5rem;
+}
+
+.brand-icon {
+  inline-size: 3rem;
+  block-size: 3rem;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.brand-accent {
+  color: #45b0ff;
+}
+
+.brand-tagline {
+  font-size: 0.85rem;
+  color: rgba(238, 242, 255, 0.7);
+}
+
+.hero-headline h1 {
+  font-size: 2.75rem;
+  line-height: 1.2;
+  font-weight: 700;
+  margin: 0 0 1.25rem;
+  color: #ffffff;
+}
+
+.hero-headline .accent {
+  color: #45b0ff;
+}
+
+.hero-headline p {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: rgba(238, 242, 255, 0.82);
+  max-inline-size: 30rem;
+  margin: 0 0 2.5rem;
+}
+
+/* --- The orbit graphic — a decorative summary of the platform's modules, not a functional nav --- */
+.orbit {
+  position: relative;
+  inline-size: 21rem;
+  block-size: 21rem;
+  margin: 0 auto 2.5rem;
+}
+
+.orbit-ring {
+  position: absolute;
+  inset: 1.75rem;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+}
+
+.orbit-center {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: 50%;
+  inline-size: 5rem;
+  block-size: 5rem;
+  margin: -2.5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2f6fe0, #12308f 70%);
+  box-shadow: 0 0 2.5rem rgba(60, 120, 230, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbit-center img {
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+}
+
+.orbit-node {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: 50%;
+  inline-size: 5.5rem;
+  margin: -2.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+  /* The classic circular-layout transform: rotate to the target angle, translate outward along the now-
+     rotated axis, then rotate back so the node's own content (icon + label) stays upright. */
+  transform: rotate(var(--angle)) translate(0, -8rem) rotate(calc(-1 * var(--angle)));
+}
+
+.orbit-node__badge {
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.35);
+}
+
+.orbit-node__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(238, 242, 255, 0.9);
+  white-space: nowrap;
+}
+
+/* Below ~68rem the hero's fixed-size orbit graphic no longer has room to breathe next to the form —
+   hiding the whole marketing panel and showing only the login card is the standard responsive fallback
+   for this two-panel pattern, the same choice most real products make on narrow viewports. */
+/* Media queries only support physical `width`/`height` — there is no logical "inline-size" media feature
+   (unlike element sizing, where inline-size IS the RTL-safe choice); the viewport itself has no writing
+   direction to be logical relative to, so a plain `max-width` is correct here regardless of language. */
+@media (max-width: 68rem) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-left {
+    display: none;
+  }
+}
+
+.feature-strip {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.feature__icon {
+  flex-shrink: 0;
+  color: #6fb3ff;
+  margin-block-start: 0.15rem;
+}
+
+.feature strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #ffffff;
+}
+
+.feature p {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: rgba(238, 242, 255, 0.7);
+}
+
+/* --- Right: the actual sign-in surface — themed via --pi-* tokens, so the toggle actually works --- */
+.login-right {
+  position: relative;
+  background: var(--pi-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 2.5rem;
+  gap: 1.5rem;
+}
+
+.top-controls {
+  position: absolute;
+  inset-block-start: 1.5rem;
+  inset-inline-end: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.language-select {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-md);
+  color: var(--pi-text-muted);
+  background: var(--pi-surface);
+}
+
+.language-select select {
+  border: none;
+  background: none;
+  color: var(--pi-text);
+  font: inherit;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--pi-border);
+  background: var(--pi-surface);
+  color: var(--pi-text);
+  cursor: pointer;
+}
+
+.login-card {
+  inline-size: 100%;
+  max-inline-size: 28rem;
+  background: var(--pi-surface);
+  border: 1px solid var(--pi-border);
+  border-radius: 1.1rem;
+  padding: 2.75rem;
+  box-shadow: var(--pi-shadow-panel);
+}
+
+.login-card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.6rem;
+  color: var(--pi-text);
+}
+
+.subtitle {
+  color: var(--pi-text-muted);
+  margin: 0 0 1.75rem;
+}
+
+.login-card label {
+  display: block;
+  margin-block-end: 1.1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--pi-text);
+}
+
+.input-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-block-start: 0.45rem;
+  padding-inline: 0.85rem;
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-md);
+  background: var(--pi-bg);
+  color: var(--pi-text-muted);
+  transition: border-color var(--pi-motion-duration) var(--pi-motion-easing);
+}
+
+.input-with-icon:focus-within {
+  border-color: var(--pi-accent);
+}
+
+.input-with-icon input,
+.input-with-icon select {
+  flex: 1;
+  inline-size: 100%;
+  min-inline-size: 0;
+  border: none;
+  outline: none;
+  background: none;
+  padding-block: 0.8rem;
+  font-size: 0.95rem;
+  color: var(--pi-text);
+}
+
+.input-with-icon select {
+  cursor: not-allowed;
+}
+
+.input-with-icon input::placeholder {
+  color: var(--pi-text-muted);
+}
+
+.reveal-password {
+  display: flex;
+  border: none;
+  background: none;
+  color: var(--pi-text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: 1.5rem;
+  font-size: 0.85rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.remember-me input {
+  margin: 0;
+}
+
+.forgot-password {
+  color: var(--pi-accent);
+  font-weight: 600;
+  cursor: help;
+}
+
+.sign-in-button {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.9rem;
+  border: none;
+  border-radius: var(--pi-radius-md);
+  background: var(--pi-accent);
+  color: var(--pi-accent-contrast);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sign-in-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.sign-in-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The arrow is a directional icon (points toward "submit"/reading-progression direction) drawn with fixed
+   rightward geometry, so — same bidi rule as every other directional icon in this app (see NavigationPane's
+   and FastTabs' own chevron comments) — it must mirror under RTL rather than always pointing physically
+   right. */
+:root[dir="rtl"] .sign-in-button svg {
+  transform: scaleX(-1);
+}
+
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 1.75rem 0 1.25rem;
+  color: var(--pi-text-muted);
+  font-size: 0.8rem;
+}
+
+.divider::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  border-block-start: 1px solid var(--pi-border);
+}
+
+.divider span {
+  position: relative;
+  background: var(--pi-surface);
+  padding-inline: 0.75rem;
+}
+
+.sso-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.sso-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem;
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-md);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  font-size: 0.85rem;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.login-error {
+  color: var(--pi-danger);
+  margin-block-end: 1.1rem;
+  font-size: 0.85rem;
+}
+
+.login-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--pi-text-muted);
+}
+
+.login-footer p {
+  margin: 0.35rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.login-footer .dot {
+  margin-inline: 0.35rem;
+}
+
+.version-line {
+  opacity: 0.75;
+}

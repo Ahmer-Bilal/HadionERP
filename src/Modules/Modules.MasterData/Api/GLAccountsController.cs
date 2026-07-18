@@ -60,6 +60,19 @@ public sealed class GLAccountsController : PlatformApiController
         catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _service.DeleteAsync(id, CurrentActor, cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException) { return NotFound(); }
+        catch (UnauthorizedAccessException ex) { return ForbiddenError(ex.Message); }
+        catch (InvalidOperationException ex) { return ConflictError(ex.Message); }
+    }
+
     [HttpPost("{id:guid}/submit")]
     public async Task<IActionResult> Submit(Guid id, CancellationToken cancellationToken)
     {

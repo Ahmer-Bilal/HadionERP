@@ -9,6 +9,10 @@ export { NavigationPane } from "./components/NavigationPane";
 export { ActionPane } from "./components/ActionPane";
 export { FastTabs } from "./components/FastTabs";
 export { SplitView } from "./components/SplitView";
+export { DepartmentIcon } from "./components/DepartmentIcon";
+export { StatCard } from "./components/StatCard";
+export { StatIcon } from "./components/StatIcon";
+export { DonutChart } from "./components/DonutChart";
 
 export type {
   LanguageCode,
@@ -21,3 +25,8 @@ export type {
   ActionVariant,
   FastTabItem,
 } from "./types";
+export type { DepartmentIconKey } from "./components/DepartmentIcon";
+export type { StatCardTrendDirection } from "./components/StatCard";
+export type { StatIconKey } from "./components/StatIcon";
+export type { DonutChartSegment } from "./components/DonutChart";
+export type { ShellBarBreadcrumbSegment } from "./components/ShellBar";

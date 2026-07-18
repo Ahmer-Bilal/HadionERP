@@ -18,6 +18,12 @@ internal sealed class FakeIpcRepository : IIpcRepository
     public Task<bool> ExistsForMeasurementSheetAsync(Guid measurementSheetId, CancellationToken cancellationToken = default) =>
         Task.FromResult(_items.Values.Any(i => i.MeasurementSheetId == measurementSheetId));
 
+    public Task<IReadOnlyList<Ipc>> ListByCommercialDocumentAsync(
+        CommercialDocumentType commercialDocumentType, Guid commercialDocumentId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Ipc>>(_items.Values
+            .Where(i => i.CommercialDocumentType == commercialDocumentType && i.CommercialDocumentId == commercialDocumentId)
+            .ToList());
+
     public void Add(Ipc ipc) => _items[ipc.Id] = ipc;
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;

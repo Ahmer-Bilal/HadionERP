@@ -16,6 +16,9 @@ internal sealed class FakeARInvoiceRepository : IARInvoiceRepository
 
     public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_items.Count);
 
+    public Task<IReadOnlyList<ARInvoice>> ListByInvoiceDateRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<ARInvoice>>(_items.Values.Where(i => i.InvoiceDate >= start && i.InvoiceDate <= end).ToList());
+
     public void Add(ARInvoice invoice) => _items[invoice.Id] = invoice;
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;

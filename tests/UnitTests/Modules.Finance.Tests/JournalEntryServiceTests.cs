@@ -46,7 +46,11 @@ public class JournalEntryServiceTests
     private static JournalEntryService BuildService(out FakeJournalEntryRepository repository) =>
         BuildService(out repository, out _);
 
-    private static JournalEntryService BuildService(out FakeJournalEntryRepository repository, out IAuditLog auditLog)
+    private static JournalEntryService BuildService(out FakeJournalEntryRepository repository, out IAuditLog auditLog) =>
+        BuildService(out repository, out auditLog, new FakeFiscalYearRepository());
+
+    private static JournalEntryService BuildService(
+        out FakeJournalEntryRepository repository, out IAuditLog auditLog, IFiscalYearRepository fiscalYearRepository)
     {
         repository = new FakeJournalEntryRepository();
         var numberRanges = new InMemoryNumberRangeService(new[]
@@ -66,7 +70,7 @@ public class JournalEntryServiceTests
         return new JournalEntryService(
             repository, numberRanges, new AuditRecorder(auditLog), workflowEngine, workflowInstances,
             new AuthorizationService(securityCatalog), BuildActorRoles(),
-            BuildGLAccountLookup(), BuildCostCenterLookup());
+            BuildGLAccountLookup(), BuildCostCenterLookup(), fiscalYearRepository);
     }
 
     private static CreateJournalEntryRequest BalancedRequest() => new(
@@ -87,6 +91,50 @@ public class JournalEntryServiceTests
         Assert.Equal("Draft", created.Status);
         Assert.True(created.IsBalanced);
         Assert.Equal(2, created.Lines.Count);
+    }
+
+    [Fact]
+    public async Task Create_tags_a_human_created_entry_as_Manual_with_no_source_document_id()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(BalancedRequest(), "ahmer.bilal", "C001");
+
+        Assert.Equal(JournalEntrySourceDocumentTypes.Manual, created.SourceDocumentType);
+        Assert.Null(created.SourceDocumentId);
+    }
+
+    [Fact]
+    public async Task CreateSystemGeneratedAsync_carries_the_callers_source_document_through()
+    {
+        var service = BuildService(out _);
+        var sourceId = Guid.NewGuid();
+        var lines = new[] { new CreateJournalLineRequest(CashAccountId, 100, 0), new CreateJournalLineRequest(RevenueAccountId, 0, 100) };
+
+        var created = await service.CreateSystemGeneratedAsync(
+            PostingDate, "AP Invoice AP-2026-000001", lines, reversalOfEntryId: null, "system",
+            sourceDocumentType: JournalEntrySourceDocumentTypes.APInvoice, sourceDocumentId: sourceId);
+
+        Assert.Equal(JournalEntrySourceDocumentTypes.APInvoice, created.SourceDocumentType);
+        Assert.Equal(sourceId, created.SourceDocumentId);
+    }
+
+    [Fact]
+    public async Task ReverseAsync_carries_the_originals_source_document_onto_the_mirror()
+    {
+        var service = BuildService(out _);
+        var sourceId = Guid.NewGuid();
+        var lines = new[] { new CreateJournalLineRequest(CashAccountId, 100, 0), new CreateJournalLineRequest(RevenueAccountId, 0, 100) };
+        var original = await service.CreateSystemGeneratedAsync(
+            PostingDate, "AP Invoice AP-2026-000001", lines, reversalOfEntryId: null, "system",
+            sourceDocumentType: JournalEntrySourceDocumentTypes.APInvoice, sourceDocumentId: sourceId);
+
+        await service.ReverseAsync(original.Id, "finance.manager", PostingDate);
+
+        var (allEntries, _) = await service.ListAsync(0, 10);
+        var mirror = allEntries.Single(e => e.Id != original.Id);
+
+        Assert.Equal(JournalEntrySourceDocumentTypes.APInvoice, mirror.SourceDocumentType);
+        Assert.Equal(sourceId, mirror.SourceDocumentId);
     }
 
     [Fact]
@@ -233,5 +281,52 @@ public class JournalEntryServiceTests
     {
         var service = BuildService(out _);
         Assert.Null(await service.GetAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task PostAsync_is_blocked_when_the_posting_dates_period_is_closed()
+    {
+        var fiscalYears = new FakeFiscalYearRepository();
+        var year = new Modules.Finance.Domain.FiscalYear("finance.manager", PostingDate.Year);
+        var period = year.Periods.Single(p => p.PeriodNumber == PostingDate.Month);
+        period.Close("finance.manager");
+        fiscalYears.Add(year);
+
+        var service = BuildService(out _, out _, fiscalYears);
+        var created = await service.CreateAsync(BalancedRequest(), "ahmer.bilal", "C001");
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+        await service.ApproveAsync(created.Id, "finance.manager");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PostAsync(created.Id, "finance.manager"));
+    }
+
+    [Fact]
+    public async Task PostAsync_succeeds_when_no_fiscal_year_covers_the_posting_date_at_all()
+    {
+        // No FiscalYear on file for PostingDate.Year — opt-in enforcement, same as RealBudgetCheckService's
+        // "no budget on file" reasoning.
+        var service = BuildService(out _, out _, new FakeFiscalYearRepository());
+        var created = await service.CreateAsync(BalancedRequest(), "ahmer.bilal", "C001");
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+        await service.ApproveAsync(created.Id, "finance.manager");
+
+        var posted = await service.PostAsync(created.Id, "finance.manager");
+        Assert.Equal("Posted", posted.Status);
+    }
+
+    [Fact]
+    public async Task CreateSystemGeneratedAsync_is_blocked_when_the_posting_dates_period_is_closed()
+    {
+        var fiscalYears = new FakeFiscalYearRepository();
+        var year = new Modules.Finance.Domain.FiscalYear("finance.manager", PostingDate.Year);
+        var period = year.Periods.Single(p => p.PeriodNumber == PostingDate.Month);
+        period.Close("finance.manager");
+        fiscalYears.Add(year);
+
+        var service = BuildService(out _, out _, fiscalYears);
+        var lines = new[] { new CreateJournalLineRequest(CashAccountId, 100, 0), new CreateJournalLineRequest(RevenueAccountId, 0, 100) };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.CreateSystemGeneratedAsync(PostingDate, "AP Invoice test", lines, reversalOfEntryId: null, "system"));
     }
 }

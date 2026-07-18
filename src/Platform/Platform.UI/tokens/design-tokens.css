@@ -4,28 +4,58 @@
  * references these --pi-* variables; none hardcodes a raw color/size. Theme-able (light/dark today,
  * per-tenant branding later) by redefining the same variables, per docs/architecture/02-business-object-model.md #4.
  *
- * Color identity (2026-07-15 UI/Visual Density Pass): deliberately NOT blue. The original palette here
- * (before this pass) was, unintentionally, GitHub Primer's exact color scheme (#0969da accent etc.) — and
- * blue is also SAP Fiori's and Dynamics 365's default accent, so a blue HadionERP would read as "yet another
- * enterprise app" at a glance. Moved to a deep teal accent with teal-tinted cool neutrals instead — distinct
- * from both reference products, still reads as professional/trustworthy, and leaves green/red/amber free for
- * their conventional success/danger/warning meaning (the creative budget went into the *identity* color, not
- * the status vocabulary — users need instant recognition there). See
- * project_visual_identity_decisions memory for the full reasoning.
+ * Color identity (2026-07-17 mockup-parity pass): superseded the 2026-07-15 "deliberately not blue" teal
+ * identity (see project_visual_identity_decisions memory for that reasoning) on explicit instruction, after
+ * comparing the running app against UI/Finance/Trail Balance.png — the user chose to match the mockups'
+ * actual dark-navy-sidebar/blue-accent look exactly rather than keep the earlier differentiated teal
+ * identity. Every neutral (--pi-text/--pi-bg/--pi-surface/--pi-border) moves from teal-tinted to true
+ * neutral gray along with --pi-accent, since a blue accent over teal-tinted neutrals would read as a
+ * mistake, not a redesign — this is a full palette replacement, not a single-variable swap.
  */
 
 :root {
   /* --- Color (light) --- */
-  --pi-text: #10201f;
-  --pi-text-muted: #52706c;
-  --pi-bg: #fbfdfc;
-  --pi-surface: #eef5f3;
-  --pi-border: #cddbd8;
-  --pi-accent: #0d7377;
+  --pi-text: #111827;
+  --pi-text-muted: #64748b;
+  --pi-bg: #f8fafc;
+  --pi-surface: #eef2f7;
+  --pi-border: #e2e8f0;
+  --pi-accent: #2563eb;
   --pi-accent-contrast: #ffffff;
   --pi-danger: #b3261e;
   --pi-success: #1b7a43;
   --pi-warning: #a15c07;
+
+  /* --- Sidebar (constant — not theme-toggled) --- */
+  /* The left NavigationPane is a fixed dark-navy brand element in both light and dark app theme, matching
+     every UI/Finance mockup — the same "persistent branded dark rail regardless of content theme" pattern
+     most enterprise dashboards with this shape use. Nothing outside NavigationPane (and ShellBar's logo
+     badge) references these.
+     --pi-sidebar-bg is the exact gradient/glow recipe LoginPage.css's own hero panel already uses (two
+     radial glows + a diagonal darker-to-lighter navy sweep) — reused verbatim rather than re-derived so the
+     pre- and post-login screens read as one identity, per the project's own "same blue/glow as the login
+     screen" brief (project_visual_identity_decisions memory). */
+  --pi-sidebar-bg:
+    radial-gradient(60rem 40rem at 15% 90%, rgba(45, 143, 224, 0.18), transparent),
+    radial-gradient(50rem 30rem at 90% 10%, rgba(123, 95, 224, 0.16), transparent),
+    linear-gradient(160deg, #050b24 0%, #071857 55%, #0a1f6b 100%);
+  --pi-sidebar-surface: #16213a;
+  --pi-sidebar-text: #e2e8f0;
+  --pi-sidebar-text-muted: #8b95ab;
+  --pi-sidebar-border: #1f2a44;
+  --pi-sidebar-accent: #2f6fe0;
+
+  /* --- Chart palette --- */
+  /* A categorical palette for multi-segment charts (DonutChart) — distinct from the status colors above:
+     "which category is this" (chart-1..5) is a different question from "is this good/bad/pending"
+     (success/danger/warning), so they're never reused for each other. Five slots covers this app's biggest
+     current category set (GLAccount's five AccountTypes); a consumer with fewer categories just uses a
+     prefix of the list. */
+  --pi-chart-1: var(--pi-accent);
+  --pi-chart-2: #3b6fd6;
+  --pi-chart-3: #8a5fd6;
+  --pi-chart-4: #c98a1f;
+  --pi-chart-5: #d6597e;
 
   /* --- Spacing scale (rem, so it respects the user's font-size preference) --- */
   --pi-space-1: 0.25rem;
@@ -57,7 +87,7 @@
   /* Used by the SplitView detail panel and other content that visually "lifts" above the page (docs/
      architecture/02-business-object-model.md #2.1's Details Master form, now rendered as a floating panel
      rather than a flat inline block — see SplitView's own doc comment). */
-  --pi-shadow-panel: 0 1px 2px rgba(16, 32, 31, 0.06), 0 8px 24px rgba(16, 32, 31, 0.10);
+  --pi-shadow-panel: 0 1px 2px rgba(17, 24, 39, 0.06), 0 8px 24px rgba(17, 24, 39, 0.10);
   /* A light glint along a glass panel's top edge — glass catches light from above regardless of theme, so
      this stays white-based even in dark mode (just dimmer), unlike every other color token here. */
   --pi-glass-highlight: rgba(255, 255, 255, 0.55);
@@ -82,17 +112,52 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --pi-text: #e3f1ee;
-    --pi-text-muted: #9ab5b0;
-    --pi-bg: #0a1413;
-    --pi-surface: #101f1d;
-    --pi-border: #24403c;
-    --pi-accent: #2dd4bf;
-    --pi-accent-contrast: #052220;
+    --pi-text: #e5e7eb;
+    --pi-text-muted: #94a3b8;
+    --pi-bg: #0f172a;
+    --pi-surface: #1e293b;
+    --pi-border: #334155;
+    --pi-accent: #60a5fa;
+    --pi-accent-contrast: #0b1220;
     --pi-danger: #f2867e;
     --pi-success: #4fd189;
     --pi-warning: #e3a548;
     --pi-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
     --pi-glass-highlight: rgba(255, 255, 255, 0.07);
   }
+}
+
+/* Manual override of the system preference above — a user-facing light/dark toggle (first added on the
+   Login screen) stamps `data-theme` on <html>, which must win in both directions regardless of what
+   `prefers-color-scheme` says. Same variable set as the media query block, just re-keyed to an attribute
+   selector so both the automatic and manual paths stay in sync by construction (edit one color, mirror it
+   in the other, never a third copy). */
+:root[data-theme="dark"] {
+  --pi-text: #e5e7eb;
+  --pi-text-muted: #94a3b8;
+  --pi-bg: #0f172a;
+  --pi-surface: #1e293b;
+  --pi-border: #334155;
+  --pi-accent: #60a5fa;
+  --pi-accent-contrast: #0b1220;
+  --pi-danger: #f2867e;
+  --pi-success: #4fd189;
+  --pi-warning: #e3a548;
+  --pi-shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --pi-glass-highlight: rgba(255, 255, 255, 0.07);
+}
+
+:root[data-theme="light"] {
+  --pi-text: #111827;
+  --pi-text-muted: #64748b;
+  --pi-bg: #f8fafc;
+  --pi-surface: #eef2f7;
+  --pi-border: #e2e8f0;
+  --pi-accent: #2563eb;
+  --pi-accent-contrast: #ffffff;
+  --pi-danger: #b3261e;
+  --pi-success: #1b7a43;
+  --pi-warning: #a15c07;
+  --pi-shadow-panel: 0 1px 2px rgba(17, 24, 39, 0.06), 0 8px 24px rgba(17, 24, 39, 0.10);
+  --pi-glass-highlight: rgba(255, 255, 255, 0.55);
 }

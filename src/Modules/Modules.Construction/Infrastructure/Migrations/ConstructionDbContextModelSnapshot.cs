@@ -161,6 +161,10 @@ namespace Modules.Construction.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("project_id");
 
+                    b.Property<decimal?>("RetentionPercentage")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("retention_percentage");
+
                     b.Property<long>("RowVersion")
                         .HasColumnType("bigint")
                         .HasColumnName("row_version");
@@ -452,6 +456,121 @@ namespace Modules.Construction.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("measurement_sheets", "construction");
+                });
+
+            modelBuilder.Entity("Modules.Construction.Domain.RetentionRelease", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AmountReleased")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount_released");
+
+                    b.Property<Guid>("CommercialDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("commercial_document_id");
+
+                    b.Property<string>("CommercialDocumentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("commercial_document_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DocumentNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("doc_number");
+
+                    b.Property<Guid?>("ExpenseAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("expense_account_id");
+
+                    b.Property<string>("ExtensionFields")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("extension_data");
+
+                    b.Property<Guid?>("LinkedApInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_ap_invoice_id");
+
+                    b.Property<Guid?>("LinkedArInvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_ar_invoice_id");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("modified_by");
+
+                    b.Property<Guid?>("PayableAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payable_account_id");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<Guid?>("ReceivableAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receivable_account_id");
+
+                    b.Property<DateOnly>("ReleaseDate")
+                        .HasColumnType("date")
+                        .HasColumnName("release_date");
+
+                    b.Property<Guid?>("RevenueAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("revenue_account_id");
+
+                    b.Property<long>("RowVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("TaxCodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tax_code_id");
+
+                    b.Property<string>("TriggerEvent")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("trigger_event");
+
+                    b.Property<Guid?>("VatAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vat_account_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("retention_releases", "construction");
                 });
 
             modelBuilder.Entity("Modules.Construction.Domain.Subcontract", b =>

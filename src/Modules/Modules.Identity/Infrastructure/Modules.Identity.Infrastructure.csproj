@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Domain\Modules.Identity.Domain.csproj" />
     <ProjectReference Include="..\Application\Modules.Identity.Application.csproj" />
+    <ProjectReference Include="..\Contracts\Modules.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Platform\Platform.Security\Platform.Security.csproj" />
   </ItemGroup>
 

@@ -20,6 +20,11 @@ public sealed class EfAPInvoiceRepository : IAPInvoiceRepository
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         _dbContext.APInvoices.CountAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<APInvoice>> ListByInvoiceDateRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default) =>
+        await _dbContext.APInvoices.AsNoTracking()
+            .Where(i => i.InvoiceDate >= start && i.InvoiceDate <= end)
+            .ToListAsync(cancellationToken);
+
     public void Add(APInvoice invoice) => _dbContext.APInvoices.Add(invoice);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>

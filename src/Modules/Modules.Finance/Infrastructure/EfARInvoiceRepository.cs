@@ -20,6 +20,11 @@ public sealed class EfARInvoiceRepository : IARInvoiceRepository
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         _dbContext.ARInvoices.CountAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ARInvoice>> ListByInvoiceDateRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default) =>
+        await _dbContext.ARInvoices.AsNoTracking()
+            .Where(i => i.InvoiceDate >= start && i.InvoiceDate <= end)
+            .ToListAsync(cancellationToken);
+
     public void Add(ARInvoice invoice) => _dbContext.ARInvoices.Add(invoice);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>

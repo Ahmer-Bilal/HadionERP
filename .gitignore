@@ -16,6 +16,7 @@ build/
 .idea/
 .zcode/
 .claude/
+.UI/
 
 # OS
 .DS_Store

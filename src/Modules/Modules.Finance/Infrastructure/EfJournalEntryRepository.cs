@@ -24,6 +24,20 @@ public sealed class EfJournalEntryRepository : IJournalEntryRepository
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         _dbContext.JournalEntries.CountAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<JournalEntry>> ListPostedAsync(DateOnly postedOnOrBefore, CancellationToken cancellationToken = default) =>
+        await _dbContext.JournalEntries.AsNoTracking().Include(e => e.Lines)
+            .Where(e => e.Status == Platform.Core.BusinessObjectStatus.Posted && e.PostingDate <= postedOnOrBefore)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<JournalEntry>> ListManualByPostingDateRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default) =>
+        await _dbContext.JournalEntries.AsNoTracking()
+            .Where(e => e.SourceDocumentType == JournalEntrySourceDocumentTypes.Manual && e.PostingDate >= start && e.PostingDate <= end)
+            .ToListAsync(cancellationToken);
+
+    public Task<JournalEntry?> FindReversalOfAsync(Guid originalEntryId, CancellationToken cancellationToken = default) =>
+        _dbContext.JournalEntries.AsNoTracking().Include(e => e.Lines)
+            .FirstOrDefaultAsync(e => e.ReversalOfEntryId == originalEntryId, cancellationToken);
+
     public void Add(JournalEntry entry) => _dbContext.JournalEntries.Add(entry);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>

@@ -15,6 +15,8 @@ export interface GLAccount {
   isActive: boolean;
   createdAt: string;
   createdBy: string;
+  modifiedAt: string | null;
+  modifiedBy: string | null;
 }
 
 export interface PagedResult<T> {
@@ -92,4 +94,14 @@ export async function approveGLAccount(id: string): Promise<GLAccount> {
 export async function rejectGLAccount(id: string): Promise<GLAccount> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/reject`, { method: "POST", headers: authHeaders() });
   return handleJson(response);
+}
+
+// Approval-gated on the backend (requires Approve privilege, not just Maintain) and only ever succeeds
+// while the account is still Draft — see GLAccountService.DeleteAsync's own doc comment.
+export async function deleteGLAccount(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}`, { method: "DELETE", headers: authHeaders() });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.detail ?? body?.title ?? `Request failed with status ${response.status}`);
+  }
 }

@@ -87,7 +87,7 @@ public class APInvoiceServiceTests
         });
         var journalEntryService = new JournalEntryService(
             journalRepo, journalNumberRanges, auditRecorder, workflowEngine, workflowInstances,
-            authorizationService, actorRoles, glLookup, costCenterLookup);
+            authorizationService, actorRoles, glLookup, costCenterLookup, new FakeFiscalYearRepository());
 
         var invoiceNumberRanges = new InMemoryNumberRangeService(new[]
         {

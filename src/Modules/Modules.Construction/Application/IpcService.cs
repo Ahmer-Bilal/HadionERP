@@ -240,7 +240,8 @@ public sealed class IpcService
             var arInvoiceId = await _customerInvoicingService.RaiseInvoiceAsync(
                 new RaiseCustomerInvoiceRequest(
                     customerId, ipc.DocumentNumber, ipc.PeriodEnd, $"IPC {ipc.DocumentNumber} — {project.ProjectName}",
-                    revenueAccountId, receivableAccountId, ipc.NetPayable, CostCenterId: null, ipc.TaxCodeId, ipc.VatAccountId),
+                    revenueAccountId, receivableAccountId, ipc.NetPayable, CostCenterId: null, ipc.TaxCodeId, ipc.VatAccountId,
+                    SourceDocumentType: "Ipc", SourceDocumentId: ipc.Id),
                 actor, "C001", cancellationToken);
             ipc.LinkArInvoice(arInvoiceId);
         }
@@ -253,7 +254,8 @@ public sealed class IpcService
             var apInvoiceId = await _vendorInvoicingService.RaiseInvoiceAsync(
                 new RaiseVendorInvoiceRequest(
                     subcontract.SubcontractorId, ipc.DocumentNumber!, ipc.PeriodEnd, $"IPC {ipc.DocumentNumber} — {subcontract.DocumentNumber}",
-                    expenseAccountId, payableAccountId, ipc.NetPayable, CostCenterId: null, ipc.TaxCodeId, ipc.VatAccountId),
+                    expenseAccountId, payableAccountId, ipc.NetPayable, CostCenterId: null, ipc.TaxCodeId, ipc.VatAccountId,
+                    SourceDocumentType: "Ipc", SourceDocumentId: ipc.Id),
                 actor, "C001", cancellationToken);
             ipc.LinkApInvoice(apInvoiceId);
         }
@@ -288,7 +290,7 @@ public sealed class IpcService
             var contract = await _contractRepository.GetAsync(id, cancellationToken)
                 ?? throw new ArgumentException($"Contract {id} was not found.");
             return new CommercialDocumentSnapshot(
-                contract.Status, contract.DocumentNumber, RetentionPercentage: null, contract.AdvancePaymentPercentage,
+                contract.Status, contract.DocumentNumber, contract.RetentionPercentage, contract.AdvancePaymentPercentage,
                 contract.BoqLines.ToDictionary(l => l.Id, l => new DocumentLineSnapshot(l.Rate)));
         }
 

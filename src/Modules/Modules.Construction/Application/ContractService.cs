@@ -70,7 +70,7 @@ public sealed class ContractService
 
         var contract = new Contract(
             actor, request.ProjectId, request.ContractType, request.PaymentTerms,
-            request.AdvancePaymentPercentage, request.DefectsLiabilityPeriodMonths);
+            request.AdvancePaymentPercentage, request.DefectsLiabilityPeriodMonths, request.RetentionPercentage);
 
         foreach (var lineRequest in request.BoqLines)
         {
@@ -200,7 +200,7 @@ public sealed class ContractService
 
     private static ContractDto ToDto(Contract c) => new(
         c.Id, c.DocumentNumber, c.Status.ToString(), c.ProjectId, c.ContractType, c.PaymentTerms,
-        c.AdvancePaymentPercentage, c.DefectsLiabilityPeriodMonths, c.ContractValue,
+        c.AdvancePaymentPercentage, c.DefectsLiabilityPeriodMonths, c.RetentionPercentage, c.ContractValue,
         c.BoqLines.Select(l => new BoqLineDto(
             l.Id, l.Code, l.Description, l.DescriptionArabic, l.UnitOfMeasure, l.Quantity, l.Rate, l.Amount, l.WbsElementId)).ToList(),
         c.CreatedAt, c.CreatedBy);

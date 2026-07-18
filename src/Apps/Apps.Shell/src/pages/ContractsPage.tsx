@@ -61,6 +61,7 @@ export function ContractsPage({ language }: ContractsPageProps) {
   const [contractType, setContractType] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("");
   const [advancePaymentPercentage, setAdvancePaymentPercentage] = useState("");
+  const [retentionPercentage, setRetentionPercentage] = useState("");
   const [defectsLiabilityPeriodMonths, setDefectsLiabilityPeriodMonths] = useState("");
   const [boqLines, setBoqLines] = useState<DraftBoqLine[]>([emptyBoqLine()]);
 
@@ -119,6 +120,7 @@ export function ContractsPage({ language }: ContractsPageProps) {
     setContractType("");
     setPaymentTerms("");
     setAdvancePaymentPercentage("");
+    setRetentionPercentage("");
     setDefectsLiabilityPeriodMonths("");
     setBoqLines([emptyBoqLine()]);
   };
@@ -148,6 +150,7 @@ export function ContractsPage({ language }: ContractsPageProps) {
         contractType,
         paymentTerms: paymentTerms.trim() || undefined,
         advancePaymentPercentage: advancePaymentPercentage ? Number(advancePaymentPercentage) : undefined,
+        retentionPercentage: retentionPercentage ? Number(retentionPercentage) : undefined,
         defectsLiabilityPeriodMonths: defectsLiabilityPeriodMonths ? Number(defectsLiabilityPeriodMonths) : undefined,
         boqLines: inputs,
       });
@@ -206,6 +209,9 @@ export function ContractsPage({ language }: ContractsPageProps) {
           </label>
           <label>{t("con.fieldAdvancePaymentPercentage", language)}
             <input type="number" min="0" max="100" style={inputStyle} value={advancePaymentPercentage} onChange={(e) => setAdvancePaymentPercentage(e.target.value)} />
+          </label>
+          <label>{t("con.fieldRetentionPercentage", language)}
+            <input type="number" min="0" max="100" style={inputStyle} value={retentionPercentage} onChange={(e) => setRetentionPercentage(e.target.value)} />
           </label>
           <label>{t("con.fieldDefectsLiabilityPeriodMonths", language)}
             <input type="number" min="0" style={inputStyle} value={defectsLiabilityPeriodMonths} onChange={(e) => setDefectsLiabilityPeriodMonths(e.target.value)} />
@@ -336,6 +342,8 @@ export function ContractsPage({ language }: ContractsPageProps) {
                 <dd>{contract.paymentTerms ?? "—"}</dd>
                 <dt>{t("con.fieldAdvancePaymentPercentage", language)}</dt>
                 <dd><bdi dir="ltr">{contract.advancePaymentPercentage ?? "—"}</bdi></dd>
+                <dt>{t("con.fieldRetentionPercentage", language)}</dt>
+                <dd><bdi dir="ltr">{contract.retentionPercentage ?? "—"}</bdi></dd>
                 <dt>{t("con.fieldDefectsLiabilityPeriodMonths", language)}</dt>
                 <dd><bdi dir="ltr">{contract.defectsLiabilityPeriodMonths ?? "—"}</bdi></dd>
                 <dt>{t("con.columnContractValue", language)}</dt>

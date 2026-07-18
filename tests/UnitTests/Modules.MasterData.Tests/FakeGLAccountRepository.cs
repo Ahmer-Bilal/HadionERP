@@ -21,5 +21,7 @@ internal sealed class FakeGLAccountRepository : IGLAccountRepository
 
     public void Add(GLAccount account) => _accounts[account.Id] = account;
 
+    public void Remove(GLAccount account) => _accounts.Remove(account.Id);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

@@ -8,6 +8,10 @@ public interface IARInvoiceRepository
 
     Task<IReadOnlyList<ARInvoice>> ListAsync(int skip, int top, CancellationToken cancellationToken = default);
 
+    /// <summary>Same "InvoiceDate in range, any status" query as <c>IAPInvoiceRepository</c>'s own — see
+    /// that interface's doc comment.</summary>
+    Task<IReadOnlyList<ARInvoice>> ListByInvoiceDateRangeAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default);
+
     Task<int> CountAsync(CancellationToken cancellationToken = default);
 
     void Add(ARInvoice invoice);

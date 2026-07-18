@@ -25,6 +25,11 @@ public sealed class FinanceDbContext : DbContext
     internal DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<CustomerReceipt> CustomerReceipts => Set<CustomerReceipt>();
     internal DbSet<CustomerReceiptAllocation> CustomerReceiptAllocations => Set<CustomerReceiptAllocation>();
+    public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<FiscalYear> FiscalYears => Set<FiscalYear>();
+    internal DbSet<FiscalPeriod> FiscalPeriods => Set<FiscalPeriod>();
+    public DbSet<ClosingActivity> ClosingActivities => Set<ClosingActivity>();
+    internal DbSet<ClosingActivityStep> ClosingActivitySteps => Set<ClosingActivityStep>();
     // WorkflowInstance is a Platform.Workflow kernel type, persisted here for the same "storage-agnostic
     // port, persisted by whichever module actually has a database" reasoning as
     // Modules.MasterData.Infrastructure.MasterDataDbContext — but in Finance's own schema/table, not
@@ -58,6 +63,8 @@ public sealed class FinanceDbContext : DbContext
             entity.Property(e => e.PostingDate).HasColumnName("posting_date");
             entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500).IsRequired();
             entity.Property(e => e.ReversalOfEntryId).HasColumnName("reversal_of_entry_id");
+            entity.Property(e => e.SourceDocumentType).HasColumnName("source_document_type").HasMaxLength(50);
+            entity.Property(e => e.SourceDocumentId).HasColumnName("source_document_id");
 
             entity.Property(e => e.ExtensionFields)
                 .HasColumnName("extension_data")
@@ -123,6 +130,8 @@ public sealed class FinanceDbContext : DbContext
             entity.Property(e => e.VatAccountId).HasColumnName("vat_account_id");
             entity.Property(e => e.NetAmount).HasColumnName("net_amount").HasColumnType("numeric(18,2)");
             entity.Property(e => e.LinkedJournalEntryId).HasColumnName("linked_journal_entry_id");
+            entity.Property(e => e.SourceDocumentType).HasColumnName("source_document_type").HasMaxLength(50);
+            entity.Property(e => e.SourceDocumentId).HasColumnName("source_document_id");
 
             entity.Property(e => e.ExtensionFields)
                 .HasColumnName("extension_data")
@@ -163,6 +172,8 @@ public sealed class FinanceDbContext : DbContext
             entity.Property(e => e.VatAccountId).HasColumnName("vat_account_id");
             entity.Property(e => e.NetAmount).HasColumnName("net_amount").HasColumnType("numeric(18,2)");
             entity.Property(e => e.LinkedJournalEntryId).HasColumnName("linked_journal_entry_id");
+            entity.Property(e => e.SourceDocumentType).HasColumnName("source_document_type").HasMaxLength(50);
+            entity.Property(e => e.SourceDocumentId).HasColumnName("source_document_id");
 
             entity.Property(e => e.ExtensionFields)
                 .HasColumnName("extension_data")
@@ -310,6 +321,125 @@ public sealed class FinanceDbContext : DbContext
             entity.Property(e => e.ARInvoiceId).HasColumnName("ar_invoice_id");
             entity.Property(e => e.AllocatedAmount).HasColumnName("allocated_amount").HasColumnType("numeric(18,2)");
             entity.Property<Guid>("CustomerReceiptId").HasColumnName("customer_receipt_id");
+        });
+
+        modelBuilder.Entity<Budget>(entity =>
+        {
+            entity.ToTable("budgets");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.CostCenterId).HasColumnName("cost_center_id");
+            entity.Property(e => e.FiscalYear).HasColumnName("fiscal_year");
+            entity.Property(e => e.Amount).HasColumnName("amount").HasColumnType("numeric(18,2)");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
+        });
+
+        modelBuilder.Entity<FiscalYear>(entity =>
+        {
+            entity.ToTable("fiscal_years");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Year).HasColumnName("year");
+            entity.HasIndex(e => e.Year).IsUnique();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+
+            // 0..n child collection, always exactly 12 (auto-generated at construction) — same "owned
+            // through the aggregate root, mapped via the private backing field" pattern as
+            // JournalEntry.Lines above.
+            entity.HasMany(e => e.Periods)
+                .WithOne()
+                .HasForeignKey("FiscalYearId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Periods)
+                .HasField("_periods")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<FiscalPeriod>(entity =>
+        {
+            entity.ToTable("fiscal_periods");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.PeriodNumber).HasColumnName("period_number");
+            entity.Property(e => e.StartDate).HasColumnName("start_date");
+            entity.Property(e => e.EndDate).HasColumnName("end_date");
+            entity.Property(e => e.IsOpen).HasColumnName("is_open");
+            entity.Property(e => e.TargetCloseDate).HasColumnName("target_close_date");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+            entity.Property<Guid>("FiscalYearId").HasColumnName("fiscal_year_id");
+
+            // Every posting-time period lookup (JournalEntryService) queries this table directly by date
+            // range, never through a loaded FiscalYear aggregate — an index on the range keeps that check
+            // cheap even once several years' worth of periods exist.
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+        });
+
+        modelBuilder.Entity<ClosingActivity>(entity =>
+        {
+            entity.ToTable("closing_activities");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.FiscalPeriodId).HasColumnName("fiscal_period_id");
+            entity.Property(e => e.ActivityKey).HasColumnName("activity_key").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.SequenceNumber).HasColumnName("sequence_number");
+            entity.Property(e => e.AssignedToUserId).HasColumnName("assigned_to_user_id");
+            entity.Property(e => e.DueDate).HasColumnName("due_date");
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.LastActionBy).HasColumnName("last_action_by").HasMaxLength(100);
+            entity.Property(e => e.LastActionAt).HasColumnName("last_action_at");
+            entity.HasIndex(e => e.FiscalPeriodId);
+
+            // Real FK to FiscalPeriod (not just a loose Guid) so deleting a period — and transitively a
+            // whole FiscalYear, via that entity's own cascade above — cascades to this activity and, in
+            // turn, its own Steps below, rather than leaving orphaned rows behind.
+            entity.HasOne<FiscalPeriod>()
+                .WithMany()
+                .HasForeignKey(e => e.FiscalPeriodId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.Steps)
+                .WithOne()
+                .HasForeignKey("ClosingActivityId")
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(e => e.Steps)
+                .HasField("_steps")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<ClosingActivityStep>(entity =>
+        {
+            entity.ToTable("closing_activity_steps");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.LinkedDocumentType).HasColumnName("linked_document_type").HasMaxLength(50);
+            entity.Property(e => e.LinkedDocumentId).HasColumnName("linked_document_id");
+            entity.Property(e => e.IsCompleted).HasColumnName("is_completed");
+            entity.Property(e => e.CompletedBy).HasColumnName("completed_by").HasMaxLength(100);
+            entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
+            entity.Property<Guid>("ClosingActivityId").HasColumnName("closing_activity_id");
+
+            entity.Ignore(e => e.IsAutoTracked);
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

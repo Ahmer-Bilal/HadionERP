@@ -140,4 +140,38 @@ public class GLAccountServiceTests
         var service = BuildService(out _);
         Assert.Null(await service.GetAsync(Guid.NewGuid()));
     }
+
+    [Fact]
+    public async Task DeleteAsync_throws_for_a_Maintainer_without_Approver_privilege()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        // Delete is approval-gated the same way Approve/Reject already are — a Maintainer alone, even
+        // deleting their own just-created Draft account, is not enough.
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.DeleteAsync(created.Id, "ahmer.bilal"));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_removes_a_Draft_account_for_an_actor_with_Approver_privilege()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+
+        await service.DeleteAsync(created.Id, "finance.manager");
+
+        Assert.Null(await service.GetAsync(created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_throws_once_the_account_is_past_Draft()
+    {
+        var service = BuildService(out _);
+        var created = await service.CreateAsync(ValidRequest(), "ahmer.bilal", "C001");
+        await service.SubmitAsync(created.Id, "ahmer.bilal");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.DeleteAsync(created.Id, "finance.manager"));
+    }
 }

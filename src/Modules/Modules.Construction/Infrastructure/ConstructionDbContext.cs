@@ -26,6 +26,7 @@ public sealed class ConstructionDbContext : DbContext
     internal DbSet<IpcLine> IpcLines => Set<IpcLine>();
     public DbSet<VariationOrder> VariationOrders => Set<VariationOrder>();
     internal DbSet<VariationOrderLine> VariationOrderLines => Set<VariationOrderLine>();
+    public DbSet<RetentionRelease> RetentionReleases => Set<RetentionRelease>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<NumberRangeCounterEntity> NumberRangeCounters => Set<NumberRangeCounterEntity>();
 
@@ -56,6 +57,7 @@ public sealed class ConstructionDbContext : DbContext
             entity.Property(e => e.ContractType).HasColumnName("contract_type").HasMaxLength(50).IsRequired();
             entity.Property(e => e.PaymentTerms).HasColumnName("payment_terms").HasMaxLength(500);
             entity.Property(e => e.AdvancePaymentPercentage).HasColumnName("advance_payment_percentage").HasColumnType("numeric(5,2)");
+            entity.Property(e => e.RetentionPercentage).HasColumnName("retention_percentage").HasColumnType("numeric(5,2)");
             entity.Property(e => e.DefectsLiabilityPeriodMonths).HasColumnName("defects_liability_period_months");
 
             entity.Property(e => e.ExtensionFields)
@@ -352,6 +354,46 @@ public sealed class ConstructionDbContext : DbContext
             entity.Property<Guid>("VariationOrderId").HasColumnName("variation_order_id");
 
             entity.Ignore(e => e.Amount);
+        });
+
+        modelBuilder.Entity<RetentionRelease>(entity =>
+        {
+            entity.ToTable("retention_releases");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.Property(e => e.DocumentNumber).HasColumnName("doc_number").HasMaxLength(50);
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.RowVersion).HasColumnName("row_version");
+            entity.UseXminAsConcurrencyToken();
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.ModifiedBy).HasColumnName("modified_by").HasMaxLength(100);
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.CommercialDocumentType).HasColumnName("commercial_document_type").HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.CommercialDocumentId).HasColumnName("commercial_document_id");
+            entity.Property(e => e.ReleaseDate).HasColumnName("release_date");
+            entity.Property(e => e.AmountReleased).HasColumnName("amount_released").HasColumnType("numeric(18,2)");
+            entity.Property(e => e.TriggerEvent).HasColumnName("trigger_event").HasConversion<string>().HasMaxLength(30);
+            entity.Property(e => e.RevenueAccountId).HasColumnName("revenue_account_id");
+            entity.Property(e => e.ReceivableAccountId).HasColumnName("receivable_account_id");
+            entity.Property(e => e.TaxCodeId).HasColumnName("tax_code_id");
+            entity.Property(e => e.VatAccountId).HasColumnName("vat_account_id");
+            entity.Property(e => e.LinkedArInvoiceId).HasColumnName("linked_ar_invoice_id");
+            entity.Property(e => e.ExpenseAccountId).HasColumnName("expense_account_id");
+            entity.Property(e => e.PayableAccountId).HasColumnName("payable_account_id");
+            entity.Property(e => e.LinkedApInvoiceId).HasColumnName("linked_ap_invoice_id");
+
+            entity.Property(e => e.ExtensionFields)
+                .HasColumnName("extension_data")
+                .HasColumnType("jsonb")
+                .HasConversion(bag => bag.ToJson(), json => ExtensionFieldBag.FromJson(json));
+
+            entity.Ignore(e => e.DomainEvents);
+            entity.Ignore(e => e.Relations);
+            entity.Ignore(e => e.CanHardDelete);
         });
 
         modelBuilder.Entity<WorkflowInstance>(entity =>

@@ -96,7 +96,7 @@ public class PaymentServiceTests
         });
         var journalEntryService = new JournalEntryService(
             journalRepo, journalNumberRanges, auditRecorder, workflowEngine, workflowInstances,
-            authorizationService, actorRoles, glLookup, costCenterLookup);
+            authorizationService, actorRoles, glLookup, costCenterLookup, new FakeFiscalYearRepository());
 
         var paymentNumberRanges = new InMemoryNumberRangeService(new[]
         {

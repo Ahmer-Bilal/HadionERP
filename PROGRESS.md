@@ -43,8 +43,9 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 | Phase 0 — Platform Foundation | **Completed** — all 9 kernel pieces built, tested, and verified live in a running app (backend + frontend, both languages) | 2026-07-14 |
 | Phase 1 — Master Data + Finance Core | **Exit criteria met** — all 5 Master Data pieces done; Modules.Finance has GL Journal Entry + AP Invoice + AR Invoice (all post/reverse-able with full audit trail) plus Bank Accounts + AP Payment Recording, AR Invoice, and now `CustomerReceipt` (the AR mirror of `Payment`, built 2026-07-17) — `ARInvoiceDto.OutstandingBalance` is now a real computed figure from Posted receipt allocations, not just Gross Amount. Document Splitting, Parallel Ledgers, Budget Control, Results Analysis/CO-PA remain as later Finance depth, not required for Phase 1's exit bar | 2026-07-17 |
 | Phase 2 — Procurement | **Exit criteria met** — full procure-to-pay cycle (BusinessRoles/Vendor Prequal → PR → RFQ → PO → GRN) built, tested, and live-verified, with a working 3-way match against AP closing the loop. Real Budget Control enforcement and a real line-by-line invoice match remain deferred Finance/Procurement depth, not required for Phase 2's exit bar | 2026-07-15 |
-| **Checkpoint** — UI/Visual Density Pass | **Paused by explicit user instruction** — teal identity (design-tokens.css) + `Platform.UI.SplitView` are live and retrofitted on `PurchaseOrdersPage`/`BusinessPartnersPage`, but the user judged this insufficient to compete visually with Fiori/Dynamics (color tokens + one layout mechanic, no icons/status pills/KPIs/avatars — see `feedback_visual_richness_gap` in memory) and told the AI to stop touching it and move to roadmap phases instead. Left as-is, not reverted. Resume only when the user explicitly asks for the visual pass again, with real surface richness this time | 2026-07-15 |
-| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, its Subcontracts slice (retention %/mobilization advance %/back-charges) built 2026-07-16, its Site Progress/Measurement slice (`MeasurementSheet`, polymorphic over Contract/Subcontract, `IsBillingElement` finally enforced) built 2026-07-17, and its IPC slice (`Ipc`, the real billing waterfall) built 2026-07-17, followed same day by wiring both directions of IPC certification to Finance — a Contract-type IPC raises a real Draft AR Invoice (`ICustomerInvoicingService`) and a Subcontract-type IPC raises a real Draft AP Invoice (`IVendorInvoicingService`, its mirror-image write Contracts interface) — plus a `CustomerReceipt` Business Object (the AR mirror of `Payment`) that finally makes `ARInvoiceDto.OutstandingBalance` real, and a `VariationOrder` Business Object (Draft→Submitted→Approved/Rejected, polymorphic over Contract/Subcontract) whose approval writes an existing BOQ/Subcontract line's quantity delta or a wholly new line straight through to the underlying commercial document. All tested and live-verified end to end. Real Retention withholding/release, Extension of Time, Fiscal-Period/Budget-Check depth, and Networks/Activities for ProjectManagement all remain not started | 2026-07-17 |
+| **Checkpoint** — UI/Visual Density Pass | **Resumed 2026-07-17 per explicit user request** to implement `docs/architecture/09-navigation-and-ui-standard.md` — the NavigationPane is now collapsible per department and every module has a consistent `DepartmentIcon` (also used on a real department-card landing page, replacing the old Master-Data-entity tiles). This closes the icon half of the `feedback_visual_richness_gap` memory; status pills/avatars/further surface richness remain outstanding | 2026-07-17 |
+| **Checkpoint** — Finance Mockup Gap Closure | **In Progress**, per `UI/Finance/FINANCE-MOCKUP-GAP-ANALYSIS.md`'s suggested build order plus explicit user requests (out of order) for Fiscal Year/Period and, most recently, full Journal Entry list/detail fidelity. Done: Trial Balance/Income Statement/Balance Sheet reports, the Chart of Accounts screen rebuild, real Budget Control, real Fiscal Year/Period with a full per-person Period Closing Center checklist, and now the Journal Entry list (`UI/Finance/Finance_Jornal List.png`) and detail (`Finance_Jornal Entry_Object.png`) mockups rebuilt at 100% fidelity — status strip, filters, bulk approve/reverse, and a real Overview/Line Items/Attachments/Notes/History/Related tabbed detail with a genuine Document Flow chain (`JournalEntryDocumentFlowService`, resolving Source Document → entry → Reversal → Payment/Receipt server-side, and the further Ipc/RetentionRelease/PurchaseOrder→RFQ→Requisition/GRN legs client-side across already-published Construction/Procurement APIs, respecting the "Finance never depends on Procurement/Construction" module-boundary rule). `APInvoice`/`ARInvoice` gained their own `SourceDocumentType` (mirroring `JournalEntry`'s), so "automatic vs. manual" — client billing, subcontractor billing, direct PO-matched invoices, manual adjustments — is now real two levels deep, not just at the ledger entry. `Platform.Attachments`/`Platform.Notes` (built in Phase 0, never wired to any screen since) are finally real via new generic `AttachmentsController`/`NotesController`/`AuditHistoryController`. All live-verified over real HTTP against a running backend, zero test regressions across 23 test projects. Still ahead: Bank Reconciliation, AP/AR workspace composition, Petty Cash, and the Finance/Financial-Statements dashboards, plus several real, disclosed simplifications documented in `docs/module/finance.md` (no PO-picker UI on the AP Invoice create form yet, Budget's cumulative availability control, Closing Insights is rule-based not AI, four of the Period Closing Center's five tabs are placeholders) | 2026-07-18 |
+| Phase 3 — Construction, Project Accounting & Accounts Receivable | In Progress — `Modules.ProjectManagement`'s WBS foundation (Project + WBS Element) built 2026-07-15; `Modules.Construction`'s Customer Contract + BOQ slice built 2026-07-16, its Subcontracts slice (retention %/mobilization advance %/back-charges) built 2026-07-16, its Site Progress/Measurement slice (`MeasurementSheet`, polymorphic over Contract/Subcontract, `IsBillingElement` finally enforced) built 2026-07-17, and its IPC slice (`Ipc`, the real billing waterfall) built 2026-07-17, followed same day by wiring both directions of IPC certification to Finance — a Contract-type IPC raises a real Draft AR Invoice (`ICustomerInvoicingService`) and a Subcontract-type IPC raises a real Draft AP Invoice (`IVendorInvoicingService`, its mirror-image write Contracts interface) — plus a `CustomerReceipt` Business Object (the AR mirror of `Payment`) that finally makes `ARInvoiceDto.OutstandingBalance` real, and a `VariationOrder` Business Object (Draft→Submitted→Approved/Rejected, polymorphic over Contract/Subcontract) whose approval writes an existing BOQ/Subcontract line's quantity delta or a wholly new line straight through to the underlying commercial document. Retention withholding/release was built same day (see the entry below): `Contract` finally has its own `RetentionPercentage` (closing a real gap — Contract-type IPCs never withheld retention before this), and a new `RetentionRelease` Business Object tracks the real running withheld-vs-released balance and raises a real AR/AP invoice on approval, same pattern as IPC. All tested (full solution `dotnet test`, zero regressions) and live-verified end to end over real HTTP against a running backend. Extension of Time, Fiscal-Period/Budget-Check depth, and Networks/Activities for ProjectManagement remain not started | 2026-07-17 |
 | **Checkpoint** — Lookup Data / Admin Panel | **Completed** — a real, admin-configurable picklist engine (`LookupType`/`LookupValue`, `LookupService`, `LookupsController`) replaced the hardcoded `BusinessRoleType`/`AddressType` enums and unvalidated `Country`/`UnitOfMeasure` free text; a genuine multi-page Admin Panel (`LookupDataPage.tsx`, inline-editable SAP-style grids, one nav entry per type) lets an administrator add/edit/deactivate/delete lookup values and even define brand-new lookup types, with in-use delete protection. Live-verified end-to-end, EN+AR | 2026-07-15 |
 | **Checkpoint** — Architecture Gap Audit | **Completed** — full SAP/Dynamics-vs-HadionERP gap audit performed, evidence-grounded (file paths/grep results, not speculation), in two parts (platform capabilities + core data model/missing modules). 23 gap findings total, severity-rated; findings live in `ARCHITECTURE-AUDIT.md` at repo root, mapped onto existing/new roadmap phases in `docs/architecture/06-roadmap.md`'s "Architecture Gap Audit & Platform Hardening" checkpoint. Two findings rated Blocking: Authentication (§1, resolved) and AP Payment Recording (§16, now also resolved — see below) | 2026-07-15 |
 | **Checkpoint** — Real Authentication & Identity | **Completed** — closes audit §1/§3. `Modules.Identity` (JWT bearer auth, persisted Users, global default-deny) replaced every hardcoded actor literal solution-wide; role assignment now runs real Segregation of Duties conflict checking for the first time ever (block → override-with-reason → succeed, live-verified). Live-verified end-to-end, EN+AR, zero regressions (22 test projects) | 2026-07-15 |
@@ -58,6 +59,501 @@ go at the top of the Entry Log, older entries are never edited or deleted.
 ---
 
 ## Entry Log (newest first)
+
+### 2026-07-18 — Finance Mockup Gap Closure slice 5: Journal Entry list/detail rebuilt at 100% mockup fidelity, real Attachments/Notes/History, deeper source tracing
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Finance Mockup Gap Closure
+- Status: Completed
+- What changed: Explicit user instruction to check both Journal Entry mockups (`Finance_Jornal List.png`,
+  `Finance_Jornal Entry_Object.png`) and build 100% of what they show, "don't waste usage" repeated several
+  times as a steer toward moving fast and deciding rather than re-asking. Also: "keep the JE automatic and
+  manual — automatic are coming from the departments like Subcontractor IPC and supplier invoice etc, manual
+  are something we create for adjustments."
+  - **Deeper source tracing**: `APInvoice`/`ARInvoice` gained their own `SourceDocumentType`/
+    `SourceDocumentId` (mirroring `JournalEntry.SourceDocumentType` exactly) — `"Manual"`, `"PurchaseOrder"`
+    (a real procurement-driven vendor invoice; `CreateAPInvoiceRequest.PurchaseOrderId` lets a clerk
+    reference the PO, unvalidated by Finance since Finance must never depend on Procurement), or `"Ipc"`/
+    `"RetentionRelease"` (Construction's own certification). `ICustomerInvoicingService`/
+    `IVendorInvoicingService` now carry this through explicitly — `IpcService`/`RetentionReleaseService`
+    each state their own source rather than the adapter guessing. This is the actual mechanism behind "every
+    JE traces to where it's coming from" — a subcontractor IPC's AP Invoice and a client IPC's AR Invoice
+    now carry a real, queryable origin distinct from a manually-keyed one.
+  - **`JournalEntryDocumentFlowService`** (new) — Source Document → this entry → Reversal (if any) →
+    Payment/Customer Receipt settlement, using `IPaymentRepository.ListByInvoiceAsync`/
+    `ICustomerReceiptRepository.ListByInvoiceAsync` (both already existed). Deliberately stops at Finance's
+    own module boundary: an invoice's own deeper origin (Ipc/RetentionRelease/PurchaseOrder) comes back as a
+    raw type+id, never resolved server-side — the frontend resolves that hop itself via Construction's/
+    Procurement's own already-published APIs (`ipcApi`/`retentionReleaseApi`/`purchaseOrderApi`/
+    `requestForQuotationApi`/`purchaseRequisitionApi`/`goodsReceiptNoteApi`), walking the real PO → RFQ →
+    Purchase Requisition chain and finding any Goods Receipt Note against that PO — a **design decision
+    surfaced and confirmed with the user mid-build** (asked whether to build the full upstream Procurement
+    chain now or leave it as a documented gap; user chose the full chain) rather than picked silently.
+  - **`AttachmentsController`/`NotesController`/`AuditHistoryController`** (new, `Gateway.Api/Controllers/`)
+    — `Platform.Attachments`/`Platform.Notes` were built in Phase 0 and never wired to a single screen until
+    now. Generic, keyed by `(businessObjectType, businessObjectId)`, so any future document type gets real
+    attachments/notes/history for free, not just Journal Entry. Attachment upload uses real multipart file
+    upload (`IFormFile`, 10 MB cap); download authenticates first and hands the browser a local object URL,
+    since a plain `<a href>` can't carry the Authorization header this endpoint requires.
+  - **`JournalEntriesPage.tsx` rebuilt in full**: list gets a real status-count strip, filters (date range,
+    search, status, source, created-by), bulk select + Approve/Reverse; detail gets a real
+    Overview/Line Items/Attachments/Notes/History/Related tabbed view (Overview shows summary cards plus
+    Line Items/Notes/Attachments previews, matching the mockup's own "highlights here, full CRUD in its own
+    tab" pattern) and a real Document Flow rail in the right rail.
+  - **A real bug caught mid-build**: a derived-list `useMemo` call was placed after the component's own
+    conditional early returns (`create`/`details` views), violating React's Rules of Hooks. Caught while
+    reviewing the file, moved to the top before any early return, unconditional every render.
+  - **Real, disclosed simplifications** (see `docs/module/finance.md` for the full list): no PO-picker UI on
+    the AP Invoice create form yet (the field works via the API, just not exposed as a dropdown); no real
+    `Reference` field exists on `JournalEntry` distinct from `Description` (the mockup shows one) — search
+    matches Description/Document Number instead of fabricating a column with no backing data; the List's own
+    Source column shows the immediate source only (an N-query-per-row cost the flat list can't absorb for
+    hundreds of rows), the deeper Ipc/RetentionRelease "Construction Billing" detection is per-entry
+    (Document Flow) only.
+- Verified: full solution `dotnet build`/`dotnet test` — 23 test projects, zero regressions (Modules.Finance.Tests
+  now 160, up from 155 — new `JournalEntryDocumentFlowServiceTests`). `tsc -b`/`oxlint`/
+  `check:no-hardcoded-arabic` clean. **Live-verified over real HTTP** against the running backend: created an
+  AP Invoice with a real `purchaseOrderId`, posted it, and confirmed `GET .../document-flow` returns exactly
+  `[PurchaseOrder → APInvoice(Posted) → JournalEntry(current, Posted) → Payment(Pending)]`; uploaded a real
+  PDF to a real Journal Entry and confirmed list/download round-trip byte-for-byte; added a real note; fetched
+  History and confirmed it shows the entry's own real audit trail record. No headless-browser tool was
+  available in this session either, so the rebuilt pages' on-screen appearance wasn't click-through verified
+  — both dev servers were left running for the user to check directly.
+- Files touched: `src/Modules/Modules.Finance/Domain/{APInvoice,ARInvoice}.cs` (SourceDocumentType);
+  `src/Modules/Modules.Finance/Application/{APInvoiceDto,ARInvoiceDto,APInvoiceService,ARInvoiceService,
+  JournalEntryDocumentFlowDto,JournalEntryDocumentFlowService}.cs` (latter two new);
+  `src/Modules/Modules.Finance/Contracts/{ICustomerInvoicingService,IVendorInvoicingService}.cs`;
+  `src/Modules/Modules.Finance/Infrastructure/{ApInvoiceVendorInvoicingService,
+  ArInvoiceCustomerInvoicingService,FinanceDbContext,EfJournalEntryRepository}.cs`, migration
+  `20260718000453_AddInvoiceSourceDocument` (new); `src/Modules/Modules.Finance/Api/JournalEntriesController.cs`;
+  `src/Modules/Modules.Construction/Application/{IpcService,RetentionReleaseService}.cs`;
+  `src/Gateway/Gateway.Api/Controllers/{AttachmentsController,NotesController,AuditHistoryController}.cs`
+  (all new), `Program.cs`; `src/Apps/Apps.Shell/src/api/{attachmentApi,noteApi,auditHistoryApi}.ts` (all
+  new), `journalEntryApi.ts`, `apInvoiceApi.ts`, `arInvoiceApi.ts`;
+  `src/Apps/Apps.Shell/src/pages/JournalEntriesPage.tsx` (full rebuild); `src/Apps/Apps.Shell/src/i18n/content.ts`;
+  `tests/UnitTests/Modules.Finance.Tests/{JournalEntryDocumentFlowServiceTests,FakeJournalEntryRepository}.cs`;
+  `tests/IntegrationTests/Modules.Finance.IntegrationTests` fakes unaffected; `docs/module/finance.md`,
+  `PROGRESS.md`. Two memory files saved earlier this session already cover the governing preferences here
+  (`feedback_mockup_fidelity`, `feedback_no_subagents_without_approval`) — no new memory needed.
+- Next: Bank Reconciliation, AP/AR workspace composition, and Petty Cash Management remain the gap
+  analysis's own biggest 🔴 items; the Finance/Financial-Statements dashboards are the natural capstone once
+  those exist. None of this checkpoint's work is committed to git yet.
+
+### 2026-07-18 — Finance Mockup Gap Closure slice 4: real Fiscal Year/Period + Period Closing Center (real per-person checklist)
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Finance Mockup Gap Closure
+- Status: Completed
+- What changed: The user explicitly asked for this out of the gap analysis's own suggested order, after a
+  design discussion (see below) about what was actually blocking multiple mockups at once — a real Fiscal
+  Year/Period concept, which both Period Closing Center (`d1f20165-...png`, previously 🔴 "nothing today
+  models a fiscal period at all") and Budget's own shallow "no real periods" limitation sit on top of.
+  - **`FiscalYear`/`FiscalPeriod`** (`Modules.Finance.Domain`) — opening a calendar year auto-generates its
+    12 real monthly periods (`IsOpen` true, a `TargetCloseDate` defaulting to 5 days after period-end,
+    matching the mockup's own "Target Close Date" card). Immediate-effect, single-privilege-gated
+    (`FiscalYearSecurity`), same reasoning as `LookupType`/`Budget` — no Draft/Submit/Approve workflow for
+    opening a year or closing/reopening a period.
+  - **This isn't decorative**: `JournalEntryService.EnsurePeriodIsOpenAsync` is now the one choke point
+    every real posting in the platform goes through (manual, or system-generated from AP/AR
+    Invoice/Payment/Customer Receipt), so closing a period genuinely blocks new postings into it. No
+    `FiscalYear` on file for a date is opt-in-not-enforced, same reasoning as `RealBudgetCheckService`'s "no
+    budget on file."
+  - **A design discussion happened mid-build, at the user's own request** ("if you see that there is issue
+    with the mockup and design discuss"): the mockup's Overall Progress donut (14 Completed/4 In
+    Progress/0 Not Started/1 Blocked = 19) doesn't reconcile against its own 10-row checklist table, and
+    three more mockup panels (AI-generated "Closing Insights," a historical "Completion Trend" chart) had no
+    obvious real, non-fabricated implementation. Presented three concrete options each via `AskUserQuestion`
+    rather than picking silently; the user chose the fuller, more real option each time (real per-activity
+    sub-items, rule-based real insights instead of skipping, a trend reconstructed from real timestamps
+    instead of skipping) — see `feedback_mockup_fidelity` memory, saved from this exchange.
+  - **`ClosingActivity`/`ClosingActivityStep`** (`Modules.Finance.Domain`) — the real per-person checklist
+    the mockup's own name promises. Ten fixed activities (`ClosingActivityCatalog`, the mockup's own list
+    and order) generated per period. Three are auto-tracked from real data: Accounts Payable/Receivable get
+    one step per invoice still pending closure in the period, Journal Review gets one step per Manual-sourced
+    entry (reusing this same session's earlier source-document-trace work) — and self-complete the moment
+    the underlying document reaches a resolved status, re-checked fresh on every read, no background job or
+    stale snapshot. The other seven (Bank Reconciliation — one step per Active `BankAccount` — and
+    Inventory/Payroll/Fixed Assets/Tax Validation/Cost Allocation/Management Review, none of which have a
+    real underlying module yet) get manually-toggled steps, honestly disclosed as placeholders pending those
+    modules. An activity's `Status` auto-derives from step completion except `Blocked`, always an explicit
+    override, never auto-cleared by a step completing. **The actual "every person has its own duties"
+    mechanism**: only an activity's own assignee, or someone holding `FiscalYearSecurity.AdministerPrivilegeKey`,
+    may assign it, toggle its steps, or block/unblock it — an identity-equality authorization check, not
+    just a role check, a new pattern in this codebase.
+  - **New cross-module contract**: `Modules.Identity.Contracts.IUserLookup` (new `Modules.Identity.Contracts`
+    project) — Finance needs to validate/display who a Closing Activity is assigned to, same
+    published-read-only-lookup shape as `IBusinessPartnerLookup`/`ICostCenterLookup`. Also exposed a
+    properly-scoped `GET /api/v1/finance/closing-activities/assignable-users` endpoint rather than reusing
+    Identity's own admin-only Users list (wrong privilege gate for an assignee picker).
+  - **Real, disclosed simplifications** (not silently cut): Closing Insights is rule-based over real
+    blocked/overdue state, not an actual AI call; Completion Trend is reconstructed from each step's own
+    real `CompletedAt` timestamp (sparse/flat on a fresh period, not fabricated); the Closing Timeline's five
+    phases are a frontend-only grouping, no new backend concept; of the mockup's five tabs, only Closing
+    Checklist has real content.
+  - **Found and fixed a real bug while writing tests**: `ClosingActivityService.GenerateAllAsync` never
+    called `activity.RefreshStatus` after populating steps, so a freshly generated activity (e.g. zero
+    pending AP invoices this period) stayed `NotStarted` forever instead of correctly reading `Completed`.
+    Caught by `ClosingActivityTests`, fixed before it ever reached the API.
+  - **Found and fixed a real schema gap while writing integration tests**: `ClosingActivity.FiscalPeriodId`
+    had no actual EF-configured foreign key to `FiscalPeriod` — deleting a period wouldn't have cascaded to
+    its activities, leaving orphaned rows. Caught by `ClosingActivityPersistenceTests`, fixed by adding the
+    real FK before this ever shipped (required regenerating the migration, since the first attempt had
+    already been applied to both dev and test databases).
+- Verified: full solution `dotnet build`/`dotnet test` — 23 test projects, zero regressions (this slice adds
+  a new non-test `Modules.Identity.Contracts` project, not a new test project). New tests:
+  `FiscalYearTests`/`ClosingActivityTests`
+  (domain), `FiscalYearServiceTests`/`ClosingActivityServiceTests` (application, including auto-tracked
+  step generation against fake AP/AR/JournalEntry repositories and assignee-vs-administrator authorization
+  gating), `FiscalYearPersistenceTests`/`ClosingActivityPersistenceTests` (integration, against real
+  Postgres), plus new `JournalEntryServiceTests` cases proving `PostAsync`/`CreateSystemGeneratedAsync` are
+  genuinely blocked by a closed period and unaffected when no period is configured. `tsc -b`/`oxlint`/
+  `check:no-hardcoded-arabic` clean. **Live-verified end to end over real HTTP** against the running
+  backend, using real dev data accumulated across this whole session: opened Fiscal Year 2026 (12 real
+  periods generated); fetched July's checklist and got real steps for real pending AP/AR invoices (including
+  ones Construction's own IPC certification had raised earlier this session) and the real Manual journal
+  entry created in an earlier smoke test; assigned and completed a manual step, watched the activity's
+  status auto-derive to Completed; confirmed a manual toggle on an auto-tracked step is rejected with a 409;
+  blocked an activity and confirmed `GetInsightsAsync` reflects it as "Attention Required"; posted a real AP
+  Invoice and confirmed its checklist step auto-completed (`completedBy: "system/auto-tracked"`) without any
+  manual action; closed the period and confirmed a real Journal Entry's `Post` fails with a 409 naming the
+  exact closed period; reopened the period and confirmed the same entry posts normally. No headless-browser
+  tool was available in this session either, so `PeriodClosingCenterPage.tsx`'s on-screen appearance wasn't
+  click-through verified — confirmed Vite serves/transforms the new page module without error, and both dev
+  servers were left running for the user to check directly.
+- Files touched: `src/Modules/Modules.Finance/Domain/{FiscalYear,FiscalPeriod,ClosingActivity,
+  ClosingActivityStep,ClosingActivityStatus,ClosingActivityCatalog}.cs` (all new);
+  `src/Modules/Modules.Finance/Application/{FiscalYearDto,IFiscalYearRepository,FiscalYearSecurity,
+  FiscalYearService,ClosingActivityDto,IClosingActivityRepository,ClosingActivityService}.cs` (all new),
+  `JournalEntryService.cs` (period-check wiring), `I{AP,AR}InvoiceRepository.cs`/`IJournalEntryRepository.cs`/
+  `IBankAccountRepository.cs` (new date-range/active-list query methods);
+  `src/Modules/Modules.Finance/Infrastructure/{EfFiscalYearRepository,EfClosingActivityRepository}.cs` (new),
+  `FinanceDbContext.cs`, `Ef{AP,AR}InvoiceRepository.cs`/`EfJournalEntryRepository.cs`/
+  `EfBankAccountRepository.cs`, migrations `20260717222802_AddFiscalYear`/`20260717231623_AddClosingActivity`
+  (new); `src/Modules/Modules.Finance/Api/{FiscalYearsController,ClosingActivitiesController}.cs` (new);
+  `src/Modules/Modules.Identity/Contracts/*` (new project — `IUserLookup.cs`),
+  `src/Modules/Modules.Identity/Infrastructure/EfUserLookup.cs` (new); `src/Gateway/Gateway.Api/Program.cs`
+  (security/DI wiring, `erp-platform.sln` gains the new Contracts project);
+  `src/Apps/Apps.Shell/src/api/fiscalYearApi.ts`, `src/Apps/Apps.Shell/src/pages/PeriodClosingCenterPage.tsx`
+  (both new), `src/Apps/Apps.Shell/src/App.tsx`, `src/Apps/Apps.Shell/src/App.css`,
+  `src/Apps/Apps.Shell/src/i18n/content.ts`;
+  `tests/UnitTests/Modules.Finance.Tests/{FiscalYearTests,ClosingActivityTests,FiscalYearServiceTests,
+  ClosingActivityServiceTests,FakeFiscalYearRepository,FakeClosingActivityRepository,FakeUserLookup}.cs`
+  (all new), `JournalEntryServiceTests.cs` (new period-block cases),
+  `Fake{AP,AR}InvoiceRepository.cs`/`FakeJournalEntryRepository.cs`/`FakeBankAccountRepository.cs` (new
+  fake methods); `tests/IntegrationTests/Modules.Finance.IntegrationTests/{FiscalYearPersistenceTests,
+  ClosingActivityPersistenceTests}.cs` (new), `TestDatabase.cs`; `docs/module/finance.md`, `ROADMAP.md`,
+  `PROGRESS.md`. Also two new memory files this session: `feedback_mockup_fidelity.md` and
+  `feedback_no_subagents_without_approval.md`.
+- Next: per the gap analysis's own remaining items — Bank Reconciliation, AP/AR workspace composition, and
+  Petty Cash Management are still 🔴/🟡; the Finance/Financial-Statements dashboards are the natural
+  capstone once those exist. Within this slice's own disclosed simplifications, the highest-value follow-up
+  is probably wiring the Posting Status/Reconciliation Status/Journal Summary/Period History tabs for real,
+  now that the underlying checklist and period data are genuinely there to report on. None of this
+  checkpoint's work is committed to git yet — still worth the user's own review before a commit.
+
+### 2026-07-18 — Finance Mockup Gap Closure slice 3: real Budget Control (`Budget` entity replaces the pass-through stub)
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Finance Mockup Gap Closure
+- Status: Completed (this slice — build-order item 4 — Completed; the checkpoint overall is not, see Next)
+- What changed: Per the gap analysis's own suggested build order, item 4 next — the audit's own words: "the
+  single clearest 'wire exists, nothing on the other end' case in the whole audit." `IBudgetCheckService`
+  (`Modules.Finance.Contracts`) has been called by `PurchaseOrderService.SubmitAsync` since Phase 2, but
+  `PassThroughBudgetCheckService` unconditionally returned `Allowed = true` because no `Budget` entity
+  existed to check against.
+  - **Domain**: `Budget` (`Modules.Finance.Domain`) — `CostCenterId`/`FiscalYear`/`Amount`, Draft →
+    Submit → Approve/Reject, deliberately no Update method: a budget is a control amount, not descriptive
+    master data, so a revision means Reject-then-create-new rather than silently editing an approved
+    ceiling (a formal Budget Supplement/Return mechanism, SAP's own approach, is disclosed future depth).
+  - **Application**: `BudgetService` (same Draft→Submit→Approve/Reject shape as `JournalEntryService`/
+    `CostCenterService`), validating the Cost Center reference through `ICostCenterLookup` and rejecting a
+    second active (non-Rejected) budget for the same Cost Center/fiscal year so a check never has two
+    Approved candidates to choose between.
+  - **The real check**: `RealBudgetCheckService` (`Modules.Finance.Infrastructure`, replacing the deleted
+    `PassThroughBudgetCheckService`) looks up the one Approved `Budget` for a Cost Center and the current
+    calendar year (the same "no separate Fiscal Period entity yet" simplification `INumberRangeService`
+    already uses). No budget on file for that combination is opt-in-not-configured — `Allowed = true`, the
+    same reasoning an unset Cost Center on a Journal Line is legal too. A **deliberate, disclosed scope
+    decision** made and documented rather than picked silently: this checks a single amount against the
+    Budget's total ceiling, not cumulative committed-vs-actual tracking (SAP's own Assigned/Committed/Actual
+    availability control) — that would need either Finance reading Procurement's own running committed-PO
+    total (reversing the established one-directional Procurement-depends-on-Finance.Contracts boundary) or
+    a stateful check-and-consume `CheckAsync` (which would need transactional care across
+    `PurchaseOrderService.SubmitAsync`'s own per-cost-center loop to avoid partial consumption if a later
+    group's check fails) — both real design decisions for a later slice, not this one.
+  - **Frontend**: `BudgetsPage.tsx` — a plain, functional list/create/detail screen (Submit/Approve/Reject),
+    not a rebuild of the mockup's own Budget Control panel, which was one small panel inside a larger
+    montage image (`BankRec-.png` panel 4), not a fully detailed screen to replicate; new Budgets nav area
+    under Finance, `budgetApi.ts`, `bud.*`/`nav.budgets*` content.ts keys, EN+AR.
+  - Also had to grant the dev bootstrap admin the two new `Finance.Budget.Maintainer`/`Finance.ApproveBudget`
+    roles by hand through the Users API during live verification — same one-time step every new Business
+    Object in this codebase needs the first time it's exercised against an already-seeded dev database
+    (`IdentitySeeder` only ever seeds the bootstrap admin once, on a genuinely empty `users` table).
+- Verified: full solution `dotnet build`/`dotnet test` (24 test projects, unit and integration — integration
+  DBs need `ERP_*_TEST_CONNECTION` pointed at the local Postgres instance — zero regressions; new
+  `BudgetTests`/`BudgetServiceTests` unit tests and `BudgetPersistenceTests` integration tests, the latter
+  exercising `RealBudgetCheckService` itself against a real persisted `Budget` row, not just a fake), `tsc
+  -b`/`oxlint`/`check:no-hardcoded-arabic` clean. **Live-verified over real HTTP** against the running
+  backend: created, submitted, and approved a real 50,000 SAR `Budget` for a real Cost Center/2026; created
+  a 100,000 SAR Purchase Order against that same cost center and confirmed `Submit` is rejected with a 400
+  naming the exact amount (100,000) and ceiling (50,000); created and submitted a 10,000 SAR PO against the
+  same cost center and confirmed it goes through normally (now Submitted). No headless-browser tool was
+  available in this session either, so `BudgetsPage.tsx`'s on-screen appearance wasn't click-through
+  verified — both dev servers were left running for the user to check directly.
+- Files touched: `src/Modules/Modules.Finance/Domain/Budget.cs` (new);
+  `src/Modules/Modules.Finance/Application/{BudgetDto,IBudgetRepository,BudgetSecurity,BudgetWorkflow,
+  BudgetService}.cs` (all new); `src/Modules/Modules.Finance/Infrastructure/EfBudgetRepository.cs` (new),
+  `RealBudgetCheckService.cs` (new, replaces deleted `PassThroughBudgetCheckService.cs`),
+  `FinanceDbContext.cs`, migration `20260717212538_AddBudget` (new);
+  `src/Modules/Modules.Finance/Api/BudgetsController.cs` (new); `src/Gateway/Gateway.Api/Program.cs`
+  (security/SoD/workflow/`allRegisteredRoleKeys`/DI wiring, `IBudgetCheckService` registration swapped);
+  `src/Apps/Apps.Shell/src/api/budgetApi.ts` (new), `src/Apps/Apps.Shell/src/pages/BudgetsPage.tsx` (new),
+  `src/Apps/Apps.Shell/src/App.tsx`, `src/Apps/Apps.Shell/src/i18n/content.ts`;
+  `tests/UnitTests/Modules.Finance.Tests/{BudgetTests,BudgetServiceTests,FakeBudgetRepository}.cs` (all
+  new); `tests/IntegrationTests/Modules.Finance.IntegrationTests/{BudgetPersistenceTests,TestDatabase}.cs`
+  (former new); `docs/module/finance.md`, `ROADMAP.md`, `PROGRESS.md`.
+- Next: Bank Reconciliation (build-order item 5) is next — needed before the Cash Management overview, the
+  Payment/Receipt Flow panel's final step, and before a Finance Dashboard's "bank reconciliation pending"
+  alert could mean anything real. After that: AP/AR workspace composition, Petty Cash, Period Closing
+  Center, and the dashboards, in that order. None of this checkpoint's work (this entry or the two slices
+  before it) is committed to git yet — still worth the user's own review before a commit.
+
+### 2026-07-17 — Finance Mockup Gap Closure slice 2: Source-document trace on JournalEntry
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Finance Mockup Gap Closure
+- Status: Completed (this slice — build-order item 3 — Completed; the checkpoint overall is not, see Next)
+- What changed: Per the gap analysis's own suggested build order, item 3 next after the reports/COA slice:
+  a `JournalEntry` never knew what raised it, so the Journal Entry detail's Document Flow panel and the
+  Journal List's Source column had no real data to show.
+  - **Domain**: `JournalEntry` gained `SourceDocumentType`/`SourceDocumentId` and a `MarkSourceDocument`
+    method (same "set once while Draft, never changed after" timing as the existing `MarkAsReversalOf`) —
+    a document's origin is a fact about its creation, not something that should ever drift.
+  - **Application**: `JournalEntryService.CreateAsync` (human-created, via `JournalEntriesController`) tags
+    every entry `"Manual"`. `CreateSystemGeneratedAsync` — the one method `APInvoiceService`/
+    `ARInvoiceService`/`PaymentService`/`CustomerReceiptService`'s own `PostAsync` all call to raise their
+    linked posting — took two new optional parameters, and each of those four callers now passes its own
+    type constant (new `JournalEntrySourceDocumentTypes`) and its own document's `Id`. A reversal's mirror
+    entry inherits the *original* entry's source rather than getting a `"Reversal"` type of its own — a
+    reversal of an AP-Invoice-raised entry still originated from that AP Invoice; `ReversalOfEntryId`
+    already answers "is this a reversal," this field answers "what business event caused this."
+  - **Infrastructure**: two new nullable columns (`source_document_type`, `source_document_id`) on
+    `finance.journal_entries`, migration `20260717204502_AddJournalEntrySourceDocument`, applied to both
+    the dev and test Postgres databases.
+  - **Frontend**: `JournalEntriesPage.tsx` gained a Source column on the list and a Source Document field on
+    the detail General tab, translating the five known source types (`Manual`/`APInvoice`/`ARInvoice`/
+    `Payment`/`CustomerReceipt`) through new `je.source*` content.ts keys, EN+AR. Deliberately not the
+    mockup's fuller Document Flow *visual* diagram (a PR→RFQ→…→Payment step graphic) — that's a separate,
+    larger UI treatment; this slice makes the underlying data real, which the diagram needs before it could
+    ever be built for real anyway.
+  - Also had to stop and restart the already-running `Gateway.Api` dev process mid-session — its locked DLLs
+    blocked `dotnet build` from writing the new columns' code. Restarted cleanly afterward, no data lost
+    (Postgres holds the actual state, not the process).
+- Verified: full solution `dotnet build`/`dotnet test` (all 23 test projects, unit *and* integration —
+  integration DBs need `ERP_*_TEST_CONNECTION` pointed at the local Postgres instance, same as the prior
+  entry — zero regressions, 3 new `JournalEntryTests`, 3 new `JournalEntryServiceTests`, 1 new
+  `JournalEntryPersistenceTests` all passing), `tsc -b`/`oxlint`/`check:no-hardcoded-arabic` clean. **Live-
+  verified over real HTTP** against the running backend, not just unit-tested: created a manual journal
+  entry and confirmed `sourceDocumentType: "Manual"`; created, submitted, approved, and posted a real AP
+  Invoice and confirmed its linked Journal Entry carries `sourceDocumentType: "APInvoice"` and
+  `sourceDocumentId` equal to the invoice's own Id; then reversed that invoice and confirmed the mirror
+  entry inherits both fields unchanged. No headless-browser tool was available in this session either, so
+  the new Source column/field's on-screen appearance wasn't click-through verified — both dev servers were
+  left running (backend restarted after the DLL-lock issue above) for the user to check directly.
+- Files touched: `src/Modules/Modules.Finance/Domain/JournalEntry.cs`,
+  `src/Modules/Modules.Finance/Application/{JournalEntryDto,JournalEntryService,APInvoiceService,
+  ARInvoiceService,PaymentService,CustomerReceiptService}.cs`,
+  `src/Modules/Modules.Finance/Application/JournalEntrySourceDocumentTypes.cs` (new),
+  `src/Modules/Modules.Finance/Infrastructure/FinanceDbContext.cs`, migration
+  `20260717204502_AddJournalEntrySourceDocument` (new), `src/Apps/Apps.Shell/src/api/journalEntryApi.ts`,
+  `src/Apps/Apps.Shell/src/pages/JournalEntriesPage.tsx`, `src/Apps/Apps.Shell/src/i18n/content.ts`,
+  `tests/UnitTests/Modules.Finance.Tests/{JournalEntryTests,JournalEntryServiceTests}.cs`,
+  `tests/IntegrationTests/Modules.Finance.IntegrationTests/JournalEntryPersistenceTests.cs`,
+  `docs/module/finance.md`, `PROGRESS.md`.
+- Next: Budget Control (build-order item 4) is next — the `IBudgetCheckService` contract already exists and
+  is already called by Procurement, only a real `Budget` entity and implementation replacing today's
+  pass-through stub are missing. After that: Bank Reconciliation, AP/AR workspace composition, Petty Cash,
+  Period Closing Center, and the dashboards, in that order. None of this checkpoint's work (this entry or
+  the reports/COA slice before it) is committed to git yet — still worth the user's own review before a
+  commit.
+
+### 2026-07-17 — Finance Mockup Gap Closure slice 1: Trial Balance/Income Statement/Balance Sheet + Chart of Accounts screen rebuild
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — Finance Mockup Gap Closure (new checkpoint, opened by `UI/Finance/FINANCE-MOCKUP-GAP-ANALYSIS.md`,
+  a read-only audit of every mockup image in that folder against what's actually built)
+- Status: In Progress (this slice — build-order items 1–2 — Completed; the checkpoint overall is not, see Next)
+- What changed: This session picked up a substantial amount of uncommitted work already sitting in the
+  working tree (`TrialBalanceService`/`IncomeStatementService`/`BalanceSheetService`/`ReportsController`,
+  the `GLAccountsPage.tsx` rebuild, `GLAccount.ModifiedAt`/`ModifiedBy` surfacing + hard-delete, and the new
+  `StatCard`/`DonutChart`/`StatIcon` Platform.UI components it depends on) that wasn't yet verified or
+  logged. Before continuing, verified all of it end to end rather than trusting it was finished:
+  - **Found and fixed one real compile break**: `App.tsx` computed `dashboardItem.isActive: page === "home"`
+    inside a block already guarded by `page !== "home"` (the block that renders `NavigationPane`, which is
+    skipped entirely on the home page) — TypeScript correctly flagged the comparison as having no overlap
+    (always false) and `tsc -b` failed. Fixed to the literal `false` it always evaluated to anyway, with a
+    comment explaining why, rather than a synthetic branch.
+  - **Ran the full verification stack, not just a build**: `dotnet build`/`dotnet test` on the whole solution
+    (all unit tests green, 0 regressions; integration tests needed `ERP_*_TEST_CONNECTION` env vars pointed
+    at the local Postgres instance — not documented anywhere in the repo, found via `dotnet user-secrets
+    list` on Gateway.Api — after which all integration tests passed too), `tsc -b`, `oxlint`, and
+    `check:no-hardcoded-arabic` on the frontend, all clean.
+  - **Live-verified over real HTTP** against the already-running dev backend (logged in as the bootstrap
+    admin): all three report endpoints return real figures from this dev database's actual posted entries,
+    and — the one figure worth actually checking, not just "did it 200" — Balance Sheet's `TotalAssets`
+    (13,045) exactly equals `TotalLiabilitiesAndEquity` (13,045), proving `BalanceSheetService`'s
+    retained-earnings plug (Revenue − Expense, computed since there's no Period Closing Center yet to post a
+    real closing entry) is actually correct, not just present. Also created and hard-deleted a throwaway
+    Draft G/L account against the running API to confirm the new `DELETE` endpoint works.
+  - Documented the reports and the COA rebuild in `docs/module/finance.md` (new sections), since neither had
+    been written up anywhere before this entry — the code existed but the module doc didn't mention it.
+- Verified: see above — `dotnet test` (all unit + integration test projects green), `tsc -b`/`oxlint`/
+  `check:no-hardcoded-arabic` clean, live HTTP verification against a running backend with real data.
+  No headless-browser tool was available in this session either, so the COA screen's visual result (stat
+  cards/donut/rail) hasn't been click-through verified in an actual browser — both dev servers were left
+  running for the user to check directly.
+- Files touched: this entry documents work already present in the working tree
+  (`src/Modules/Modules.Finance/Application/{TrialBalanceService,IncomeStatementService,BalanceSheetService,
+  TrialBalanceDto,IncomeStatementDto,BalanceSheetDto,StatementLineDto}.cs`,
+  `src/Modules/Modules.Finance/Api/ReportsController.cs`,
+  `src/Modules/Modules.Finance/Application/IJournalEntryRepository.cs` +
+  `src/Modules/Modules.Finance/Infrastructure/EfJournalEntryRepository.cs` (`ListPostedAsync`),
+  `src/Modules/Modules.MasterData/Application/{GLAccountDto,GLAccountService}.cs` (`ModifiedAt`/`ModifiedBy`
+  + `DeleteAsync`), `src/Modules/Modules.MasterData/Api/GLAccountsController.cs` (`DELETE`),
+  `src/Apps/Apps.Shell/src/pages/GLAccountsPage.tsx`, `{TrialBalance,IncomeStatement,BalanceSheet}Page.tsx`
+  (new), `src/Apps/Apps.Shell/src/api/{trialBalance,incomeStatement,balanceSheet,glAccount}Api.ts`,
+  `src/Platform/Platform.UI/components/{StatCard,StatIcon,DonutChart}.tsx` (new),
+  `tests/UnitTests/Modules.Finance.Tests/{StatementServicesTests,TrialBalanceServiceTests}.cs` (new),
+  `tests/UnitTests/Modules.MasterData.Tests/{FakeGLAccountRepository,GLAccountServiceTests}.cs`); this
+  entry's own changes: `src/Apps/Apps.Shell/src/App.tsx` (the compile fix above), `docs/module/finance.md`,
+  `PROGRESS.md`.
+- Next: per the gap analysis's own suggested build order, item 3 (source-document trace on `JournalEntry` —
+  unblocks the Journal Entry detail's Document Flow panel, the Journal List's Source column, and the
+  Payment/Receipt Flow right-rails all at once) is next, followed by Budget Control (item 4 — the contract
+  already exists, only the entity + real implementation is missing), Bank Reconciliation, AP/AR workspace
+  composition, Petty Cash, Period Closing Center, and the dashboards, in that order. None of this work is
+  committed to git yet — it's substantial (dozens of files across two prior uncommitted sessions plus this
+  one) and worth the user's own review before a commit, rather than an AI session committing on their
+  behalf without being asked.
+
+### 2026-07-17 — Modules.Construction slice 5: Retention withholding/release built (Contract.RetentionPercentage fix + RetentionRelease)
+
+- Agent: Claude Sonnet 5
+- Phase: Phase 3 — Construction, Project Accounting & Accounts Receivable
+- Status: Completed
+- What changed: Per ROADMAP.md's own Phase 3 remaining list and `construction-commercial-processes-spec.md`
+  §7's suggested build order (step 3, "small, mostly derived from IPC + Contract terms"), built Retention as
+  the next slice after Variation Orders.
+  - **Fixed a real, disclosed gap found while scoping this slice**: `Contract` had no `RetentionPercentage`
+    field at all — only `Subcontract` did — so `IpcService.LoadCommercialDocumentAsync` always passed `null`
+    for a Contract's retention percentage, meaning a Contract-type IPC has *never* actually withheld any
+    retention, only a Subcontract-type one did. Added `Contract.RetentionPercentage` (mirrors
+    `Subcontract.RetentionPercentage` exactly) and wired it through Application/Infrastructure (new EF
+    column + migration)/Api/Frontend (`ContractsPage.tsx` create form + detail view). A regression test
+    (`IpcServiceTests.Create_snapshots_a_Contracts_own_retention_percentage_not_just_a_Subcontracts`) proves
+    the fix.
+  - **`RetentionRelease`** (`Modules.Construction.Domain`) — polymorphic over Contract/Subcontract exactly
+    like `Ipc`, Draft→Submitted→Approved/Rejected, a single header `AmountReleased` (deliberately not a
+    collection of per-IPC release lines — the spec itself describes release as "one or two lump-sum events,"
+    not a line-by-line reconciliation) plus a `RetentionTriggerEvent` (TakingOver/DefectsLiabilityExpiry/
+    Manual, recorded but not yet auto-fired off a real date). `RetentionReleaseService.GetRetentionBalanceAsync`
+    computes the real running balance — every Approved IPC's own `RetentionAmount` for a commercial document,
+    less every prior Approved release's `AmountReleased` — fresh each call, never stored as a separate figure
+    that could drift. `CreateAsync` validates a new release's amount against that same balance and rejects
+    over-release. Approving a Contract-type release raises a real Draft AR Invoice
+    (`ICustomerInvoicingService`); approving a Subcontract-type release raises a real Draft AP Invoice
+    (`IVendorInvoicingService`) — the same two cross-module write Contracts interfaces IPC already uses,
+    now with a second caller each.
+  - **Frontend**: `RetentionReleasesPage.tsx` (SplitView list+detail, shows the live withheld/released/
+    outstanding balance for the selected document before letting the user pick an amount), new nav entry
+    inside the Construction module group, `retentionReleaseApi.ts`, all new `retrel.*`/`con.fieldRetentionPercentage`
+    content.ts keys (everything else reuses existing `nav.*`/`ipc.*`/`ar.*`/`meas.*` keys).
+  - **Also fixed while live-verifying**: `Program.cs`'s `allRegisteredRoleKeys` (grants the bootstrap admin
+    full access on first seed) had never been extended past `CustomerReceipt` — Contract/Subcontract/
+    MeasurementSheet/Ipc/VariationOrder role keys were missing too, a pre-existing gap predating this slice
+    (past sessions had apparently worked around it by manually granting roles through the Users API during
+    their own live verification, per the already-held roles found while testing this slice). Added the full
+    Construction module block, including the new RetentionRelease keys.
+- Verified: full solution `dotnet test` — 26 test projects, zero regressions, all new unit tests
+  (`RetentionReleaseTests`, `RetentionReleaseServiceTests`, updated `ContractTests`/`IpcServiceTests`) and
+  integration tests (`RetentionReleasePersistenceTests`, against real Postgres) passing. `tsc -b` clean,
+  `oxlint` clean, `check:no-hardcoded-arabic` clean. Live-verified end-to-end over real HTTP against the
+  running backend: created a Project→Customer→Contract (retentionPercentage=10)→MeasurementSheet→Ipc chain,
+  confirmed the Contract-type IPC now actually withholds retention (200 of a 2000 gross value), certified it
+  (raised a real Draft AR Invoice), queried the balance (200 withheld / 0 released), created and approved a
+  RetentionRelease for 120 (raised a second real Draft AR Invoice, balance became 120 released / 80
+  outstanding), and confirmed an over-release attempt (81 against an 80 balance) is correctly rejected with
+  a 400. EN+AR frontend build verified statically (typecheck/lint/Arabic-guard); no headless-browser tool
+  was available in this session for an actual Playwright click-through of the new page.
+- Files touched: `src/Modules/Modules.Construction/Domain/Contract.cs`, `RetentionRelease.cs` (new);
+  `src/Modules/Modules.Construction/Application/ContractDto.cs`, `ContractService.cs`, `IpcService.cs`,
+  `IIpcRepository.cs`, `RetentionReleaseDto.cs`/`IRetentionReleaseRepository.cs`/`RetentionReleaseSecurity.cs`/
+  `RetentionReleaseWorkflow.cs`/`RetentionReleaseService.cs` (all new);
+  `src/Modules/Modules.Construction/Infrastructure/ConstructionDbContext.cs`, `EfIpcRepository.cs`,
+  `EfRetentionReleaseRepository.cs` (new), migration `20260717131442_AddRetentionReleaseAndContractRetentionPercentage`;
+  `src/Modules/Modules.Construction/Api/RetentionReleasesController.cs` (new);
+  `src/Gateway/Gateway.Api/Program.cs` (DI/security/workflow/SoD/number-range wiring +
+  `allRegisteredRoleKeys` fix); `src/Apps/Apps.Shell/src/api/contractApi.ts`,
+  `retentionReleaseApi.ts` (new); `src/Apps/Apps.Shell/src/pages/ContractsPage.tsx`,
+  `RetentionReleasesPage.tsx` (new); `src/Apps/Apps.Shell/src/App.tsx`, `src/Apps/Apps.Shell/src/i18n/content.ts`;
+  `tests/UnitTests/Modules.Construction.Tests/ContractTests.cs`, `IpcServiceTests.cs`, `FakeIpcRepository.cs`,
+  `RetentionReleaseTests.cs`/`RetentionReleaseServiceTests.cs`/`FakeRetentionReleaseRepository.cs` (new);
+  `tests/IntegrationTests/Modules.Construction.IntegrationTests/TestDatabase.cs`,
+  `RetentionReleasePersistenceTests.cs` (new); `docs/module/construction.md`, `docs/module/finance.md`.
+- Next: Extension of Time/Claims is the one piece of the construction spec's own build order still not
+  built. On the Finance side, Fiscal Year/Period management and a real Budget Check remain, per ROADMAP.md's
+  "Checkpoint — between Phase 3 and Phase 4." Separately (not blocking, but worth flagging): both
+  `docs/module/finance.md` and (before this entry's own fixes) `docs/module/construction.md` had drifted
+  noticeably stale relative to already-shipped work from prior sessions (CustomerReceipt, VariationOrder) —
+  only the sections this entry directly touched were corrected; a fuller doc-staleness pass across both
+  files is still worth doing at some point.
+
+### 2026-07-17 — Navigation & UI Standard (doc 09) implemented: collapsible department nav, consistent icons, department-card landing page
+
+- Agent: Claude Sonnet 5
+- Phase: Checkpoint — UI/Visual Density Pass (paused 2026-07-15, resumed here per explicit user instruction
+  to implement `docs/architecture/09-navigation-and-ui-standard.md`)
+- Status: Completed
+- What changed: The NavigationPane's Modules→Areas→Items grouping already existed (one top-level entry per
+  department, per `03-module-boundaries.md`), but the doc's other two requirements didn't: the groups
+  weren't collapsible, and there were no department icons anywhere, so the landing page couldn't show one
+  card per department the way the doc specifies.
+  - `Platform.UI.NavModule` gained a required `icon: DepartmentIconKey` field and an optional
+    `defaultCollapsed` field. `NavigationPane` now renders each module group behind a clickable header
+    (icon + label + a chevron reusing `FastTabs`' own logical-border RTL-mirroring construction) that
+    toggles that group's Areas open/closed via local component state; Platform Administration ships
+    `defaultCollapsed: true` since it's not a business department a user works in daily, the same reasoning
+    Dynamics 365 applies to not tiling its own Settings area on the landing workspace.
+  - New `Platform.UI.DepartmentIcon` — seven small inline-SVG line icons (home, platform-administration,
+    master-data, finance, procurement, project-management, construction), stroke=currentColor, zero
+    external dependency, zero embedded text (nothing for `check-no-hardcoded-arabic` to ever flag). `App.tsx`
+    assigns one icon key per `NavModule`, the same key `HomePage` now reads for its cards, so the nav header
+    and the landing card literally share the icon, not just the same visual style.
+  - `HomePage.tsx` rewritten from three Master-Data-entity tiles (Business Partners/GL Accounts/Items) into
+    five real department cards — Master Data, Project Management, Construction, Procurement, Finance — each
+    with its department icon, a total + pending-approval count from that department's most-used document
+    type (Business Partners/Projects/Contracts/Purchase Orders/AP Invoices respectively), and a click-through
+    into that document type's list screen, matching the doc's own "Contracts Pending Approval: 3" example.
+    Home and Platform Administration don't get cards, same reasoning as the nav's default-collapsed choice
+    above.
+  - No new translation keys were needed — every card label reuses an existing `nav.*`/`home.*` content.ts key.
+- Verified: `tsc -b` (full solution references, zero errors), `npm run check:no-hardcoded-arabic` (clean),
+  `npm run lint` (zero new warnings — one pre-existing `AuthContext.tsx` fast-refresh warning, unrelated).
+  Backend (already running from a prior session on :5210) confirmed still enforcing auth correctly
+  (401 + `WWW-Authenticate: Bearer` on an unauthenticated request); frontend dev server (:5174 — :5173 was
+  already occupied by a stale prior instance) confirmed serving the updated `App.tsx`/`HomePage.tsx` modules
+  without a Vite transform error. No headless-browser tool was available in this session to drive an actual
+  Playwright/EN+AR click-through pass the way `AGENTS.md` asks for — both dev servers were left running for
+  the user to check directly in a real browser rather than claiming a visual verification that didn't happen.
+- Files touched: `src/Platform/Platform.UI/components/DepartmentIcon.tsx` (new),
+  `src/Platform/Platform.UI/components/NavigationPane.tsx`, `src/Platform/Platform.UI/types.ts`,
+  `src/Platform/Platform.UI/index.ts`, `src/Platform/Platform.UI/components/components.css`,
+  `src/Apps/Apps.Shell/src/App.tsx`, `src/Apps/Apps.Shell/src/App.css`,
+  `src/Apps/Apps.Shell/src/pages/HomePage.tsx`
+- Next: a real browser (EN+AR, RTL) pass by the user or a future session with a headless-browser tool
+  available, to confirm the collapse affordance and card grid actually look right rather than just
+  compiling right. Status pills/avatars/further surface richness (`feedback_visual_richness_gap`) remain
+  the rest of the paused UI/Visual Density Pass, not done here.
 
 ### 2026-07-17 — Finance module completed (CustomerReceipt + Subcontract IPC→AP wiring) and Variation Orders built
 

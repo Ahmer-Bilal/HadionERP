@@ -50,9 +50,9 @@ and Results Analysis remain later Finance depth, not required for this phase's o
 The full procure-to-pay cycle: Vendor Prequalification (the first genuinely multi-step approval workflow in
 the system, five independent departments each reviewing a vendor for a specific role and trade rather than
 one approver wearing five hats) followed by Purchase Requisition, RFQ, Purchase Order, Goods Receipt, and a
-working three-way match against Accounts Payable. Real Budget Control enforcement and a real line-by-line
-invoice match are deferred Finance/Procurement depth, not required for this phase's exit bar — the check
-that exists today is a deliberate pass-through stub, disclosed rather than hidden.
+working three-way match against Accounts Payable. Real Budget Control enforcement now exists (`Modules.Finance.Domain.Budget`, replacing the former
+pass-through stub the check used to be — see `docs/module/finance.md`); a real line-by-line invoice match
+remains deferred Finance/Procurement depth, not required for this phase's exit bar.
 
 ## Phase 3 — Construction, Project Accounting & Accounts Receivable — In progress
 
@@ -75,11 +75,20 @@ mirror of `Payment`) closes the loop the IPC→AR wiring opened. `VariationOrder
 Draft→Submitted→Approved/Rejected scope/quantity change against an Approved Contract or Subcontract, whose
 approval writes an existing line's quantity delta (or a wholly new line) straight through to the underlying
 document, the mechanism `MeasurementSheetService`'s own over-measurement guard already referenced before it
-existed. What's still ahead in this phase: real Retention withholding and release, and Extension of
-Time/Claims on the Construction side; on the Finance side, Fiscal Year/Period management, a real Budget
-Check replacing today's pass-through stub, and a generic Statement pattern (opening balance → transactions →
-running balance → aging) built once and reused for both customers and suppliers rather than rebuilt per
-module later. The detailed process design for everything still ahead in this phase — the two-party
+existed. Retention withholding and release is also now built: `Contract` finally carries its own
+`RetentionPercentage` (a Contract-type IPC never withheld retention before this — a real, disclosed gap
+closed alongside the new feature), and `RetentionRelease` tracks the real running withheld-vs-released
+balance per commercial document and raises a real AR/AP invoice on approval, the same certify-then-bill
+pattern IPC uses. Fiscal Year/Period management is also now built — `FiscalYear`/`FiscalPeriod` (12 real
+calendar-month periods per year, Open/Closed state) actually gates every real posting in the system through
+`JournalEntryService`'s one choke point, and a real per-person Period Closing checklist
+(`ClosingActivity`/`ClosingActivityStep`, matching `UI/Finance/d1f20165-...png`) tracks ten fixed closing
+activities per period, three of them (AP, AR, Journal Review) auto-derived from real pending documents and
+self-completing as those documents post. Real Budget Control is built too (`Budget`, a Cost Center/fiscal-year
+spending ceiling backing `IBudgetCheckService` for real). What's still ahead in this phase: Extension of
+Time/Claims on the Construction side; on the Finance side, a generic Statement pattern (opening balance →
+transactions → running balance → aging) built once and reused for both customers and suppliers rather than
+rebuilt per module later. The detailed process design for everything still ahead in this phase — the two-party
 measurement certification workflow, the Client↔Main Contractor↔Subcontractor billing hierarchy, Extension of
 Time as its own document type — lives in `construction-commercial-processes-spec.md` and
 `docs/architecture/07-integrated-project-controlling.md`; read both before starting any of it.

@@ -34,9 +34,323 @@
   color: var(--pi-text-muted);
 }
 
+/* --- Home page: the post-login landing dashboard --- */
+/* One tile per real business department (docs/architecture/09-navigation-and-ui-standard.md), never per
+   document type — mirrors the NavigationPane's own module grouping so the landing page and the side nav
+   teach the same "the system is organized like my company" mental model. Tile badge colors and the glow
+   treatment deliberately match LoginPage.css's orbit nodes exactly, so the pre- and post-login screens read
+   as one identity rather than two different products — the "same blue/glow as the login screen" brief. */
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-2);
+}
+
+.home-greeting {
+  position: relative;
+  padding-block: var(--pi-space-3);
+}
+
+.home-greeting h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.home-greeting p {
+  margin: var(--pi-space-1) 0 0;
+  color: var(--pi-text-muted);
+}
+
+/* The same "give the panel something for a blur/wash to catch" trick as .app-shell__content's own
+   accent wash — re-tinted blue here specifically (rather than the app's ambient teal) to carry the login
+   screen's identity onto the very first thing a user sees after signing in. */
+.home-greeting::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -2rem;
+  inset-block-start: -3rem;
+  inline-size: 26rem;
+  block-size: 16rem;
+  background: radial-gradient(closest-side, rgba(47, 143, 224, 0.16), transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-section-header {
+  margin-block-start: var(--pi-space-3);
+}
+
+.home-section-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.home-section-header p {
+  margin: var(--pi-space-1) 0 0;
+  color: var(--pi-text-muted);
+  font-size: var(--pi-font-size-sm);
+}
+
+/* Three honest empty-state cards (see HomePage.tsx's own comment — no fake counts, a real cross-module
+   pending-approvals aggregation is a follow-up feature, not this pass) reusing the same StatCard component
+   the Finance reports already use, for one consistent "KPI tile" look across the app. */
+.home-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--pi-space-3);
+}
+
+.home-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 18rem;
+  gap: var(--pi-space-4);
+  align-items: start;
+}
+
+.home-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--pi-space-4);
+}
+
+@media (max-width: 900px) {
+  .home-main-grid,
+  .home-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.home-panel {
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-lg);
+  padding: var(--pi-space-4);
+  background: var(--pi-surface);
+}
+
+.home-panel h2 {
+  margin: 0 0 var(--pi-space-3);
+  font-size: 1.05rem;
+}
+
+.home-quick-actions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-2);
+}
+
+.home-quick-action {
+  padding: var(--pi-space-2) var(--pi-space-3);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-md);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.home-quick-action:hover {
+  border-color: var(--pi-accent);
+  color: var(--pi-accent);
+}
+
+.home-quick-links-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-1);
+}
+
+.home-quick-links-list button {
+  inline-size: 100%;
+  padding: var(--pi-space-2) var(--pi-space-3);
+  border: none;
+  border-radius: var(--pi-radius-md);
+  background: none;
+  color: var(--pi-accent);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.home-quick-links-list button:hover {
+  background: var(--pi-bg);
+}
+
+.home-department-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pi-space-4);
+  margin-block-start: var(--pi-space-3);
+}
+
+/* A pure gateway tile — icon plus label, nothing else. Matches the mockup's own "Explore Workspaces" tiles
+   exactly: this is the front door into a department, not a stats card, so no total/pending count lives
+   here (that number would have to collapse an entire department's several document types into one
+   misleading figure the moment a department owns more than one — see AGENTS.md's own "never let a header
+   number drift from what the underlying data actually says" reasoning, same principle applied to a tile
+   instead of a document total). Per-type counts belong on that type's own list screen. */
+.home-department-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pi-space-2);
+  padding: var(--pi-space-5) var(--pi-space-4);
+  min-inline-size: 9rem;
+  flex: 1 1 9rem;
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-lg, var(--pi-radius-md));
+  cursor: pointer;
+  background: var(--pi-surface);
+  text-align: center;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.home-department-tile:hover,
+.home-department-tile:focus-visible {
+  border-color: var(--pi-accent);
+  box-shadow: var(--pi-shadow-panel, none);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+/* The "crystal glow" icon treatment — a diagonal gradient fill, a glass highlight along the top edge
+   (the ::after below), and a soft color-matched glow thrown outward via box-shadow (set inline per tile
+   since each department's color is data, not a fixed value) — the same modern "glowing badge" look modern
+   enterprise app suites (Oracle Fusion, Microsoft Fluent) use for module icons, rather than a flat tinted
+   square. */
+.home-department-tile__badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 3.25rem;
+  block-size: 3.25rem;
+  border-radius: var(--pi-radius-md);
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.home-department-tile__badge::after {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  block-size: 45%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.home-department-tile__title {
+  font-weight: var(--pi-font-weight-semibold);
+  color: var(--pi-text);
+  font-size: var(--pi-font-size-sm);
+}
+
+.home-recent-panel {
+  padding: var(--pi-space-2);
+}
+
+.home-recent-panel h2 {
+  padding-inline-start: var(--pi-space-2);
+}
+
+.home-recent-empty {
+  color: var(--pi-text-muted);
+  padding: var(--pi-space-3);
+  margin: 0;
+}
+
+.home-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-recent-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-space-3);
+  inline-size: 100%;
+  padding: var(--pi-space-3) var(--pi-space-4);
+  border: none;
+  border-radius: var(--pi-radius-md);
+  background: none;
+  color: var(--pi-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.home-recent-item:hover,
+.home-recent-item:focus-visible {
+  background: var(--pi-bg);
+  outline: none;
+}
+
+.home-recent-item .pi-department-icon {
+  flex-shrink: 0;
+  color: var(--pi-accent);
+}
+
 /* Status-page-specific styling (the one real page so far). */
 .status-page__error {
   color: var(--pi-danger);
+}
+
+/* --- DepartmentActivityPage --- */
+.activity-page__section {
+  margin-block-start: var(--pi-space-5);
+}
+
+.activity-page__section h2 {
+  font-size: 1.05rem;
+  margin-block-end: var(--pi-space-2);
+}
+
+/* --- DepartmentLandingPage --- */
+/* One shared accent-colored badge for every tile (unlike Home's per-department distinct colors — see
+   DepartmentLandingPage.tsx's own doc comment for why only one identity needs carrying here). */
+.dept-landing-page .home-department-tile__badge {
+  background: linear-gradient(135deg, var(--pi-accent), color-mix(in srgb, var(--pi-accent) 65%, black));
+  box-shadow: 0 10px 24px -6px color-mix(in srgb, var(--pi-accent) 45%, transparent),
+              0 0 22px -4px color-mix(in srgb, var(--pi-accent) 45%, transparent);
+}
+
+/* --- ComingSoonPage --- */
+.coming-soon-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pi-space-3);
+  text-align: center;
+  padding-block: var(--pi-space-6);
+  color: var(--pi-text-muted);
+}
+
+.coming-soon-page__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 4.5rem;
+  block-size: 4.5rem;
+  border-radius: 50%;
+  background: var(--pi-surface);
+  color: var(--pi-accent);
+}
+
+.coming-soon-page h1 {
+  margin: 0;
+  color: var(--pi-text);
+}
+
+.coming-soon-page p {
+  margin: 0;
+  max-inline-size: 26rem;
 }
 
 .status-page__facts {
@@ -115,50 +429,429 @@
   margin-block-end: var(--pi-space-3);
 }
 
-/* --- Login page --- */
-.app-shell__login {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-block-size: 100vh;
-  background: var(--pi-bg);
+/* --- Shared Finance report layout (Trial Balance, Income Statement, Balance Sheet — one statement-page
+   shape reused across all three: filters, stat-card row, statement table + right rail) --- */
+.fin-report__subtitle {
+  color: var(--pi-text-muted);
+  margin-block-start: -0.5rem;
 }
 
-.app-shell__login-form {
+.fin-report__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--pi-space-4);
+  margin-block-end: var(--pi-space-4);
+}
+
+.fin-report__filters label {
   display: flex;
   flex-direction: column;
-  gap: var(--pi-space-3);
-  inline-size: 24rem;
-  max-inline-size: 90vw;
-  padding: var(--pi-space-6);
-  border: 1px solid var(--pi-border);
-  border-radius: var(--pi-radius-lg, var(--pi-radius-sm));
-  background: var(--pi-surface);
-  box-shadow: var(--pi-shadow-panel, none);
+  gap: var(--pi-space-1);
+  font-size: var(--pi-font-size-sm);
+  color: var(--pi-text-muted);
 }
 
-.app-shell__login-form input {
-  display: block;
-  inline-size: 100%;
+.fin-report__filters input[type="date"],
+.fin-report__filters input[type="search"],
+.fin-report__filters input[type="text"],
+.fin-report__filters select {
+  font: inherit;
   padding: var(--pi-space-2);
-  margin-block-start: var(--pi-space-1);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  min-inline-size: 10rem;
+}
+
+.fin-report__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pi-space-3);
+  margin-block-start: var(--pi-space-3);
+  color: var(--pi-text-muted);
+  font-size: var(--pi-font-size-sm);
+}
+
+.fin-report__pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-space-3);
+}
+
+.fin-report__pagination-controls button {
+  padding: var(--pi-space-1) var(--pi-space-2);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  cursor: pointer;
+}
+
+.fin-report__pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fin-report__rows-per-page {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-space-2);
+}
+
+.fin-report__rows-per-page select {
+  padding: var(--pi-space-1) var(--pi-space-2);
   border: 1px solid var(--pi-border);
   border-radius: var(--pi-radius-sm);
   background: var(--pi-bg);
   color: var(--pi-text);
 }
 
-.app-shell__login-form button {
-  padding: var(--pi-space-2) var(--pi-space-4);
-  border: 1px solid var(--pi-accent);
+/* --- Chart of Accounts specifics --- */
+.gl-badge-header {
+  margin-inline-start: var(--pi-space-2);
+  padding: 0.1rem 0.5rem;
   border-radius: var(--pi-radius-sm);
-  background: var(--pi-accent);
-  color: white;
-  cursor: pointer;
+  background: var(--pi-surface);
+  color: var(--pi-text-muted);
+  font-size: 0.7rem;
   font-weight: var(--pi-font-weight-semibold);
 }
 
-.app-shell__login-form button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.gl-status-pill {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: var(--pi-font-size-sm);
+  font-weight: var(--pi-font-weight-semibold);
 }
+
+.gl-status-pill--active {
+  background: color-mix(in srgb, var(--pi-success) 16%, transparent);
+  color: var(--pi-success);
+}
+
+.gl-status-pill--inactive {
+  background: var(--pi-surface);
+  color: var(--pi-text-muted);
+}
+
+.gl-doc-flow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-3);
+  position: relative;
+}
+
+.gl-doc-flow li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-inline-start: var(--pi-space-4);
+  border-inline-start: 2px solid var(--pi-border);
+  padding-block-end: var(--pi-space-2);
+  font-size: var(--pi-font-size-sm);
+}
+
+.gl-doc-flow li strong {
+  color: var(--pi-text);
+}
+
+.gl-doc-flow li span {
+  color: var(--pi-text-muted);
+}
+
+.gl-doc-flow__final {
+  border-inline-start-color: var(--pi-success) !important;
+}
+
+.gl-doc-flow__final strong {
+  color: var(--pi-success) !important;
+}
+
+.gl-structure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-2);
+}
+
+.gl-structure-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-space-2);
+  font-size: var(--pi-font-size-sm);
+  color: var(--pi-text-muted);
+}
+
+.gl-structure-list li strong {
+  margin-inline-start: auto;
+  color: var(--pi-text);
+}
+
+.gl-structure-dot {
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fin-report__checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: var(--pi-space-2) !important;
+}
+
+.fin-report__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--pi-space-3);
+  margin-block-end: var(--pi-space-4);
+}
+
+.fin-report__layout {
+  display: grid;
+  grid-template-columns: 1fr 20rem;
+  gap: var(--pi-space-4);
+  align-items: start;
+}
+
+.fin-report__main {
+  min-inline-size: 0;
+  overflow-x: auto;
+}
+
+.fin-report__row--header td {
+  font-weight: var(--pi-font-weight-semibold);
+  background: var(--pi-surface);
+}
+
+.fin-report__row--total td {
+  font-weight: var(--pi-font-weight-semibold);
+  border-block-start: 2px solid var(--pi-border);
+}
+
+.fin-report__row--section td {
+  font-weight: var(--pi-font-weight-semibold);
+  color: var(--pi-accent);
+  padding-block-start: var(--pi-space-3);
+}
+
+.fin-report__negative {
+  color: var(--pi-danger);
+}
+
+.fin-report__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-3);
+}
+
+.fin-report__panel {
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-lg);
+  padding: var(--pi-space-4);
+  background: var(--pi-bg);
+}
+
+.fin-report__panel h2 {
+  font-size: var(--pi-font-size-base);
+  margin-block: 0 var(--pi-space-3);
+}
+
+.fin-report__panel-empty {
+  color: var(--pi-text-muted);
+  font-size: var(--pi-font-size-sm);
+}
+
+.fin-report__top-accounts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-2);
+}
+
+.fin-report__top-accounts li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--pi-space-2);
+  font-size: var(--pi-font-size-sm);
+}
+
+.fin-report__top-account-name {
+  color: var(--pi-text-muted);
+}
+
+.fin-report__top-account-value {
+  color: var(--pi-text);
+  font-weight: var(--pi-font-weight-semibold);
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .fin-report__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Period Closing Center (UI/Finance/d1f20165-...png) */
+
+.pcc-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pi-space-3);
+  align-items: end;
+  margin-block-end: var(--pi-space-4);
+}
+
+.pcc-selectors label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-1);
+  font-size: var(--pi-font-size-sm);
+}
+
+.pcc-overview-stats {
+  align-items: stretch;
+}
+
+.pcc-progress-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--pi-space-3);
+}
+
+.pcc-progress-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-1);
+  font-size: var(--pi-font-size-sm);
+}
+
+.pcc-progress-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--pi-space-2);
+}
+
+.pcc-tabs {
+  display: flex;
+  gap: var(--pi-space-1);
+  border-block-end: 1px solid var(--pi-border);
+  margin-block-end: var(--pi-space-4);
+}
+
+.pcc-tab {
+  padding: var(--pi-space-2) var(--pi-space-3);
+  border: none;
+  background: transparent;
+  border-block-end: 2px solid transparent;
+  color: var(--pi-text-muted);
+  cursor: pointer;
+}
+
+.pcc-tab--active {
+  color: var(--pi-accent);
+  border-block-end-color: var(--pi-accent);
+  font-weight: var(--pi-font-weight-semibold);
+}
+
+.pcc-steps-detail {
+  margin-block: var(--pi-space-2);
+  font-size: var(--pi-font-size-sm);
+}
+
+.pcc-steps-detail ul {
+  list-style: none;
+  margin: var(--pi-space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pi-space-1);
+}
+
+.pcc-timeline {
+  margin-block-start: var(--pi-space-4);
+}
+
+.pcc-timeline-steps {
+  display: flex;
+  list-style: none;
+  margin: var(--pi-space-2) 0;
+  padding: 0;
+  gap: var(--pi-space-2);
+}
+
+.pcc-timeline-steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--pi-space-1);
+  flex: 1;
+  text-align: center;
+  font-size: var(--pi-font-size-sm);
+}
+
+.pcc-timeline-dot {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--pi-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pcc-timeline-step--done .pcc-timeline-dot {
+  background: var(--pi-success);
+  border-color: var(--pi-success);
+  color: var(--pi-surface);
+}
+
+.pcc-timeline-step--active .pcc-timeline-dot {
+  border-color: var(--pi-accent);
+  color: var(--pi-accent);
+}
+
+.pcc-trend {
+  margin-block-start: var(--pi-space-4);
+}
+
+.pcc-trend-svg {
+  inline-size: 100%;
+  block-size: 8rem;
+}
+
+.pcc-insight {
+  border-inline-start: 3px solid var(--pi-border);
+  padding-inline-start: var(--pi-space-2);
+  margin-block-end: var(--pi-space-3);
+  font-size: var(--pi-font-size-sm);
+}
+
+.pcc-insight--OnTrack {
+  border-inline-start-color: var(--pi-success);
+}
+
+.pcc-insight--AttentionRequired {
+  border-inline-start-color: var(--pi-danger);
+}
+
+.pcc-insight--BestPractice {
+  border-inline-start-color: var(--pi-chart-2);
+}
+
+/* Login page styling lives in pages/LoginPage.css, scoped to that page's own classes — see that file. */

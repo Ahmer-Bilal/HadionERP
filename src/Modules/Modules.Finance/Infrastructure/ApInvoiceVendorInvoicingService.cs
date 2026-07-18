@@ -20,7 +20,8 @@ public sealed class ApInvoiceVendorInvoicingService : IVendorInvoicingService
                 request.VendorId, request.VendorInvoiceNumber, request.InvoiceDate, request.Description,
                 request.ExpenseAccountId, request.PayableAccountId, request.NetAmount,
                 request.CostCenterId, request.TaxCodeId, request.VatAccountId),
-            actor, companyId, cancellationToken);
+            actor, companyId, cancellationToken,
+            sourceDocumentType: request.SourceDocumentType, sourceDocumentId: request.SourceDocumentId);
 
         return created.Id;
     }

@@ -20,6 +20,8 @@ export interface APInvoice {
   grossAmount: number;
   outstandingBalance: number;
   linkedJournalEntryId: string | null;
+  sourceDocumentType: string | null;
+  sourceDocumentId: string | null;
   createdAt: string;
   createdBy: string;
 }
@@ -42,6 +44,7 @@ export interface CreateAPInvoiceInput {
   costCenterId?: string | null;
   taxCodeId?: string | null;
   vatAccountId?: string | null;
+  purchaseOrderId?: string | null;
 }
 
 const BASE_PATH = "/api/v1/finance/ap-invoices";

@@ -12,7 +12,10 @@ public sealed record RaiseVendorInvoiceRequest(
     decimal NetAmount,
     Guid? CostCenterId,
     Guid? TaxCodeId,
-    Guid? VatAccountId);
+    Guid? VatAccountId,
+    // See RaiseCustomerInvoiceRequest's identical fields for the full reasoning.
+    string SourceDocumentType,
+    Guid SourceDocumentId);
 
 /// <summary>
 /// The AP mirror of <see cref="ICustomerInvoicingService"/> — Construction calls this when an IPC against a

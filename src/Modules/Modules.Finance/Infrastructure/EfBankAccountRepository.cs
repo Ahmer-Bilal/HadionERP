@@ -23,6 +23,10 @@ public sealed class EfBankAccountRepository : IBankAccountRepository
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         _dbContext.BankAccounts.CountAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<BankAccount>> ListActiveAsync(CancellationToken cancellationToken = default) =>
+        await _dbContext.BankAccounts.AsNoTracking()
+            .Where(b => b.IsActive).OrderBy(b => b.AccountCode).ToListAsync(cancellationToken);
+
     public void Add(BankAccount bankAccount) => _dbContext.BankAccounts.Add(bankAccount);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>

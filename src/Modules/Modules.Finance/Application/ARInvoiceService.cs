@@ -69,7 +69,8 @@ public sealed class ARInvoiceService
     }
 
     public async Task<ARInvoiceDto> CreateAsync(
-        CreateARInvoiceRequest request, string actor, string companyId, CancellationToken cancellationToken = default)
+        CreateARInvoiceRequest request, string actor, string companyId, CancellationToken cancellationToken = default,
+        string? sourceDocumentType = null, Guid? sourceDocumentId = null)
     {
         RequireAuthorization(actor, ARInvoiceSecurity.MaintainPrivilegeKey);
 
@@ -89,6 +90,7 @@ public sealed class ARInvoiceService
             actor, request.CustomerId, request.CustomerReference, request.InvoiceDate, request.Description,
             request.RevenueAccountId, request.ReceivableAccountId, request.NetAmount);
         invoice.SetCostCenter(request.CostCenterId);
+        invoice.MarkSourceDocument(sourceDocumentType ?? "Manual", sourceDocumentId);
 
         if (request.TaxCodeId is { } taxCodeId)
         {
@@ -218,7 +220,8 @@ public sealed class ARInvoiceService
 
         var journalEntry = await _journalEntryService.CreateSystemGeneratedAsync(
             invoice.InvoiceDate, $"AR Invoice {invoice.DocumentNumber}: {invoice.Description}", lines,
-            reversalOfEntryId: null, actor, cancellationToken);
+            reversalOfEntryId: null, actor, cancellationToken,
+            sourceDocumentType: JournalEntrySourceDocumentTypes.ARInvoice, sourceDocumentId: invoice.Id);
 
         invoice.LinkJournalEntry(journalEntry.Id);
         var fromStatus = invoice.Status;
@@ -314,6 +317,7 @@ public sealed class ARInvoiceService
         return new(
             i.Id, i.DocumentNumber, i.Status.ToString(), i.CustomerId, i.CustomerReference, i.InvoiceDate, i.Description,
             i.RevenueAccountId, i.ReceivableAccountId, i.CostCenterId, i.TaxCodeId, i.TaxRate, i.VatAccountId,
-            i.NetAmount, i.TaxAmount, i.GrossAmount, outstandingBalance, i.LinkedJournalEntryId, i.CreatedAt, i.CreatedBy);
+            i.NetAmount, i.TaxAmount, i.GrossAmount, outstandingBalance, i.LinkedJournalEntryId,
+            i.SourceDocumentType, i.SourceDocumentId, i.CreatedAt, i.CreatedBy);
     }
 }

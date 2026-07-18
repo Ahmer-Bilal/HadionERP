@@ -122,4 +122,44 @@ public class JournalEntryTests
 
         Assert.Equal(original, mirror.ReversalOfEntryId);
     }
+
+    [Fact]
+    public void MarkSourceDocument_sets_both_fields()
+    {
+        var sourceId = Guid.NewGuid();
+        var entry = new JournalEntry("ahmer.bilal", PostingDate, "Test");
+        entry.MarkSourceDocument("APInvoice", sourceId);
+
+        Assert.Equal("APInvoice", entry.SourceDocumentType);
+        Assert.Equal(sourceId, entry.SourceDocumentId);
+    }
+
+    [Fact]
+    public void MarkSourceDocument_allows_a_null_id_for_Manual_entries()
+    {
+        var entry = new JournalEntry("ahmer.bilal", PostingDate, "Test");
+        entry.MarkSourceDocument("Manual", null);
+
+        Assert.Equal("Manual", entry.SourceDocumentType);
+        Assert.Null(entry.SourceDocumentId);
+    }
+
+    [Fact]
+    public void MarkSourceDocument_rejects_a_blank_type()
+    {
+        var entry = new JournalEntry("ahmer.bilal", PostingDate, "Test");
+        Assert.Throws<ArgumentException>(() => entry.MarkSourceDocument("", null));
+    }
+
+    [Fact]
+    public void MarkSourceDocument_after_submit_is_rejected()
+    {
+        var entry = new JournalEntry("ahmer.bilal", PostingDate, "Test");
+        entry.AddLine(Guid.NewGuid(), null, 100, 0);
+        entry.AddLine(Guid.NewGuid(), null, 0, 100);
+        entry.AssignNumber("FIN-JE-2026-000001");
+        entry.Submit("ahmer.bilal");
+
+        Assert.Throws<InvalidOperationException>(() => entry.MarkSourceDocument("Manual", null));
+    }
 }

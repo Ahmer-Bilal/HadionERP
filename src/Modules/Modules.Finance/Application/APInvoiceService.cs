@@ -71,7 +71,8 @@ public sealed class APInvoiceService
     }
 
     public async Task<APInvoiceDto> CreateAsync(
-        CreateAPInvoiceRequest request, string actor, string companyId, CancellationToken cancellationToken = default)
+        CreateAPInvoiceRequest request, string actor, string companyId, CancellationToken cancellationToken = default,
+        string? sourceDocumentType = null, Guid? sourceDocumentId = null)
     {
         RequireAuthorization(actor, APInvoiceSecurity.MaintainPrivilegeKey);
 
@@ -92,6 +93,13 @@ public sealed class APInvoiceService
             actor, request.VendorId, request.VendorInvoiceNumber, request.InvoiceDate, request.Description,
             request.ExpenseAccountId, request.PayableAccountId, request.NetAmount);
         invoice.SetCostCenter(request.CostCenterId);
+
+        // System-generated callers (Ipc/RetentionRelease, via ApInvoiceVendorInvoicingService) pass their
+        // own source explicitly; a direct HTTP create (APInvoicesController) has none of those, only its
+        // own optional PurchaseOrderId — Manual when even that's absent.
+        invoice.MarkSourceDocument(
+            sourceDocumentType ?? (request.PurchaseOrderId is not null ? "PurchaseOrder" : "Manual"),
+            sourceDocumentType is not null ? sourceDocumentId : request.PurchaseOrderId);
 
         if (request.TaxCodeId is { } taxCodeId)
         {
@@ -229,7 +237,8 @@ public sealed class APInvoiceService
 
         var journalEntry = await _journalEntryService.CreateSystemGeneratedAsync(
             invoice.InvoiceDate, $"AP Invoice {invoice.DocumentNumber}: {invoice.Description}", lines,
-            reversalOfEntryId: null, actor, cancellationToken);
+            reversalOfEntryId: null, actor, cancellationToken,
+            sourceDocumentType: JournalEntrySourceDocumentTypes.APInvoice, sourceDocumentId: invoice.Id);
 
         invoice.LinkJournalEntry(journalEntry.Id);
         var fromStatus = invoice.Status;
@@ -326,6 +335,7 @@ public sealed class APInvoiceService
         return new(
             i.Id, i.DocumentNumber, i.Status.ToString(), i.VendorId, i.VendorInvoiceNumber, i.InvoiceDate, i.Description,
             i.ExpenseAccountId, i.PayableAccountId, i.CostCenterId, i.TaxCodeId, i.TaxRate, i.VatAccountId,
-            i.NetAmount, i.TaxAmount, i.GrossAmount, outstandingBalance, i.LinkedJournalEntryId, i.CreatedAt, i.CreatedBy);
+            i.NetAmount, i.TaxAmount, i.GrossAmount, outstandingBalance, i.LinkedJournalEntryId,
+            i.SourceDocumentType, i.SourceDocumentId, i.CreatedAt, i.CreatedBy);
     }
 }

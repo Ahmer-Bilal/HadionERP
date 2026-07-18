@@ -13,7 +13,9 @@ public sealed record GLAccountDto(
     bool IsPostable,
     bool IsActive,
     DateTimeOffset CreatedAt,
-    string CreatedBy);
+    string CreatedBy,
+    DateTimeOffset? ModifiedAt,
+    string? ModifiedBy);
 
 public sealed record CreateGLAccountRequest(
     string AccountCode,

@@ -194,7 +194,32 @@ public sealed class GLAccountService
         await _repository.GetAsync(id, cancellationToken)
             ?? throw new KeyNotFoundException($"G/L account {id} was not found.");
 
+    /// <summary>Deletes a G/L account outright — approval-gated (requires <see cref="GLAccountSecurity.ApprovePrivilegeKey"/>,
+    /// not just Maintain) so a Maintainer alone can never delete something they created; the same
+    /// second-person control this codebase already enforces for Approve/Reject, applied to deletion too,
+    /// rather than a separate ad hoc "delete workflow." Only ever allowed while the account
+    /// <see cref="Platform.Core.BusinessObject.CanHardDelete"/> — Draft, never approved — matching this
+    /// platform's "correct by reversal, not by deletion" rule for anything that ever had a real effect;
+    /// <see cref="UpdateAsync"/>'s <c>IsActive</c> toggle (Deactivate) is the equivalent action once an
+    /// account is Approved.</summary>
+    public async Task DeleteAsync(Guid id, string actor, CancellationToken cancellationToken = default)
+    {
+        RequireAuthorization(actor, GLAccountSecurity.ApprovePrivilegeKey);
+        var account = await RequireAccountAsync(id, cancellationToken);
+
+        if (!account.CanHardDelete)
+            throw new InvalidOperationException(
+                $"G/L account '{account.AccountCode}' has already been submitted for approval and can no longer be deleted — deactivate it instead.");
+
+        _repository.Remove(account);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        _auditRecorder.RecordDeleteAttempt(AuditReference(account.Id), actor,
+            $"G/L account '{account.AccountCode}' ({account.AccountName}) deleted.", AuditSource);
+    }
+
     private static GLAccountDto ToDto(GLAccount a) => new(
         a.Id, a.DocumentNumber, a.Status.ToString(), a.AccountCode, a.AccountName, a.AccountNameArabic,
-        a.AccountType.ToString(), a.NormalBalance, a.ParentAccountId, a.IsPostable, a.IsActive, a.CreatedAt, a.CreatedBy);
+        a.AccountType.ToString(), a.NormalBalance, a.ParentAccountId, a.IsPostable, a.IsActive, a.CreatedAt, a.CreatedBy,
+        a.ModifiedAt, a.ModifiedBy);
 }

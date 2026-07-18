@@ -222,7 +222,8 @@ public sealed class CustomerReceiptService
 
         var journalEntry = await _journalEntryService.CreateSystemGeneratedAsync(
             receipt.ReceiptDate, $"Customer Receipt {receipt.DocumentNumber}: {receipt.Reference ?? "customer receipt"}", lines,
-            reversalOfEntryId: null, actor, cancellationToken);
+            reversalOfEntryId: null, actor, cancellationToken,
+            sourceDocumentType: JournalEntrySourceDocumentTypes.CustomerReceipt, sourceDocumentId: receipt.Id);
 
         receipt.LinkJournalEntry(journalEntry.Id);
         var fromStatus = receipt.Status;

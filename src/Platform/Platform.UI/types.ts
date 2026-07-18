@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { DepartmentIconKey } from "./components/DepartmentIcon";
 
 /*
  * Platform.UI's own types. Deliberately no imports from Apps.Shell — Platform.UI is a self-contained
@@ -53,6 +54,14 @@ export interface NavArea {
 export interface NavModule {
   key: string;
   label: string;
+  /** The department's one consistent icon (docs/architecture/09-navigation-and-ui-standard.md) — reused
+   * as-is on the landing page's matching department card, never a different icon per screen. */
+  icon: DepartmentIconKey;
+  /** The module's own "home" link — resolved by the app layer exactly like every NavItem.href, so
+   * Platform.UI never hardcodes a routing convention. For a department with more than one item this is
+   * that department's tile-grid landing page; for a department with exactly one item it's that item's own
+   * href directly (no pointless one-tile landing page in between). */
+  href: string;
   areas: NavArea[];
 }
 

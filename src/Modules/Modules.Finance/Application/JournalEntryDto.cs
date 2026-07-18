@@ -15,6 +15,8 @@ public sealed record JournalEntryDto(
     DateOnly PostingDate,
     string Description,
     Guid? ReversalOfEntryId,
+    string? SourceDocumentType,
+    Guid? SourceDocumentId,
     decimal TotalDebits,
     decimal TotalCredits,
     bool IsBalanced,

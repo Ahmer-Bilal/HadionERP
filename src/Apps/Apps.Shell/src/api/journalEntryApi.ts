@@ -17,12 +17,23 @@ export interface JournalEntry {
   postingDate: string;
   description: string;
   reversalOfEntryId: string | null;
+  sourceDocumentType: string | null;
+  sourceDocumentId: string | null;
   totalDebits: number;
   totalCredits: number;
   isBalanced: boolean;
   lines: JournalLine[];
   createdAt: string;
   createdBy: string;
+}
+
+export interface JournalEntryDocumentFlowNode {
+  kind: string;
+  label: string;
+  documentNumber: string | null;
+  documentId: string | null;
+  status: string;
+  isCurrent: boolean;
 }
 
 export interface PagedResult<T> {
@@ -92,6 +103,11 @@ export async function rejectJournalEntry(id: string): Promise<JournalEntry> {
 
 export async function postJournalEntry(id: string): Promise<JournalEntry> {
   const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/post`, { method: "POST", headers: authHeaders() });
+  return handleJson(response);
+}
+
+export async function getJournalEntryDocumentFlow(id: string): Promise<JournalEntryDocumentFlowNode[]> {
+  const response = await fetch(`${API_BASE_URL}${BASE_PATH}/${id}/document-flow`, { headers: authHeaders() });
   return handleJson(response);
 }
 

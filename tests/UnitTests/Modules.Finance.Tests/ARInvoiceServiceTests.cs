@@ -88,7 +88,7 @@ public class ARInvoiceServiceTests
         });
         var journalEntryService = new JournalEntryService(
             journalRepo, journalNumberRanges, auditRecorder, workflowEngine, workflowInstances,
-            authorizationService, actorRoles, glLookup, costCenterLookup);
+            authorizationService, actorRoles, glLookup, costCenterLookup, new FakeFiscalYearRepository());
 
         var invoiceNumberRanges = new InMemoryNumberRangeService(new[]
         {
@@ -306,7 +306,7 @@ public class ARInvoiceServiceTests
 
         var journalNumberRanges = new InMemoryNumberRangeService(new[] { new NumberRangeDefinition(JournalEntryService.NumberRangeKey, "FIN", "JE") });
         var journalEntryService = new JournalEntryService(
-            journalRepo, journalNumberRanges, auditRecorder, workflowEngine, workflowInstances, authorizationService, actorRoles, glLookup, costCenterLookup);
+            journalRepo, journalNumberRanges, auditRecorder, workflowEngine, workflowInstances, authorizationService, actorRoles, glLookup, costCenterLookup, new FakeFiscalYearRepository());
 
         var invoiceNumberRanges = new InMemoryNumberRangeService(new[] { new NumberRangeDefinition(ARInvoiceService.NumberRangeKey, "FIN", "AR") });
         var invoiceService = new ARInvoiceService(

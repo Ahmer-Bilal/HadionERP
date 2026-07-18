@@ -17,5 +17,7 @@ public interface IGLAccountRepository
 
     void Add(GLAccount account);
 
+    void Remove(GLAccount account);
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -27,6 +27,8 @@ public sealed class EfGLAccountRepository : IGLAccountRepository
 
     public void Add(GLAccount account) => _dbContext.GLAccounts.Add(account);
 
+    public void Remove(GLAccount account) => _dbContext.GLAccounts.Remove(account);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         _dbContext.SaveChangesAsync(cancellationToken);
 }

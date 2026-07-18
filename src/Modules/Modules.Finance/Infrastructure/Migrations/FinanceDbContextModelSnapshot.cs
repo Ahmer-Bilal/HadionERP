@@ -91,6 +91,15 @@ namespace Modules.Finance.Infrastructure.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("row_version");
 
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_document_id");
+
+                    b.Property<string>("SourceDocumentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_document_type");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -206,6 +215,15 @@ namespace Modules.Finance.Infrastructure.Migrations
                     b.Property<long>("RowVersion")
                         .HasColumnType("bigint")
                         .HasColumnName("row_version");
+
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_document_id");
+
+                    b.Property<string>("SourceDocumentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_document_type");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -330,6 +348,166 @@ namespace Modules.Finance.Infrastructure.Migrations
                     b.ToTable("bank_accounts", "finance");
                 });
 
+            modelBuilder.Entity("Modules.Finance.Domain.Budget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("CostCenterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cost_center_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DocumentNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("doc_number");
+
+                    b.Property<string>("ExtensionFields")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("extension_data");
+
+                    b.Property<int>("FiscalYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("fiscal_year");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("modified_by");
+
+                    b.Property<long>("RowVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("budgets", "finance");
+                });
+
+            modelBuilder.Entity("Modules.Finance.Domain.ClosingActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActivityKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("activity_key");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_to_user_id");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<Guid>("FiscalPeriodId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_period_id");
+
+                    b.Property<DateTimeOffset?>("LastActionAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_action_at");
+
+                    b.Property<string>("LastActionBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("last_action_by");
+
+                    b.Property<int>("SequenceNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("sequence_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FiscalPeriodId");
+
+                    b.ToTable("closing_activities", "finance");
+                });
+
+            modelBuilder.Entity("Modules.Finance.Domain.ClosingActivityStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClosingActivityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("closing_activity_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("CompletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("completed_by");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_completed");
+
+                    b.Property<Guid?>("LinkedDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_document_id");
+
+                    b.Property<string>("LinkedDocumentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("linked_document_type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClosingActivityId");
+
+                    b.ToTable("closing_activity_steps", "finance");
+                });
+
             modelBuilder.Entity("Modules.Finance.Domain.CustomerReceipt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -436,6 +614,80 @@ namespace Modules.Finance.Infrastructure.Migrations
                     b.ToTable("customer_receipt_allocations", "finance");
                 });
 
+            modelBuilder.Entity("Modules.Finance.Domain.FiscalPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<Guid>("FiscalYearId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fiscal_year_id");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_open");
+
+                    b.Property<DateTimeOffset?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("modified_by");
+
+                    b.Property<int>("PeriodNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("period_number");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<DateOnly>("TargetCloseDate")
+                        .HasColumnType("date")
+                        .HasColumnName("target_close_date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FiscalYearId");
+
+                    b.HasIndex("StartDate", "EndDate");
+
+                    b.ToTable("fiscal_periods", "finance");
+                });
+
+            modelBuilder.Entity("Modules.Finance.Domain.FiscalYear", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Year")
+                        .IsUnique();
+
+                    b.ToTable("fiscal_years", "finance");
+                });
+
             modelBuilder.Entity("Modules.Finance.Domain.JournalEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -487,6 +739,15 @@ namespace Modules.Finance.Infrastructure.Migrations
                     b.Property<long>("RowVersion")
                         .HasColumnType("bigint")
                         .HasColumnName("row_version");
+
+                    b.Property<Guid?>("SourceDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_document_id");
+
+                    b.Property<string>("SourceDocumentType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("source_document_type");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -731,11 +992,38 @@ namespace Modules.Finance.Infrastructure.Migrations
                     b.ToTable("workflow_instances", "finance");
                 });
 
+            modelBuilder.Entity("Modules.Finance.Domain.ClosingActivity", b =>
+                {
+                    b.HasOne("Modules.Finance.Domain.FiscalPeriod", null)
+                        .WithMany()
+                        .HasForeignKey("FiscalPeriodId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Modules.Finance.Domain.ClosingActivityStep", b =>
+                {
+                    b.HasOne("Modules.Finance.Domain.ClosingActivity", null)
+                        .WithMany("Steps")
+                        .HasForeignKey("ClosingActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Modules.Finance.Domain.CustomerReceiptAllocation", b =>
                 {
                     b.HasOne("Modules.Finance.Domain.CustomerReceipt", null)
                         .WithMany("Allocations")
                         .HasForeignKey("CustomerReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Modules.Finance.Domain.FiscalPeriod", b =>
+                {
+                    b.HasOne("Modules.Finance.Domain.FiscalYear", null)
+                        .WithMany("Periods")
+                        .HasForeignKey("FiscalYearId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -758,9 +1046,19 @@ namespace Modules.Finance.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Modules.Finance.Domain.ClosingActivity", b =>
+                {
+                    b.Navigation("Steps");
+                });
+
             modelBuilder.Entity("Modules.Finance.Domain.CustomerReceipt", b =>
                 {
                     b.Navigation("Allocations");
+                });
+
+            modelBuilder.Entity("Modules.Finance.Domain.FiscalYear", b =>
+                {
+                    b.Navigation("Periods");
                 });
 
             modelBuilder.Entity("Modules.Finance.Domain.JournalEntry", b =>

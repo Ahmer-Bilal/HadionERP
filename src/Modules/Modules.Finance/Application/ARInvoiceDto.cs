@@ -23,6 +23,8 @@ public sealed record ARInvoiceDto(
     decimal GrossAmount,
     decimal OutstandingBalance,
     Guid? LinkedJournalEntryId,
+    string? SourceDocumentType,
+    Guid? SourceDocumentId,
     DateTimeOffset CreatedAt,
     string CreatedBy);
 

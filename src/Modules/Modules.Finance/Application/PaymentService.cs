@@ -237,7 +237,8 @@ public sealed class PaymentService
 
         var journalEntry = await _journalEntryService.CreateSystemGeneratedAsync(
             payment.PaymentDate, $"Payment {payment.DocumentNumber}: {payment.Reference ?? "vendor payment"}", lines,
-            reversalOfEntryId: null, actor, cancellationToken);
+            reversalOfEntryId: null, actor, cancellationToken,
+            sourceDocumentType: JournalEntrySourceDocumentTypes.Payment, sourceDocumentId: payment.Id);
 
         payment.LinkJournalEntry(journalEntry.Id);
         var fromStatus = payment.Status;

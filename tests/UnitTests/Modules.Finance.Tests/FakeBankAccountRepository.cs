@@ -19,6 +19,9 @@ internal sealed class FakeBankAccountRepository : IBankAccountRepository
 
     public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_accounts.Count);
 
+    public Task<IReadOnlyList<BankAccount>> ListActiveAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<BankAccount>>(_accounts.Values.Where(a => a.IsActive).OrderBy(a => a.AccountCode).ToList());
+
     public void Add(BankAccount bankAccount) => _accounts[bankAccount.Id] = bankAccount;
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;

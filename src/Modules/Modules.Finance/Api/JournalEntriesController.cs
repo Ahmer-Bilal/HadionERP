@@ -16,8 +16,20 @@ public sealed record ReverseJournalEntryRequest(DateOnly? ReversalDate = null);
 public sealed class JournalEntriesController : PlatformApiController
 {
     private readonly JournalEntryService _service;
+    private readonly JournalEntryDocumentFlowService _documentFlowService;
 
-    public JournalEntriesController(JournalEntryService service) => _service = service;
+    public JournalEntriesController(JournalEntryService service, JournalEntryDocumentFlowService documentFlowService)
+    {
+        _service = service;
+        _documentFlowService = documentFlowService;
+    }
+
+    [HttpGet("{id:guid}/document-flow")]
+    public async Task<IActionResult> GetDocumentFlow(Guid id, CancellationToken cancellationToken)
+    {
+        try { return Ok(await _documentFlowService.GetAsync(id, cancellationToken)); }
+        catch (KeyNotFoundException) { return NotFound(); }
+    }
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)

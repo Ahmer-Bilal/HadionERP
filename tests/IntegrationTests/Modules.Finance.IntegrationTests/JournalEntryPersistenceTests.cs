@@ -130,4 +130,27 @@ public class JournalEntryPersistenceTests : IAsyncLifetime
         var reloadedMirror = await readContext.JournalEntries.FirstAsync(e => e.Id == mirrorId);
         Assert.Equal(originalId, reloadedMirror.ReversalOfEntryId);
     }
+
+    [Fact]
+    public async Task SourceDocumentType_and_Id_persist_through_a_fresh_DbContext()
+    {
+        Guid id;
+        var sourceId = Guid.NewGuid();
+        await using (var writeContext = TestDatabase.CreateContext())
+        {
+            var entry = new JournalEntry("system", PostingDate, "AP Invoice AP-2026-000001");
+            entry.AddLine(Guid.NewGuid(), null, 100m, 0m);
+            entry.AddLine(Guid.NewGuid(), null, 0m, 100m);
+            entry.MarkSourceDocument("APInvoice", sourceId);
+            entry.AssignNumber("FIN-JE-2026-000006");
+            writeContext.JournalEntries.Add(entry);
+            await writeContext.SaveChangesAsync();
+            id = entry.Id;
+        }
+
+        await using var readContext = TestDatabase.CreateContext();
+        var reloaded = await readContext.JournalEntries.FirstAsync(e => e.Id == id);
+        Assert.Equal("APInvoice", reloaded.SourceDocumentType);
+        Assert.Equal(sourceId, reloaded.SourceDocumentId);
+    }
 }

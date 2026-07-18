@@ -38,6 +38,9 @@ internal static class TestDatabase
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.journal_entries CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.ap_invoices");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.ar_invoices");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.budgets");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.closing_activities CASCADE");
+        await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.fiscal_years CASCADE");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.number_range_counters");
         await context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE finance.workflow_instances");
     }

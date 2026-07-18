@@ -30,6 +30,13 @@ public sealed class Contract : BusinessObject
 
     public decimal? AdvancePaymentPercentage { get; private set; }
 
+    /// <summary>Percentage withheld per certified IPC (construction-commercial-processes-spec.md §5) —
+    /// mirrors <see cref="Subcontract.RetentionPercentage"/>, added here so a Contract-type IPC can finally
+    /// withhold retention too (<c>IpcService.LoadCommercialDocumentAsync</c> previously always passed <c>null</c>
+    /// for a Contract, meaning retention only ever worked on the Subcontract side — a real, disclosed gap
+    /// this field closes).</summary>
+    public decimal? RetentionPercentage { get; private set; }
+
     public int? DefectsLiabilityPeriodMonths { get; private set; }
 
     public IReadOnlyCollection<BoqLine> BoqLines => _boqLines.AsReadOnly();
@@ -39,7 +46,7 @@ public sealed class Contract : BusinessObject
 
     public Contract(
         string createdBy, Guid projectId, string contractType, string? paymentTerms,
-        decimal? advancePaymentPercentage, int? defectsLiabilityPeriodMonths)
+        decimal? advancePaymentPercentage, int? defectsLiabilityPeriodMonths, decimal? retentionPercentage = null)
         : base(createdBy)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(contractType);
@@ -47,12 +54,15 @@ public sealed class Contract : BusinessObject
             throw new ArgumentException("Advance payment percentage must be between 0 and 100.", nameof(advancePaymentPercentage));
         if (defectsLiabilityPeriodMonths is < 0)
             throw new ArgumentException("Defects liability period cannot be negative.", nameof(defectsLiabilityPeriodMonths));
+        if (retentionPercentage is < 0 or > 100)
+            throw new ArgumentException("Retention percentage must be between 0 and 100.", nameof(retentionPercentage));
 
         ProjectId = projectId;
         ContractType = contractType;
         PaymentTerms = paymentTerms;
         AdvancePaymentPercentage = advancePaymentPercentage;
         DefectsLiabilityPeriodMonths = defectsLiabilityPeriodMonths;
+        RetentionPercentage = retentionPercentage;
     }
 
     /// <summary>Reserved for ORM materialization — see <see cref="BusinessObject"/>'s parameterless

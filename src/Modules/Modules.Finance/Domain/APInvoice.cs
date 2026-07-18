@@ -61,6 +61,21 @@ public sealed class APInvoice : BusinessObject
     /// this invoice reverses that linked entry too (see <c>APInvoiceService.ReverseAsync</c>).</summary>
     public Guid? LinkedJournalEntryId { get; private set; }
 
+    /// <summary>What actually raised this invoice — <c>"Manual"</c> (entered directly by an AP clerk),
+    /// <c>"PurchaseOrder"</c> (a real procurement-driven vendor invoice, matched against a PO), or
+    /// <c>"Ipc"</c> (a Subcontract-type IPC's certification raised this automatically — see
+    /// `docs/module/construction.md`). Same "set once while Draft, string not enum so new source types
+    /// don't need a Domain change" reasoning as <see cref="JournalEntry.SourceDocumentType"/>, which this
+    /// mirrors one level up the chain: a Journal Entry's own source is "APInvoice", but knowing *this*
+    /// invoice's own origin is what lets a UI show "Construction Billing" instead of a generic "Accounts
+    /// Payable" for a subcontractor IPC invoice.</summary>
+    public string? SourceDocumentType { get; private set; }
+
+    /// <summary>The specific document's own Id when <see cref="SourceDocumentType"/> names a real one — the
+    /// Purchase Order's Id for <c>"PurchaseOrder"</c>, the IPC's Id for <c>"Ipc"</c>, null for
+    /// <c>"Manual"</c>.</summary>
+    public Guid? SourceDocumentId { get; private set; }
+
     public APInvoice(
         string createdBy, Guid vendorId, string vendorInvoiceNumber, DateOnly invoiceDate, string description,
         Guid expenseAccountId, Guid payableAccountId, decimal netAmount)
@@ -100,6 +115,15 @@ public sealed class APInvoice : BusinessObject
     }
 
     public void LinkJournalEntry(Guid journalEntryId) => LinkedJournalEntryId = journalEntryId;
+
+    public void MarkSourceDocument(string sourceDocumentType, Guid? sourceDocumentId)
+    {
+        if (Status != BusinessObjectStatus.Draft)
+            throw new InvalidOperationException("The source document can only be set while the invoice is in Draft.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceDocumentType);
+        SourceDocumentType = sourceDocumentType;
+        SourceDocumentId = sourceDocumentId;
+    }
 
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 

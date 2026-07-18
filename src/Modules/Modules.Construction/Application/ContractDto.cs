@@ -13,6 +13,7 @@ public sealed record ContractDto(
     string? PaymentTerms,
     decimal? AdvancePaymentPercentage,
     int? DefectsLiabilityPeriodMonths,
+    decimal? RetentionPercentage,
     decimal ContractValue,
     IReadOnlyList<BoqLineDto> BoqLines,
     DateTimeOffset CreatedAt,
@@ -25,4 +26,4 @@ public sealed record CreateBoqLineRequest(
 public sealed record CreateContractRequest(
     Guid ProjectId, string ContractType, string? PaymentTerms,
     decimal? AdvancePaymentPercentage, int? DefectsLiabilityPeriodMonths,
-    IReadOnlyList<CreateBoqLineRequest> BoqLines);
+    IReadOnlyList<CreateBoqLineRequest> BoqLines, decimal? RetentionPercentage = null);

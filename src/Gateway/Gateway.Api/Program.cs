@@ -153,7 +153,10 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 SubcontractSecurity.MaintainerRole, SubcontractSecurity.ApproverRole,
                 MeasurementSheetSecurity.MaintainerRole, MeasurementSheetSecurity.ApproverRole,
                 IpcSecurity.MaintainerRole, IpcSecurity.ApproverRole,
-                VariationOrderSecurity.MaintainerRole, VariationOrderSecurity.ApproverRole },
+                VariationOrderSecurity.MaintainerRole, VariationOrderSecurity.ApproverRole,
+                RetentionReleaseSecurity.MaintainerRole, RetentionReleaseSecurity.ApproverRole,
+                BudgetSecurity.MaintainerRole, BudgetSecurity.ApproverRole,
+                FiscalYearSecurity.AdministratorRole },
         new[] { manageSecurityDuty, BusinessPartnerSecurity.MaintainerDuty, BusinessPartnerSecurity.ApproverDuty,
                 GLAccountSecurity.MaintainerDuty, GLAccountSecurity.ApproverDuty,
                 ItemSecurity.MaintainerDuty, ItemSecurity.ApproverDuty,
@@ -179,7 +182,10 @@ builder.Services.AddSingleton<ISecurityCatalog>(_ =>
                 SubcontractSecurity.MaintainerDuty, SubcontractSecurity.ApproverDuty,
                 MeasurementSheetSecurity.MaintainerDuty, MeasurementSheetSecurity.ApproverDuty,
                 IpcSecurity.MaintainerDuty, IpcSecurity.ApproverDuty,
-                VariationOrderSecurity.MaintainerDuty, VariationOrderSecurity.ApproverDuty });
+                VariationOrderSecurity.MaintainerDuty, VariationOrderSecurity.ApproverDuty,
+                RetentionReleaseSecurity.MaintainerDuty, RetentionReleaseSecurity.ApproverDuty,
+                BudgetSecurity.MaintainerDuty, BudgetSecurity.ApproverDuty,
+                FiscalYearSecurity.AdministratorDuty });
 });
 builder.Services.AddSingleton<Platform.Security.IAuthorizationService, AuthorizationService>();
 
@@ -219,6 +225,8 @@ builder.Services.AddSingleton<ISodEngine>(sp =>
         MeasurementSheetSecurity.MaintainerApproverConflict,
         IpcSecurity.MaintainerApproverConflict,
         VariationOrderSecurity.MaintainerApproverConflict,
+        RetentionReleaseSecurity.MaintainerApproverConflict,
+        BudgetSecurity.MaintainerApproverConflict,
     }, sp.GetRequiredService<ISodExceptionLog>()));
 
 // Platform.Security's actor-to-role resolution — used to be a hardcoded in-memory dictionary mapping
@@ -255,6 +263,18 @@ var allRegisteredRoleKeys = new[]
     BankAccountSecurity.MaintainerRoleKey, BankAccountWorkflow.ApproverRoleKey,
     PaymentSecurity.MaintainerRoleKey, PaymentWorkflow.ApproverRoleKey,
     CustomerReceiptSecurity.MaintainerRoleKey, CustomerReceiptWorkflow.ApproverRoleKey,
+    // Modules.Construction — added here alongside RetentionRelease after discovering, during this slice's
+    // own live verification, that this list had never been extended past CustomerReceipt: the bootstrap
+    // admin had silently had no access to Contract/Subcontract/MeasurementSheet/Ipc/VariationOrder either,
+    // not just the new RetentionRelease. A real, disclosed gap in every prior Construction BO, closed here.
+    ContractSecurity.MaintainerRoleKey, ContractWorkflow.ApproverRoleKey,
+    SubcontractSecurity.MaintainerRoleKey, SubcontractWorkflow.ApproverRoleKey,
+    MeasurementSheetSecurity.MaintainerRoleKey, MeasurementSheetWorkflow.ApproverRoleKey,
+    IpcSecurity.MaintainerRoleKey, IpcWorkflow.ApproverRoleKey,
+    VariationOrderSecurity.MaintainerRoleKey, VariationOrderWorkflow.ApproverRoleKey,
+    RetentionReleaseSecurity.MaintainerRoleKey, RetentionReleaseWorkflow.ApproverRoleKey,
+    BudgetSecurity.MaintainerRoleKey, BudgetWorkflow.ApproverRoleKey,
+    FiscalYearSecurity.AdministratorRoleKey,
 };
 
 // Platform.Workflow: one real approval workflow is registered — Modules.MasterData's Business Partner
@@ -285,6 +305,8 @@ builder.Services.AddSingleton<IWorkflowDefinitionCatalog>(_ =>
         MeasurementSheetWorkflow.SubmitApprovalDefinition,
         IpcWorkflow.SubmitApprovalDefinition,
         VariationOrderWorkflow.SubmitApprovalDefinition,
+        RetentionReleaseWorkflow.SubmitApprovalDefinition,
+        BudgetWorkflow.SubmitApprovalDefinition,
     }));
 builder.Services.AddSingleton<IDelegationRegistry, InMemoryDelegationRegistry>();
 builder.Services.AddSingleton<IWorkflowEligibilityService, RoleBasedWorkflowEligibilityService>();
@@ -395,6 +417,11 @@ builder.Services.AddScoped<INumberRangeService>(sp => new EfCoreNumberRangeServi
 // never on Modules.MasterData.Domain/Infrastructure/Application directly.
 builder.Services.AddDbContext<Modules.Finance.Infrastructure.FinanceDbContext>(options => options.UseNpgsql(masterDataConnectionString));
 builder.Services.AddScoped<Modules.Finance.Application.IJournalEntryRepository, Modules.Finance.Infrastructure.EfJournalEntryRepository>();
+// Fiscal Year/Period — registered before JournalEntryService below since it now depends on this to enforce
+// Period Closing (a Posted entry's PostingDate must fall in an open period; see JournalEntryService's own
+// EnsurePeriodIsOpenAsync doc comment).
+builder.Services.AddScoped<Modules.Finance.Application.IFiscalYearRepository, Modules.Finance.Infrastructure.EfFiscalYearRepository>();
+builder.Services.AddScoped<Modules.Finance.Application.FiscalYearService>();
 // JournalEntryService's own IWorkflowInstanceRepository/INumberRangeService are constructed directly here,
 // not registered as shared container services — Modules.MasterData already registers those same
 // interfaces bound to ITS OWN DbContext/schema, and a second AddScoped for the same interface would just
@@ -411,7 +438,8 @@ builder.Services.AddScoped<Modules.Finance.Application.JournalEntryService>(sp =
     sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IGLAccountLookup>(),
-    sp.GetRequiredService<ICostCenterLookup>()));
+    sp.GetRequiredService<ICostCenterLookup>(),
+    sp.GetRequiredService<Modules.Finance.Application.IFiscalYearRepository>()));
 builder.Services.AddScoped<Modules.Finance.Application.IAPInvoiceRepository, Modules.Finance.Infrastructure.EfAPInvoiceRepository>();
 // APInvoiceService reuses JournalEntryService directly (both Modules.Finance.Application — an intra-module
 // dependency, not a cross-module one, so no Contracts package is needed here) to generate and reverse the
@@ -518,15 +546,50 @@ builder.Services.AddScoped<Modules.Finance.Application.CustomerReceiptService>(s
     sp.GetRequiredService<ILookupCatalog>(),
     sp.GetRequiredService<Modules.Finance.Application.JournalEntryService>()));
 
+// Journal Entry Document Flow (UI/Finance/Finance_Jornal Entry_Object.png's own "Document Flow" rail) —
+// auto-wires from the repositories already registered above (IJournalEntryRepository/IAPInvoiceRepository/
+// IARInvoiceRepository/IPaymentRepository/ICustomerReceiptRepository), no factory needed.
+builder.Services.AddScoped<Modules.Finance.Application.JournalEntryDocumentFlowService>();
+
+// Trial Balance — the first Finance report (UI/Finance/FINANCE-MOCKUP-GAP-ANALYSIS.md), a pure aggregation
+// over the same IJournalEntryRepository/IGLAccountLookup already registered above, so it needs no new
+// DbContext, connection, or migration of its own.
+builder.Services.AddScoped<Modules.Finance.Application.TrialBalanceService>();
+// Income Statement / Balance Sheet — the next two reports in the gap analysis's build order, both reusing
+// TrialBalanceService directly (intra-module dependency, auto-wired the same way).
+builder.Services.AddScoped<Modules.Finance.Application.IncomeStatementService>();
+builder.Services.AddScoped<Modules.Finance.Application.BalanceSheetService>();
+
+// Budget — closes the gap analysis's "single clearest wire-exists-nothing-on-the-other-end case": a real
+// Cost-Center/fiscal-year spending ceiling now backs the IBudgetCheckService contract below, replacing the
+// former PassThroughBudgetCheckService stub (deleted; see Budget's own doc comment for what this does and
+// deliberately doesn't check yet).
+builder.Services.AddScoped<Modules.Finance.Application.IBudgetRepository, Modules.Finance.Infrastructure.EfBudgetRepository>();
+builder.Services.AddScoped<Modules.Finance.Application.BudgetService>(sp => new Modules.Finance.Application.BudgetService(
+    sp.GetRequiredService<Modules.Finance.Application.IBudgetRepository>(),
+    new Modules.Finance.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>(),
+        new[] { new NumberRangeDefinition(Modules.Finance.Application.BudgetService.NumberRangeKey, "FIN", "BUD") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Finance.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Finance.Infrastructure.FinanceDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<ICostCenterLookup>()));
+
 // Modules.Finance.Contracts: the published, synchronous cross-module contract call
 // docs/architecture/01-overview.md §3.2 names as its own worked example ("Procurement asks
-// Finance's IBudgetCheckService before releasing a PO"). PassThroughBudgetCheckService always allows for now
-// — Budget Control itself is deferred Finance depth (PROGRESS.md), not built yet — see that class's own doc
-// comment for why this is disclosed rather than faking enforcement against numbers that don't exist.
-builder.Services.AddScoped<IBudgetCheckService, Modules.Finance.Infrastructure.PassThroughBudgetCheckService>();
+// Finance's IBudgetCheckService before releasing a PO") — now backed by the real Budget entity above.
+builder.Services.AddScoped<IBudgetCheckService, Modules.Finance.Infrastructure.RealBudgetCheckService>();
 // Modules.Finance.Contracts' other publication: the 3-way match's read-only view into an AP Invoice's
 // vendor/amount, same dependency direction as IBudgetCheckService above.
 builder.Services.AddScoped<Modules.Finance.Contracts.IAPInvoiceLookup, Modules.Finance.Infrastructure.EfAPInvoiceLookup>();
+
+// Period Closing Center's real checklist (UI/Finance/d1f20165-...png) — reuses IAPInvoiceRepository/
+// IARInvoiceRepository/IJournalEntryRepository/IBankAccountRepository directly (all intra-module) plus
+// Modules.Identity.Contracts.IUserLookup for real per-person assignment.
+builder.Services.AddScoped<Modules.Finance.Application.IClosingActivityRepository, Modules.Finance.Infrastructure.EfClosingActivityRepository>();
+builder.Services.AddScoped<Modules.Finance.Application.ClosingActivityService>();
 
 // Modules.Procurement: the third real, persisted business module, starting Phase 2. Own "procurement"
 // Postgres schema in the same physical database as MasterData's/Finance's. Depends on
@@ -658,6 +721,10 @@ builder.Services.AddDbContext<IdentityDbContext>(options => options.UseNpgsql(ma
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddSingleton<ITokenService>(_ => new JwtTokenService(jwtSigningKey));
+// Modules.Identity.Contracts: published for the Period Closing Center's real per-person duty assignment
+// (Modules.Finance.Application.ClosingActivityService) — same cross-module read-only lookup shape as
+// Modules.MasterData.Contracts' own IBusinessPartnerLookup/ICostCenterLookup.
+builder.Services.AddScoped<Modules.Identity.Contracts.IUserLookup, Modules.Identity.Infrastructure.EfUserLookup>();
 
 // Modules.Construction: the sixth real, persisted business module, Phase 3's commercial layer on top of
 // ProjectManagement's WBS backbone (docs/architecture/07-integrated-project-controlling.md
@@ -762,6 +829,28 @@ builder.Services.AddScoped<VariationOrderService>(sp => new VariationOrderServic
     sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
     sp.GetRequiredService<IActorRoleAssignmentStore>(),
     sp.GetRequiredService<IProjectLookup>()));
+
+// Retention Release: releases a portion of the retention withheld across a commercial document's own
+// Approved IPCs — depends on IIpcRepository directly (same module, no cross-module lookup needed) to
+// compute the real running "withheld to date" balance a new release is validated against, plus the same
+// ICustomerInvoicingService/IVendorInvoicingService pair IPC uses to raise the real AR/AP invoice on approval.
+builder.Services.AddScoped<IRetentionReleaseRepository, Modules.Construction.Infrastructure.EfRetentionReleaseRepository>();
+builder.Services.AddScoped<RetentionReleaseService>(sp => new RetentionReleaseService(
+    sp.GetRequiredService<IRetentionReleaseRepository>(),
+    sp.GetRequiredService<IIpcRepository>(),
+    sp.GetRequiredService<IContractRepository>(),
+    sp.GetRequiredService<ISubcontractRepository>(),
+    new Modules.Construction.Infrastructure.EfCoreNumberRangeService(
+        sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>(),
+        new[] { new NumberRangeDefinition(RetentionReleaseService.NumberRangeKey, "CON", "RETREL") }),
+    sp.GetRequiredService<IAuditRecorder>(),
+    sp.GetRequiredService<IWorkflowEngine>(),
+    new Modules.Construction.Infrastructure.EfWorkflowInstanceRepository(sp.GetRequiredService<Modules.Construction.Infrastructure.ConstructionDbContext>()),
+    sp.GetRequiredService<Platform.Security.IAuthorizationService>(),
+    sp.GetRequiredService<IActorRoleAssignmentStore>(),
+    sp.GetRequiredService<IProjectLookup>(),
+    sp.GetRequiredService<Modules.Finance.Contracts.ICustomerInvoicingService>(),
+    sp.GetRequiredService<Modules.Finance.Contracts.IVendorInvoicingService>()));
 
 var app = builder.Build();
 

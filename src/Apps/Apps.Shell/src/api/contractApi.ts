@@ -22,6 +22,7 @@ export interface Contract {
   paymentTerms: string | null;
   advancePaymentPercentage: number | null;
   defectsLiabilityPeriodMonths: number | null;
+  retentionPercentage: number | null;
   contractValue: number;
   boqLines: BoqLine[];
   createdAt: string;
@@ -51,6 +52,7 @@ export interface CreateContractInput {
   paymentTerms?: string;
   advancePaymentPercentage?: number;
   defectsLiabilityPeriodMonths?: number;
+  retentionPercentage?: number;
   boqLines: CreateBoqLineInput[];
 }
 

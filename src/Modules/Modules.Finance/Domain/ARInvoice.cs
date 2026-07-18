@@ -61,6 +61,13 @@ public sealed class ARInvoice : BusinessObject
     /// this invoice reverses that linked entry too (see <c>ARInvoiceService.ReverseAsync</c>).</summary>
     public Guid? LinkedJournalEntryId { get; private set; }
 
+    /// <summary>What actually raised this invoice — <c>"Manual"</c>, <c>"Ipc"</c> (a Contract-type IPC's
+    /// certification), or <c>"RetentionRelease"</c> (a Contract-type retention release). Mirrors
+    /// <see cref="APInvoice.SourceDocumentType"/> exactly — see that field's own doc comment.</summary>
+    public string? SourceDocumentType { get; private set; }
+
+    public Guid? SourceDocumentId { get; private set; }
+
     public ARInvoice(
         string createdBy, Guid customerId, string? customerReference, DateOnly invoiceDate, string description,
         Guid revenueAccountId, Guid receivableAccountId, decimal netAmount)
@@ -98,6 +105,15 @@ public sealed class ARInvoice : BusinessObject
     }
 
     public void LinkJournalEntry(Guid journalEntryId) => LinkedJournalEntryId = journalEntryId;
+
+    public void MarkSourceDocument(string sourceDocumentType, Guid? sourceDocumentId)
+    {
+        if (Status != BusinessObjectStatus.Draft)
+            throw new InvalidOperationException("The source document can only be set while the invoice is in Draft.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceDocumentType);
+        SourceDocumentType = sourceDocumentType;
+        SourceDocumentId = sourceDocumentId;
+    }
 
     public void Submit(string actor) => Transition(BusinessObjectTransition.Submit, actor);
 

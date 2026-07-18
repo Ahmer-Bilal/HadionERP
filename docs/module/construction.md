@@ -2,10 +2,10 @@
 
 Construction is the commercial layer sitting directly on top of Project Management's WBS elements. It
 owns the documents that turn a project's cost structure into real money — Customer Contracts, the Bill of
-Quantities priced against that contract, Subcontracts issued to execute portions of that scope, and,
-still to be built, Site Progress/Measurement, Variation Orders, Retention, Extension of Time/Claims, and
-IPC billing. It never defines its own project-cost structure — every document in this module references a
-WBS element it doesn't own, and Project Management's `IProjectLookup` is how it checks that reference is
+Quantities priced against that contract, Subcontracts issued to execute portions of that scope, Site
+Progress/Measurement, IPC billing, Variation Orders, and Retention withholding/release. Extension of
+Time/Claims is still to be built. It never defines its own project-cost structure — every document in this
+module references a WBS element it doesn't own, and Project Management's `IProjectLookup` is how it checks that reference is
 real, belongs to the right project, and is currently Approved. For the full commercial-process reasoning
 behind each of these document types — the actual IPC calculation waterfall, how retention and advance
 recovery work, why EOT is a separate document from a Variation Order, and how the whole thing changes shape
@@ -119,18 +119,38 @@ without them, and separately rejects one whose Project has no Customer set, sinc
 The IPC itself still stops at Approved, deliberately short of the spec's further "Paid" step — that needs a
 real Customer Receipt Business Object (the AR mirror of `Payment`), not yet built.
 
+## Retention — a running balance, released against real IPCs, not just a per-IPC deduction
+
+`Contract` now carries its own `RetentionPercentage` (mirroring `Subcontract.RetentionPercentage`, which
+already existed) — closing a real gap the IPC section above doesn't mention: before this, `IpcService`'s
+own commercial-document snapshot always passed `null` for a Contract's retention percentage, so a
+Contract-type IPC never actually withheld any retention at all, only a Subcontract-type one did. Every
+Approved IPC still only computes *this period's* retention deduction (spec §5's "withheld this period"
+figure, unchanged from the IPC section above) — what's new is `RetentionRelease`, the document that
+finally tracks the *cumulative* balance and pays it back. `RetentionReleaseService.GetRetentionBalanceAsync`
+sums every Approved IPC's own `RetentionAmount` for a commercial document, subtracts every prior Approved
+release's `AmountReleased`, and that's the real running "Total Retention Withheld to Date − Total Retention
+Released to Date" balance the spec calls for — computed fresh each time, never stored as a separate figure
+that could drift out of sync. `RetentionReleaseService.CreateAsync` validates a new release's amount against
+that same balance and rejects anything that would over-release. `RetentionRelease` is polymorphic over
+Contract/Subcontract exactly like `Ipc`, deliberately a single header amount rather than a collection of
+per-IPC release lines (the spec itself describes retention release as "one or two lump-sum events tied to
+project milestones," not a line-by-line reconciliation), and reuses the same certify-then-bill pattern:
+approving a Contract-type release raises a real Draft AR Invoice, approving a Subcontract-type release
+raises a real Draft AP Invoice, both through the same `ICustomerInvoicingService`/`IVendorInvoicingService`
+pair `Ipc` already uses. `TriggerEvent` (Taking Over Certificate / Defects Liability Expiry / Manual) is
+recorded but not yet wired to actually *fire* automatically off a real Taking-Over or DLP-expiry date —
+that's still a manually-triggered release for this slice.
+
 ## What's still deliberately absent
 
-Everything downstream of "an IPC has been certified and its AR Invoice raised" is still to be built. There's
-no way yet to record that a customer actually paid an AR Invoice, or that a subcontractor was paid against
-their own IPC — the latter needs the AP-side integration mentioned above, the former needs a Customer
-Receipt Business Object. Retention exists today only as a percentage term recorded
-on a Subcontract's header, applied per-IPC as a deduction; the running withheld-balance-owed-back and
-release-event mechanics described in the commercial-process spec aren't built (an IPC computes how much
-retention was withheld *this period*, but nothing yet tracks the cumulative balance or ever releases it).
-Variation Orders and Extension of Time/Claims don't exist as document types yet at all — a change in scope
-or a delay currently has nowhere to be formally recorded against a Contract or Subcontract, and the
-over-measurement guard will hard-block legitimate additional scope until a VO can raise a line's quantity.
+Everything downstream of "an IPC has been certified and its AR Invoice raised" beyond Retention is still to
+be built. There's no way yet to record that a customer actually paid an AR Invoice, or that a subcontractor
+was paid against their own IPC — the latter needs the AP-side integration mentioned above, the former needs
+a Customer Receipt Business Object (both now actually built too — see `docs/module/finance.md` — this
+paragraph is only about what's still missing). Extension of Time/Claims doesn't exist as a document type at
+all yet — a delay currently has nowhere to be formally recorded against a Contract or Subcontract, and
+Liquidated Damages (which depend on it) aren't modeled either.
 
 A couple of smaller, disclosed rough edges worth knowing about rather than tripping over: `PaymentTerms`
 is genuinely free text right now, not sourced from a real Payment Terms field on the Business Partner
@@ -142,7 +162,7 @@ the on-screen rendering is affected.
 
 ## Where to look before extending this module
 
-Before adding Site Progress, IPC, Retention, Variation Orders, or EOT/Claims, read
+Before adding Extension of Time/Claims (the one piece of §7's build order still not built), read
 `construction-commercial-processes-spec.md` in full first — every one of those document types has a
 specific reason for its shape (why EOT can't just be a field on a Variation Order, why Measurement needs
 both a submitted and a certified quantity per line, why the IPC waterfall has the exact deduction order it
